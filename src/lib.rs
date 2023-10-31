@@ -1,1 +1,2 @@
-mod univariate_lde;
+pub mod polynomial;
+pub mod univariate_lde;
