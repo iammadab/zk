@@ -13,6 +13,9 @@ impl<F: PrimeField> Polynomial<F> {
         Self { coefficients }
     }
 
+    // TODO: implement method to simplify coefficients by truncation
+    //  e.g. [0, 2, 0, 0] is equivalent to [0, 2]
+
     /// Evaluate polynomial at a given point x
     fn evaluate(&self, x: &F) -> F {
         // naive implementation
@@ -29,11 +32,11 @@ impl<F: PrimeField> Polynomial<F> {
     /// Add two polynomials in dense format
     fn add(&self, other: &Self) -> Self {
         // TODO: improve implementation
-        if self.coefficients.is_empty() {
+        if self.is_zero() {
             return Self::new(other.coefficients.clone());
         }
 
-        if other.coefficients.is_empty() {
+        if other.is_zero() {
             return Self::new(self.coefficients.clone());
         }
 
@@ -50,11 +53,51 @@ impl<F: PrimeField> Polynomial<F> {
 
         Self::new(new_coefficients)
     }
+
+    // TODO: implement the rust multiply
+    /// Multiply two polynomials in dense format
+    fn mul(&self, other: &Self) -> Self {
+        if self.is_zero() || other.is_zero() {
+            return Self::new(vec![]);
+        }
+
+        // Given 2 polynomials A, B of degree a, b respectively
+        // the product polynomial C = AB will have max degree of a + b
+        let product_max_degree = self.degree() + other.degree();
+
+        // we need d + 1 element to represent a polynomial of degree d
+        let mut product_coefficients = vec![F::zero(); product_max_degree + 1];
+
+        // [0, 1, 2] degree is 3, max element is at index 2
+        // so we can go from 0 to degree with degree inclusive
+        // but what of empty arrays?? we handled that already, nice
+        for i in 0..=self.degree() {
+            for j in 0..=other.degree() {
+                product_coefficients[i + j] += self.coefficients[i] * other.coefficients[j];
+            }
+        }
+
+        Self::new(product_coefficients)
+    }
+
+    /// return true if polynomial is a zero poly i.e p(..) = 0
+    fn is_zero(&self) -> bool {
+        self.coefficients.is_empty()
+    }
+
+    /// return the degree of a polynomial
+    fn degree(&self) -> usize {
+        return if self.coefficients.is_empty() {
+            0
+        } else {
+            self.coefficients.len() - 1
+        };
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::polynomial::Polynomial;
+    use super::Polynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend, PrimeField};
 
@@ -108,5 +151,32 @@ mod tests {
         assert_eq!(p_plus_q, q_plus_p);
         // should sum to expected value
         assert_eq!(p_plus_q, poly_from_vec(vec![7, 7, 2, 4]));
+    }
+
+    #[test]
+    fn test_polynomial_multiplication() {
+        // if either polynomial is the zero polynomial, return zero
+        assert_eq!(
+            poly_zero().mul(&poly_from_vec(vec![0, 2])),
+            poly_from_vec(vec![])
+        );
+        assert_eq!(
+            poly_from_vec(vec![0, 2]).mul(&poly_zero()),
+            poly_from_vec(vec![])
+        );
+
+        // p = 2x^2 + 3x + 4
+        // q = 4x^3 + 4x + 3
+        // pq = 8x^5 + 12x^4 + 24x^3 + 18x^2 + 25x + 12
+        // pq mod 17 = 8x^5 + 12x^4 + 7x^3 + 1x^2 + 8x + 12
+        let p = poly_from_vec(vec![4, 3, 2]);
+        let q = poly_from_vec(vec![3, 4, 0, 4]);
+        let p_mul_q = p.mul(&q);
+        let q_mul_p = q.mul(&p);
+
+        // should be commutative
+        assert_eq!(p_mul_q, q_mul_p);
+        // should mul to expected value
+        assert_eq!(p_mul_q, poly_from_vec(vec![12, 25, 18, 24, 12, 8]));
     }
 }
