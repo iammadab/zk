@@ -1,5 +1,5 @@
 use ark_ff::PrimeField;
-use std::collections::HashMap;
+use std::ops;
 
 #[derive(Debug, PartialEq)]
 pub struct Polynomial<F: PrimeField> {
@@ -29,55 +29,6 @@ impl<F: PrimeField> Polynomial<F> {
             })
     }
 
-    // TODO: implement the rust add
-    /// Add two polynomials in dense format
-    fn add(&self, other: &Self) -> Self {
-        // TODO: improve implementation
-        if self.is_zero() {
-            return Self::new(other.coefficients.clone());
-        }
-
-        if other.is_zero() {
-            return Self::new(self.coefficients.clone());
-        }
-
-        let (mut new_coefficients, other_coeff) =
-            if self.coefficients.len() >= other.coefficients.len() {
-                (self.coefficients.clone(), &other.coefficients)
-            } else {
-                (other.coefficients.clone(), &self.coefficients)
-            };
-
-        for i in 0..other_coeff.len() {
-            new_coefficients[i] += other_coeff[i];
-        }
-
-        Self::new(new_coefficients)
-    }
-
-    // TODO: implement the rust multiply
-    /// Multiply two polynomials in dense format
-    fn mul(&self, other: &Self) -> Self {
-        if self.is_zero() || other.is_zero() {
-            return Self::new(vec![]);
-        }
-
-        // Given 2 polynomials A, B of degree a, b respectively
-        // the product polynomial C = AB will have max degree of a + b
-        let product_max_degree = self.degree() + other.degree();
-
-        // we need d + 1 element to represent a polynomial of degree d
-        let mut product_coefficients = vec![F::zero(); product_max_degree + 1];
-
-        for i in 0..=self.degree() {
-            for j in 0..=other.degree() {
-                product_coefficients[i + j] += self.coefficients[i] * other.coefficients[j];
-            }
-        }
-
-        Self::new(product_coefficients)
-    }
-
     /// returns a new polynomial that interpolates all the given points
     // TODO: prevent duplication in the x values (use a new type)
     fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
@@ -97,11 +48,12 @@ impl<F: PrimeField> Polynomial<F> {
                 let denominator = (*x - x_value).inverse().unwrap();
 
                 lagrange_basis =
-                    lagrange_basis.mul(&numerator.mul(&Polynomial::new(vec![denominator])));
+                    &lagrange_basis * &(&numerator * &Polynomial::new(vec![denominator]));
             }
 
-            let monomial = lagrange_basis.mul(&Polynomial::new(vec![*y]));
-            result = result.add(&monomial);
+            let monomial = &lagrange_basis * &Polynomial::new(vec![*y]);
+            // TODO: implement add assign
+            result = &result + &monomial;
         }
 
         result
@@ -119,6 +71,59 @@ impl<F: PrimeField> Polynomial<F> {
         } else {
             self.coefficients.len() - 1
         };
+    }
+}
+
+impl<F: PrimeField> ops::Add for &Polynomial<F> {
+    type Output = Polynomial<F>;
+
+    fn add(self, other: Self) -> Self::Output {
+        // TODO: improve implementation
+        if self.is_zero() {
+            return Polynomial::new(other.coefficients.clone());
+        }
+
+        if other.is_zero() {
+            return Polynomial::new(self.coefficients.clone());
+        }
+
+        let (mut new_coefficients, other_coeff) =
+            if self.coefficients.len() >= other.coefficients.len() {
+                (self.coefficients.clone(), &other.coefficients)
+            } else {
+                (other.coefficients.clone(), &self.coefficients)
+            };
+
+        for i in 0..other_coeff.len() {
+            new_coefficients[i] += other_coeff[i];
+        }
+
+        Polynomial::new(new_coefficients)
+    }
+}
+
+impl<F: PrimeField> ops::Mul for &Polynomial<F> {
+    type Output = Polynomial<F>;
+
+    fn mul(self, other: Self) -> Self::Output {
+        if self.is_zero() || other.is_zero() {
+            return Polynomial::new(vec![]);
+        }
+
+        // Given 2 polynomials A, B of degree a, b respectively
+        // the product polynomial C = AB will have max degree of a + b
+        let product_max_degree = self.degree() + other.degree();
+
+        // we need d + 1 element to represent a polynomial of degree d
+        let mut product_coefficients = vec![F::zero(); product_max_degree + 1];
+
+        for i in 0..=self.degree() {
+            for j in 0..=other.degree() {
+                product_coefficients[i + j] += self.coefficients[i] * other.coefficients[j];
+            }
+        }
+
+        Polynomial::new(product_coefficients)
     }
 }
 
@@ -158,15 +163,15 @@ mod tests {
     #[test]
     fn test_polynomial_addition() {
         // both polynomials are zero polynomials
-        assert_eq!(poly_zero().add(&poly_zero()), poly_zero());
+        assert_eq!(&poly_zero() + &poly_zero(), poly_zero());
 
         // if either polynomial is zero, return the other polynomial
         assert_eq!(
-            poly_zero().add(&poly_from_vec(vec![0, 2])),
+            &poly_zero() + &poly_from_vec(vec![0, 2]),
             poly_from_vec(vec![0, 2])
         );
         assert_eq!(
-            poly_from_vec(vec![0, 2]).add(&poly_zero()),
+            &poly_from_vec(vec![0, 2]) + &poly_zero(),
             poly_from_vec(vec![0, 2])
         );
 
@@ -175,8 +180,8 @@ mod tests {
         // p + q = 4x^3 + 2x^2 + 7x + 7
         let p = poly_from_vec(vec![4, 3, 2]);
         let q = poly_from_vec(vec![3, 4, 0, 4]);
-        let p_plus_q = p.add(&q);
-        let q_plus_p = q.add(&p);
+        let p_plus_q = &p + &q;
+        let q_plus_p = &q + &p;
 
         // should be commutative
         assert_eq!(p_plus_q, q_plus_p);
@@ -188,11 +193,11 @@ mod tests {
     fn test_polynomial_multiplication() {
         // if either polynomial is the zero polynomial, return zero
         assert_eq!(
-            poly_zero().mul(&poly_from_vec(vec![0, 2])),
+            &poly_zero() * &poly_from_vec(vec![0, 2]),
             poly_from_vec(vec![])
         );
         assert_eq!(
-            poly_from_vec(vec![0, 2]).mul(&poly_zero()),
+            &poly_from_vec(vec![0, 2]) * &poly_zero(),
             poly_from_vec(vec![])
         );
 
@@ -202,8 +207,8 @@ mod tests {
         // pq mod 17 = 8x^5 + 12x^4 + 7x^3 + 1x^2 + 8x + 12
         let p = poly_from_vec(vec![4, 3, 2]);
         let q = poly_from_vec(vec![3, 4, 0, 4]);
-        let p_mul_q = p.mul(&q);
-        let q_mul_p = q.mul(&p);
+        let p_mul_q = &p * &q;
+        let q_mul_p = &q * &p;
 
         // should be commutative
         assert_eq!(p_mul_q, q_mul_p);
