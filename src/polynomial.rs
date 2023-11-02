@@ -82,7 +82,6 @@ impl<F: PrimeField> Polynomial<F> {
     // TODO: prevent duplication in the x values (use a new type)
     fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
         let mut result = Polynomial::new(vec![]);
-        let mut cached_denominators: HashMap<usize, F> = HashMap::new();
 
         for (lagrange_basis_index, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
             let mut lagrange_basis = Polynomial::new(vec![F::from(1_u8)]);
@@ -96,15 +95,6 @@ impl<F: PrimeField> Polynomial<F> {
                 // numerator = x -xs[i] where i != lagrange_basis_index
                 let numerator = Polynomial::new(vec![-x_value.clone(), F::from(1_u8)]);
                 let denominator = (*x - x_value).inverse().unwrap();
-
-                // let denominator_index = x_index + lagrange_basis_index;
-                // let denominator = if let Some(a) = cached_denominators.get(&denominator_index) {
-                //     -a.clone()
-                // } else {
-                //     let value = (*x - x_value).inverse().unwrap();
-                //     cached_denominators.insert(denominator_index, value.clone());
-                //     value
-                // };
 
                 lagrange_basis =
                     lagrange_basis.mul(&numerator.mul(&Polynomial::new(vec![denominator])));
