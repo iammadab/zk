@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub struct Polynomial<F: PrimeField> {
@@ -68,9 +69,6 @@ impl<F: PrimeField> Polynomial<F> {
         // we need d + 1 element to represent a polynomial of degree d
         let mut product_coefficients = vec![F::zero(); product_max_degree + 1];
 
-        // [0, 1, 2] degree is 3, max element is at index 2
-        // so we can go from 0 to degree with degree inclusive
-        // but what of empty arrays?? we handled that already, nice
         for i in 0..=self.degree() {
             for j in 0..=other.degree() {
                 product_coefficients[i + j] += self.coefficients[i] * other.coefficients[j];
@@ -78,6 +76,45 @@ impl<F: PrimeField> Polynomial<F> {
         }
 
         Self::new(product_coefficients)
+    }
+
+    /// returns a new polynomial that interpolates all the given points
+    // TODO: prevent duplication in the x values (use a new type)
+    fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
+        let mut result = Polynomial::new(vec![]);
+        let mut cached_denominators: HashMap<usize, F> = HashMap::new();
+
+        for (lagrange_basis_index, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
+            let mut lagrange_basis = Polynomial::new(vec![F::from(1_u8)]);
+
+            // compute the lagrange basis polynomial
+            for (x_index, x_value) in xs.iter().enumerate() {
+                if x_index == lagrange_basis_index {
+                    continue;
+                }
+
+                // numerator = x -xs[i] where i != lagrange_basis_index
+                let numerator = Polynomial::new(vec![-x_value.clone(), F::from(1_u8)]);
+                let denominator = (*x - x_value).inverse().unwrap();
+
+                // let denominator_index = x_index + lagrange_basis_index;
+                // let denominator = if let Some(a) = cached_denominators.get(&denominator_index) {
+                //     -a.clone()
+                // } else {
+                //     let value = (*x - x_value).inverse().unwrap();
+                //     cached_denominators.insert(denominator_index, value.clone());
+                //     value
+                // };
+
+                lagrange_basis =
+                    lagrange_basis.mul(&numerator.mul(&Polynomial::new(vec![denominator])));
+            }
+
+            let monomial = lagrange_basis.mul(&Polynomial::new(vec![*y]));
+            result = result.add(&monomial);
+        }
+
+        result
     }
 
     /// return true if polynomial is a zero poly i.e p(..) = 0
@@ -107,8 +144,12 @@ mod tests {
     pub struct FqConfig;
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
-    fn poly_from_vec(coefficients: Vec<u64>) -> Polynomial<Fq> {
-        Polynomial::new(coefficients.into_iter().map(Fq::from).collect())
+    fn fq_from_vec(values: Vec<i64>) -> Vec<Fq> {
+        values.into_iter().map(Fq::from).collect()
+    }
+
+    fn poly_from_vec(coefficients: Vec<i64>) -> Polynomial<Fq> {
+        Polynomial::new(fq_from_vec(coefficients))
     }
 
     fn poly_zero() -> Polynomial<Fq> {
@@ -178,5 +219,32 @@ mod tests {
         assert_eq!(p_mul_q, q_mul_p);
         // should mul to expected value
         assert_eq!(p_mul_q, poly_from_vec(vec![12, 25, 18, 24, 12, 8]));
+    }
+
+    #[test]
+    fn test_polynomial_interpolation() {
+        // p = 2x
+        // evaluations = [(0, 0), (1, 2)]
+        let p = Polynomial::interpolate(fq_from_vec(vec![0, 1]), fq_from_vec(vec![0, 2]));
+        assert_eq!(p, poly_from_vec(vec![0, 2]));
+
+        // p = 2x^2 + 5
+        // evaluations = [(0, 5), (1, 7), (2, 13)]
+        let p = Polynomial::interpolate(fq_from_vec(vec![0, 1, 2]), fq_from_vec(vec![5, 7, 13]));
+        assert_eq!(p, poly_from_vec(vec![5, 0, 2]));
+
+        // p = 8x^5 + 12x^4 + 7x^3 + 1x^2 + 8x + 12
+        let p = Polynomial::interpolate(
+            fq_from_vec(vec![0, 1, 3, 4, 5, 8]),
+            fq_from_vec(vec![12, 48, 3150, 11772, 33452, 315020]),
+        );
+        assert_eq!(p, poly_from_vec(vec![12, 25, 18, 24, 12, 8]));
+
+        // p = 5x^3 - 12x
+        let p = Polynomial::interpolate(
+            fq_from_vec(vec![5, 7, 9, 1]),
+            fq_from_vec(vec![565, 1631, 3537, -7]),
+        );
+        assert_eq!(p, poly_from_vec(vec![0, -12, 0, 5]));
     }
 }
