@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 ark-bls12-381 = "0.4.0"
 ark-ff = "0.4.2"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "polynomial_benchmark"
+harness = false

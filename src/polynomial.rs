@@ -10,7 +10,7 @@ pub struct Polynomial<F: PrimeField> {
 
 impl<F: PrimeField> Polynomial<F> {
     /// Instantiate a new polynomial
-    fn new(coefficients: Vec<F>) -> Self {
+    pub fn new(coefficients: Vec<F>) -> Self {
         Self { coefficients }
     }
 
@@ -18,7 +18,7 @@ impl<F: PrimeField> Polynomial<F> {
     //  e.g. [0, 2, 0, 0] is equivalent to [0, 2]
 
     /// Evaluate polynomial at a given point x
-    fn evaluate(&self, x: &F) -> F {
+    pub fn evaluate(&self, x: &F) -> F {
         // naive implementation
         // TODO: apply distributive law to see if things are faster (do benchmarks first)
         self.coefficients
