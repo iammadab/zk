@@ -27,11 +27,18 @@ impl<F: PrimeField> Polynomial<F> {
             .fold(F::zero(), |acc, (exp, coeff)| {
                 acc + x.pow(&[exp as u64]) * coeff
             })
+        // self.coefficients
+        //     .iter()
+        //     .rev()
+        //     // .enumerate()
+        //     .fold(F::zero(), |acc, coeff| {
+        //         acc * x + coeff
+        //     })
     }
 
     /// returns a new polynomial that interpolates all the given points
     // TODO: prevent duplication in the x values (use a new type)
-    fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
+    pub fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
         let mut result = Polynomial::new(vec![]);
 
         for (lagrange_basis_index, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
