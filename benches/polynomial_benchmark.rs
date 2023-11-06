@@ -50,7 +50,7 @@ fn polynomial_multiplication_benchmark(c: &mut Criterion) {
 fn polynomial_interpolation_benchmark(c: &mut Criterion) {
     c.bench_function("polynomial interpolation", |b| {
         b.iter(|| {
-            Polynomial::interpolate(
+            Polynomial::interpolate_xy(
                 vec![
                     Fq::from(0),
                     Fq::from(1),

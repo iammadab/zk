@@ -36,9 +36,19 @@ impl<F: PrimeField> Polynomial<F> {
         //     })
     }
 
+    // TODO: add comments
+    pub fn interpolate(ys: Vec<F>) -> Self {
+        let mut xs = vec![];
+        for i in 0..ys.len() {
+            xs.push(F::from(i as u64));
+        }
+        Self::interpolate_xy(xs, ys)
+    }
+
     /// returns a new polynomial that interpolates all the given points
     // TODO: prevent duplication in the x values (use a new type)
-    pub fn interpolate(xs: Vec<F>, ys: Vec<F>) -> Self {
+    // TODO: use new type to prevent x and y from being of different lengths
+    pub fn interpolate_xy(xs: Vec<F>, ys: Vec<F>) -> Self {
         let mut result = Polynomial::new(vec![]);
 
         for (lagrange_basis_index, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
@@ -143,9 +153,10 @@ mod tests {
     #[derive(MontConfig)]
     #[modulus = "17"]
     #[generator = "3"]
-    pub struct FqConfig;
-    pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+    struct FqConfig;
+    type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
+    // TODO: move this functionality into the polynomial struct
     fn fq_from_vec(values: Vec<i64>) -> Vec<Fq> {
         values.into_iter().map(Fq::from).collect()
     }
@@ -227,23 +238,23 @@ mod tests {
     fn test_polynomial_interpolation() {
         // p = 2x
         // evaluations = [(0, 0), (1, 2)]
-        let p = Polynomial::interpolate(fq_from_vec(vec![0, 1]), fq_from_vec(vec![0, 2]));
+        let p = Polynomial::interpolate_xy(fq_from_vec(vec![0, 1]), fq_from_vec(vec![0, 2]));
         assert_eq!(p, poly_from_vec(vec![0, 2]));
 
         // p = 2x^2 + 5
         // evaluations = [(0, 5), (1, 7), (2, 13)]
-        let p = Polynomial::interpolate(fq_from_vec(vec![0, 1, 2]), fq_from_vec(vec![5, 7, 13]));
+        let p = Polynomial::interpolate_xy(fq_from_vec(vec![0, 1, 2]), fq_from_vec(vec![5, 7, 13]));
         assert_eq!(p, poly_from_vec(vec![5, 0, 2]));
 
         // p = 8x^5 + 12x^4 + 7x^3 + 1x^2 + 8x + 12
-        let p = Polynomial::interpolate(
+        let p = Polynomial::interpolate_xy(
             fq_from_vec(vec![0, 1, 3, 4, 5, 8]),
             fq_from_vec(vec![12, 48, 3150, 11772, 33452, 315020]),
         );
         assert_eq!(p, poly_from_vec(vec![12, 25, 18, 24, 12, 8]));
 
         // p = 5x^3 - 12x
-        let p = Polynomial::interpolate(
+        let p = Polynomial::interpolate_xy(
             fq_from_vec(vec![5, 7, 9, 1]),
             fq_from_vec(vec![565, 1631, 3537, -7]),
         );
