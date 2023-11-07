@@ -48,6 +48,7 @@ impl<F: PrimeField> Polynomial<F> {
     /// returns a new polynomial that interpolates all the given points
     // TODO: prevent duplication in the x values (use a new type)
     // TODO: use new type to prevent x and y from being of different lengths
+    // TODO: figure out caching
     pub fn interpolate_xy(xs: Vec<F>, ys: Vec<F>) -> Self {
         let mut result = Polynomial::new(vec![]);
 
