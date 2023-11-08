@@ -17,8 +17,8 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Instantiate a new Multilinear polynomial, from polynomial terms
     // TODO: use error object not string
     fn new(number_of_variables: u32, terms: Vec<PolynomialTerm<F>>) -> Result<Self, &'static str> {
-        let total_variable_combinations = 2_i32.pow(number_of_variables) as usize;
-        let mut coefficients = vec![F::zero(); total_variable_combinations];
+        let mut coefficients =
+            vec![F::zero(); Self::variable_combination_count(number_of_variables)];
         for term in terms {
             if term.1.len() != number_of_variables as usize {
                 return Err("the selector array len should be the same as the number of variables");
@@ -44,6 +44,56 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         }
 
         sum
+    }
+
+    /// Figure out all the index values that a variable appears in
+    fn get_variable_indexes(
+        number_of_variables: u32,
+        selector: Vec<bool>,
+    ) -> Result<Vec<usize>, &'static str> {
+        if selector.len() != number_of_variables as usize {
+            return Err("the selector array len should be the same as the number of variables");
+        }
+
+        // Ensure that only a single variable is selected
+        // return an error if the constant is selected or multiple variables are selected
+        let selector_sum = selector.iter().fold(0, |sum, selection| {
+            if *selection {
+                return sum + 1;
+            }
+            sum
+        });
+
+        if selector_sum != 1 {
+            return Err("only select single variable, cannot get indexes for constant or multiple variables");
+        }
+
+        let variable_id = Self::selector_to_index(&selector);
+        let mut indexes = vec![];
+        let mut count = 0;
+        let mut skip = false;
+
+        let max_array_index = Self::variable_combination_count(number_of_variables) - 1;
+
+        for i in variable_id..=max_array_index {
+            if count == variable_id {
+                skip = !skip;
+                count = 0;
+            }
+
+            if !skip {
+                indexes.push(i);
+            }
+
+            count += 1;
+        }
+
+        Ok(indexes)
+    }
+
+    /// Returns the number of elements in the dense polynomial representation
+    fn variable_combination_count(number_of_variables: u32) -> usize {
+        2_i32.pow(number_of_variables) as usize
     }
 }
 
@@ -147,6 +197,56 @@ mod tests {
         assert_eq!(
             MultiLinearPolynomial::<Fq>::selector_to_index(&[true, true, false, true]),
             11
+        );
+    }
+
+    #[test]
+    fn test_get_variable_indexes() {
+        // Given 4 variables [a, b, c, d]
+        // Dense form is this:
+        // [const (0), a (1), b (2), ab (3), c (4), ac (5), bc (6), abc (7), d (8),
+        //     ad (9), bd (10), abd (11), cd (12), acd (13), bcd (14), abcd (15)]
+        // indexes per variables:
+        //  a = [1, 3, 5, 7, 9, 11, 13, 15]
+        //  b = [2, 3, 6, 7, 10, 11, 14, 15]
+        //  c = [4, 5, 6, 7, 12, 13, 14, 15]
+        //  d = [8, 9, 10, 11, 12, 13, 14, 15]
+
+        // you cannot get indexes for const or multiple variables
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, false, false])
+                .is_err(),
+            true
+        );
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![true, false, true, false])
+                .is_err(),
+            true
+        );
+
+        // get all a indexes
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![true, false, false, false])
+                .unwrap(),
+            vec![1, 3, 5, 7, 9, 11, 13, 15]
+        );
+        // get all b indexes
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, true, false, false])
+                .unwrap(),
+            vec![2, 3, 6, 7, 10, 11, 14, 15]
+        );
+        // get all c indexes
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, true, false])
+                .unwrap(),
+            vec![4, 5, 6, 7, 12, 13, 14, 15]
+        );
+        // get all d indexes
+        assert_eq!(
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, false, true])
+                .unwrap(),
+            vec![8, 9, 10, 11, 12, 13, 14, 15]
         );
     }
 }
