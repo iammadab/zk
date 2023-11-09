@@ -7,6 +7,7 @@ use ark_ff::PrimeField;
 /// then 5ac = (5, vec![1, 0, 1, 0, 0])
 type PolynomialTerm<F> = (F, Vec<bool>);
 
+#[derive(Clone, PartialEq, Debug)]
 // TODO: add documentation explaining the structure
 struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: u32,
@@ -31,6 +32,44 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
+    // TODO: add proper documentation
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
+        // TODO: add explanation
+        // TODO: how do you deal with updating the number of variables??
+        let mut evaluated_polynomial = self.clone();
+        for (selector, coeff) in assignments {
+            let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
+            for i in variable_indexes {
+                let result_index = i - Self::selector_to_index(selector);
+                let updated_coefficient = evaluated_polynomial.coefficients[i] * *coeff;
+                evaluated_polynomial.coefficients[result_index] += updated_coefficient;
+                evaluated_polynomial.coefficients[i] = F::zero();
+            }
+        }
+        Ok(evaluated_polynomial)
+    }
+
+    // TODO: add documentation
+    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+        // TODO: add explanations
+        if assignments.len() != self.n_vars as usize {
+            return Err("evaluate requires an assignment for every variable");
+        }
+
+        let mut indexed_assignments = vec![];
+
+        for (position, assignment) in assignments.into_iter().enumerate() {
+            indexed_assignments.push((
+                Self::selector_from_position(self.n_vars as usize, position)?,
+                assignment,
+            ))
+        }
+
+        let evaluated_poly = self.partial_evaluate(&indexed_assignments)?;
+
+        Ok(evaluated_poly.coefficients[0])
+    }
+
     /// Convert a selector to an index in the dense polynomial
     fn selector_to_index(selector: &[bool]) -> usize {
         let mut sum = 0;
@@ -46,10 +85,21 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         sum
     }
 
+    /// Returns a Vec<bool> of a given size, with default value set to false, except the position index
+    fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
+        if position > size - 1 {
+            return Err("position index out of bounds");
+        }
+
+        let mut selector = vec![false; size];
+        selector[position] = true;
+        Ok(selector)
+    }
+
     /// Figure out all the index values that a variable appears in
     fn get_variable_indexes(
         number_of_variables: u32,
-        selector: Vec<bool>,
+        selector: &[bool],
     ) -> Result<Vec<usize>, &'static str> {
         if selector.len() != number_of_variables as usize {
             return Err("the selector array len should be the same as the number of variables");
@@ -107,6 +157,11 @@ mod tests {
     #[generator = "3"]
     struct FqConfig;
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
+    // TODO: move this functionality into the polynomial struct
+    fn fq_from_vec(values: Vec<i64>) -> Vec<Fq> {
+        values.into_iter().map(Fq::from).collect()
+    }
 
     #[test]
     fn test_polynomial_instantiation() {
@@ -214,39 +269,175 @@ mod tests {
 
         // you cannot get indexes for const or multiple variables
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, false, false])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, false, false])
                 .is_err(),
             true
         );
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![true, false, true, false])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, true, false])
                 .is_err(),
             true
         );
 
         // get all a indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![true, false, false, false])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, false, false])
                 .unwrap(),
             vec![1, 3, 5, 7, 9, 11, 13, 15]
         );
         // get all b indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, true, false, false])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, true, false, false])
                 .unwrap(),
             vec![2, 3, 6, 7, 10, 11, 14, 15]
         );
         // get all c indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, true, false])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, true, false])
                 .unwrap(),
             vec![4, 5, 6, 7, 12, 13, 14, 15]
         );
         // get all d indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, vec![false, false, false, true])
+            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, false, true])
                 .unwrap(),
             vec![8, 9, 10, 11, 12, 13, 14, 15]
         );
+    }
+
+    fn poly_5ab_7bc_8d() -> MultiLinearPolynomial<Fq> {
+        // p = 5ab + 7bc + 8d
+        MultiLinearPolynomial::new(
+            4,
+            vec![
+                (Fq::from(5), vec![true, true, false, false]),
+                (Fq::from(7), vec![false, true, true, false]),
+                (Fq::from(8), vec![false, false, false, true]),
+            ],
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_empty_partial_evaluation() {
+        let p = poly_5ab_7bc_8d();
+        let p_eval = poly_5ab_7bc_8d().partial_evaluate(&[]).unwrap();
+        assert_eq!(p, p_eval);
+    }
+
+    #[test]
+    fn test_partial_eval_happy_path() {
+        // p = 5ab + 7bc + 8d
+        // partial eval a and b
+        // a = 2 b = 3
+        // p = 5(2)(3) + 7(3)c + 8d
+        // p = 30 + 21c + 8d
+        // apply mod 17
+        // p = 13 + 4c + 8d
+        // [13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0]
+        let p = poly_5ab_7bc_8d();
+        let p_13_4c_8d = poly_5ab_7bc_8d()
+            .partial_evaluate(&[
+                (vec![false, true, false, false], &Fq::from(3)),
+                (vec![true, false, false, false], &Fq::from(2)),
+            ])
+            .unwrap();
+        assert_eq!(
+            p_13_4c_8d.coefficients,
+            fq_from_vec(vec![13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
+        );
+
+        // p = 13 + 4c + 8d
+        // eval c = 2
+        // p = 13 + 8 + 8d = 21 + 8d
+        // apply mod 17
+        // p = 4 + 8d
+        // dense form
+        // [4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0]
+        let p_21_8d = p_13_4c_8d
+            .partial_evaluate(&[(vec![false, false, true, false], &Fq::from(2))])
+            .unwrap();
+        assert_eq!(
+            p_21_8d.coefficients,
+            fq_from_vec(vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn test_partial_eval_assign_all() {
+        // p = 5ab + 7bc + 8d
+        // a = 2, b = 4, c = 3, d = 5
+        // p = 5(2)(4) + 7(4)(3) + 8(5)
+        // p = 40 + 84 + 40
+        // p = 164
+        // apply mod 17
+        // p = 11
+        // dense form
+        // [11, .....]
+        let p = poly_5ab_7bc_8d();
+        let eval = poly_5ab_7bc_8d()
+            .partial_evaluate(&[
+                (vec![true, false, false, false], &Fq::from(2)),
+                (vec![false, true, false, false], &Fq::from(4)),
+                (vec![false, false, true, false], &Fq::from(3)),
+                (vec![false, false, false, true], &Fq::from(5)),
+            ])
+            .unwrap();
+        assert_eq!(
+            eval.coefficients,
+            fq_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn test_partial_eval_repeated_assignment() {
+        // p = 5ab + 7bc + 8d
+        // a = 2, a = 3, b = 4, c = 3, d = 5
+        // should use the first instance of a only
+        // hence:
+        // p = 5(2)(4) + 7(4)(3) + 8(5)
+        // p = 40 + 84 + 40
+        // p = 164
+        // apply mod 17
+        // p = 11
+        // dense form
+        // [11, .....]
+        let p = poly_5ab_7bc_8d();
+        let eval = poly_5ab_7bc_8d()
+            .partial_evaluate(&[
+                (vec![true, false, false, false], &Fq::from(2)),
+                (vec![true, false, false, false], &Fq::from(3)),
+                (vec![false, true, false, false], &Fq::from(4)),
+                (vec![false, false, true, false], &Fq::from(3)),
+                (vec![false, false, false, true], &Fq::from(5)),
+            ])
+            .unwrap();
+        assert_eq!(
+            eval.coefficients,
+            fq_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn test_evaluation_incomplete_assignment() {
+        // p has 4 variables so requires 4 assignments
+        let p = poly_5ab_7bc_8d();
+        assert_eq!(p.evaluate(&[Fq::from(4)]).is_err(), true);
+    }
+
+    #[test]
+    fn test_evaluation_happy_path() {
+        // p = 5ab + 7bc + 8d
+        // a = 2, b = 4, c = 3, d = 5
+        // p = 5(2)(4) + 7(4)(3) + 8(5)
+        // p = 40 + 84 + 40
+        // p = 164
+        // apply mod 17
+        // p = 11
+        // dense form
+        // [11, .....]
+        let p = poly_5ab_7bc_8d();
+        let eval = p.evaluate(&fq_from_vec(vec![2, 4, 3, 5])).unwrap();
+        assert_eq!(eval, Fq::from(11));
     }
 }
