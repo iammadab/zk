@@ -32,10 +32,21 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
-    // TODO: add proper documentation
+    /// Partially assign values to variables in the polynomial
+    /// Returns the resulting polynomial once those variables have been fixed
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
-        // TODO: add explanation
-        // TODO: how do you deal with updating the number of variables??
+        // When partially evaluate a variable in a monomial, we need to multiply the variable assignment
+        // with the previous coefficient, then move the new coefficient to the appropriate monomial
+        // e.g p = 5abc partially evaluating a = 2
+        // new coefficient will be 5*2 = 10 and new monomial will be bc
+        // resulting in 10bc
+        // recall each variable has an index in the power of two
+        // [a, b, c] = [1, 2, 4]
+        // given a term e.g. abc the index is 1 + 2 + 4 = 7
+        // to get the index of the result, just subtract the variable being evaluated
+        // 7 - 1 = 6
+        // and bc = 2 + 4 = 6
+
         let mut evaluated_polynomial = self.clone();
         for (selector, coeff) in assignments {
             let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
@@ -49,15 +60,16 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         Ok(evaluated_polynomial)
     }
 
-    // TODO: add documentation
+    /// Assign a value to every variable in the polynomial, result is a Field element
     fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
-        // TODO: add explanations
+        // Associates every assignment with the correct selector vector and calls
+        // partial evaluate on the expanded assignment
+
         if assignments.len() != self.n_vars as usize {
             return Err("evaluate requires an assignment for every variable");
         }
 
         let mut indexed_assignments = vec![];
-
         for (position, assignment) in assignments.into_iter().enumerate() {
             indexed_assignments.push((
                 Self::selector_from_position(self.n_vars as usize, position)?,
