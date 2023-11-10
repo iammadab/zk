@@ -25,7 +25,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             if term.1.len() != number_of_variables as usize {
                 return Err("the selector array len should be the same as the number of variables");
             }
-            coefficients[Self::selector_to_index(&term.1)] += term.0;
+            coefficients[selector_to_index(&term.1)] += term.0;
         }
         Ok(Self {
             n_vars: number_of_variables,
@@ -67,7 +67,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         for (selector, coeff) in assignments {
             let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
             for i in variable_indexes {
-                let result_index = i - Self::selector_to_index(selector);
+                let result_index = i - selector_to_index(selector);
                 let updated_coefficient = evaluated_polynomial.coefficients[i] * *coeff;
                 evaluated_polynomial.coefficients[result_index] += updated_coefficient;
                 evaluated_polynomial.coefficients[i] = F::zero();
@@ -88,7 +88,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         let mut indexed_assignments = vec![];
         for (position, assignment) in assignments.into_iter().enumerate() {
             indexed_assignments.push((
-                Self::selector_from_position(self.n_vars as usize, position)?,
+                selector_from_position(self.n_vars as usize, position)?,
                 assignment,
             ))
         }
@@ -109,32 +109,6 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             .collect();
         Self::new_with_coefficient(self.n_vars, updated_coefficients)
             .expect("number of variables are the same in scalar mul")
-    }
-
-    /// Convert a selector to an index in the dense polynomial
-    fn selector_to_index(selector: &[bool]) -> usize {
-        let mut sum = 0;
-        let mut adder = 1;
-
-        for i in 0..selector.len() {
-            if selector[i] {
-                sum += adder;
-            }
-            adder *= 2;
-        }
-
-        sum
-    }
-
-    /// Returns a Vec<bool> of a given size, with default value set to false, except the position index
-    fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
-        if position > size - 1 {
-            return Err("position index out of bounds");
-        }
-
-        let mut selector = vec![false; size];
-        selector[position] = true;
-        Ok(selector)
     }
 
     /// Figure out all the index values that a variable appears in
@@ -159,7 +133,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             return Err("only select single variable, cannot get indexes for constant or multiple variables");
         }
 
-        let variable_id = Self::selector_to_index(&selector);
+        let variable_id = selector_to_index(&selector);
         let mut indexes = vec![];
         let mut count = 0;
         let mut skip = false;
@@ -212,9 +186,86 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
     }
 }
 
+impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
+    type Output = MultiLinearPolynomial<F>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        // It is assumed that both lhs and rhs don't share common variables
+        // if they did then this multiplication will be multivariate
+        // the resulting polynomial number of variables is the sum of the lhs and rhs n_vars
+        let mut new_poly_coefficients =
+            vec![
+                F::zero();
+                MultiLinearPolynomial::<F>::variable_combination_count(self.n_vars + rhs.n_vars)
+            ];
+
+        for i in 0..self.coefficients.len() {
+            for j in 0..rhs.coefficients.len() {
+                if self.coefficients[i].is_zero() || rhs.coefficients[j].is_zero() {
+                    continue;
+                }
+                let new_coefficient = self.coefficients[i] * rhs.coefficients[j];
+                let mut left_index_vec = selector_from_usize(i, self.n_vars as usize);
+                let mut right_index_vec = selector_from_usize(j, rhs.n_vars as usize);
+                left_index_vec.append(&mut right_index_vec);
+
+                let result_index = selector_to_index(&left_index_vec);
+                new_poly_coefficients[result_index] += new_coefficient;
+            }
+        }
+
+        MultiLinearPolynomial::new_with_coefficient(self.n_vars + rhs.n_vars, new_poly_coefficients)
+            .unwrap()
+    }
+}
+
+/// Convert a selector to an index in the dense polynomial
+fn selector_to_index(selector: &[bool]) -> usize {
+    let mut sum = 0;
+    let mut adder = 1;
+
+    for i in 0..selector.len() {
+        if selector[i] {
+            sum += adder;
+        }
+        adder *= 2;
+    }
+
+    sum
+}
+
+/// Convert a number to a vec of bool
+fn selector_from_usize(value: usize, min_size: usize) -> Vec<bool> {
+    let binary_value = format!("{:b}", value);
+    let mut result = vec![];
+    for char in binary_value.chars() {
+        if char == '1' {
+            result.push(true)
+        } else {
+            result.push(false)
+        }
+    }
+    result.reverse();
+    for _ in 0..(min_size - binary_value.len()) {
+        result.push(false);
+    }
+    result
+}
+
+/// Returns a Vec<bool> of a given size, with default value set to false, except the position index
+fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
+    if position > size - 1 {
+        return Err("position index out of bounds");
+    }
+
+    let mut selector = vec![false; size];
+    selector[position] = true;
+    Ok(selector)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly::MultiLinearPolynomial;
+    use crate::multilinear_poly::{selector_to_index, MultiLinearPolynomial};
     use ark_ff::{Fp64, MontBackend, MontConfig};
 
     #[derive(MontConfig)]
@@ -299,25 +350,13 @@ mod tests {
     fn test_selector_to_index() {
         // [a, b, c, d] -> [1, 2, 4, 8]
         // index for constant is 0
-        assert_eq!(
-            MultiLinearPolynomial::<Fq>::selector_to_index(&[false, false, false, false]),
-            0
-        );
+        assert_eq!(selector_to_index(&[false, false, false, false]), 0);
         // index for a is 1
-        assert_eq!(
-            MultiLinearPolynomial::<Fq>::selector_to_index(&[true, false, false, false]),
-            1
-        );
+        assert_eq!(selector_to_index(&[true, false, false, false]), 1);
         // index for b is 2
-        assert_eq!(
-            MultiLinearPolynomial::<Fq>::selector_to_index(&[false, true, false, false]),
-            2
-        );
+        assert_eq!(selector_to_index(&[false, true, false, false]), 2);
         // index for abd = 1 + 2 + 8 = 11
-        assert_eq!(
-            MultiLinearPolynomial::<Fq>::selector_to_index(&[true, true, false, true]),
-            11
-        );
+        assert_eq!(selector_to_index(&[true, true, false, true]), 11);
     }
 
     #[test]
@@ -536,5 +575,98 @@ mod tests {
             two_p.coefficients,
             fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
         );
+    }
+
+    #[test]
+    fn test_multilinear_poly_multiplication() {
+        // p = 5ab
+        // q = 6c
+        // pq = 30abc
+        // dense form:
+        // [0, 0, 0, 0, 0, 0, 0, 30]
+        let p = MultiLinearPolynomial::new(2, vec![(Fq::from(5), vec![true, true])]).unwrap();
+        let q = MultiLinearPolynomial::new(1, vec![(Fq::from(6), vec![true])]).unwrap();
+        let pq = &p * &q;
+        assert_eq!(pq.n_vars, 3);
+        assert_eq!(pq.coefficients, fq_from_vec(vec![0, 0, 0, 0, 0, 0, 0, 30]));
+
+        // p = 3ac + 2ab
+        // q = 7de
+        // pq = 21acde + 14abde
+        let p = MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fq::from(3), vec![true, false, true]),
+                (Fq::from(2), vec![true, true, false]),
+            ],
+        )
+        .unwrap();
+        let q = MultiLinearPolynomial::new(2, vec![(Fq::from(7), vec![true, true])]).unwrap();
+        let pq = &p * &q;
+        assert_eq!(pq.n_vars, 5);
+
+        let mut expected_coefficients = vec![Fq::from(0); 32];
+        // [a, b, c, d, e] = [1, 2, 4, 8, 16]
+        // set 14abde = 1 + 2 + 8 + 16 = 27
+        // set 21acde = 1 + 4 + 8 + 16 = 29
+        expected_coefficients[27] = Fq::from(14);
+        expected_coefficients[29] = Fq::from(21);
+
+        assert_eq!(pq.coefficients, expected_coefficients);
+    }
+
+    #[test]
+    fn test_crazy_multilinear_poly_multiplication() {
+        // p = 2a + 3bc + 6d
+        // q = 4e + 5fg + 2h
+        // pq = 8ae + 10afg + 4ah + 12bce + 15bcfg + 6bch + 24de + 30dfg + 12dh
+
+        // result indexes
+        // [a, b, c, d, e, f, g, h] = [1, 2, 4, 8, 16, 32, 64, 128]
+        // 8ae -> 1 + 6 = 17
+        // 10afg -> 1 + 32 + 64 = 97
+        // 4ah = 1 + 128 = 129
+        // 12bce = 2 + 4 + 16 = 22
+        // 15bcfg = 2 + 4 + 32 + 64 = 102
+        // 6bch = 2 + 4 + 128 = 134
+        // 24de = 16 + 8 = 24
+        // 30dfg = 8 + 32 + 64 = 104
+        // 12dh = 8 + 128 = 136
+
+        let p = MultiLinearPolynomial::new(
+            4,
+            vec![
+                (Fq::from(2), vec![true, false, false, false]),
+                (Fq::from(3), vec![false, true, true, false]),
+                (Fq::from(6), vec![false, false, false, true]),
+            ],
+        )
+        .unwrap();
+
+        let q = MultiLinearPolynomial::new(
+            4,
+            vec![
+                (Fq::from(4), vec![true, false, false, false]),
+                (Fq::from(5), vec![false, true, true, false]),
+                (Fq::from(2), vec![false, false, false, true]),
+            ],
+        )
+        .unwrap();
+
+        let pq = &p * &q;
+
+        assert_eq!(pq.n_vars, 8);
+
+        let mut expected_coefficients = vec![Fq::from(0); 256];
+        expected_coefficients[17] = Fq::from(8);
+        expected_coefficients[97] = Fq::from(10);
+        expected_coefficients[129] = Fq::from(4);
+        expected_coefficients[22] = Fq::from(12);
+        expected_coefficients[102] = Fq::from(15);
+        expected_coefficients[134] = Fq::from(6);
+        expected_coefficients[24] = Fq::from(24);
+        expected_coefficients[104] = Fq::from(30);
+        expected_coefficients[136] = Fq::from(12);
+        assert_eq!(pq.coefficients, expected_coefficients);
     }
 }
