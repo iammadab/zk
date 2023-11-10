@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use std::ops::{Add, Mul};
 
 /// Polynomial term represents a monomial
 /// The first part of the tuple is the coefficient
@@ -26,6 +27,21 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             }
             coefficients[Self::selector_to_index(&term.1)] += term.0;
         }
+        Ok(Self {
+            n_vars: number_of_variables,
+            coefficients,
+        })
+    }
+
+    /// Instantiate Multilinear polynomial directly from coefficients
+    fn new_with_coefficient(
+        number_of_variables: u32,
+        coefficients: Vec<F>,
+    ) -> Result<Self, &'static str> {
+        if coefficients.len() != Self::variable_combination_count(number_of_variables) {
+            return Err("coefficients must be a dense representation of the number of variables");
+        }
+
         Ok(Self {
             n_vars: number_of_variables,
             coefficients,
@@ -80,6 +96,19 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         let evaluated_poly = self.partial_evaluate(&indexed_assignments)?;
 
         Ok(evaluated_poly.coefficients[0])
+    }
+
+    /// Co-efficient wise multiplication with scalar
+    fn scalar_multiply(&self, scalar: &F) -> Self {
+        // TODO: try implementing inplace operations
+        let mut updated_coefficients = self
+            .coefficients
+            .clone()
+            .into_iter()
+            .map(|coeff| coeff * scalar)
+            .collect();
+        Self::new_with_coefficient(self.n_vars, updated_coefficients)
+            .expect("number of variables are the same in scalar mul")
     }
 
     /// Convert a selector to an index in the dense polynomial
@@ -156,6 +185,30 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Returns the number of elements in the dense polynomial representation
     fn variable_combination_count(number_of_variables: u32) -> usize {
         2_i32.pow(number_of_variables) as usize
+    }
+}
+
+impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
+    type Output = Result<MultiLinearPolynomial<F>, &'static str>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        // TODO: we might be able to add different variable length polynomials
+        //  as long as they have correct coefficient to variable
+        if self.coefficients.len() != rhs.coefficients.len() {
+            return Err("cannot add polynomials with different variables");
+        }
+
+        let summed_coefficients = self
+            .coefficients
+            .iter()
+            .zip(rhs.coefficients.iter())
+            .map(|(a, b)| *a + b)
+            .collect::<Vec<F>>();
+
+        Ok(MultiLinearPolynomial::new_with_coefficient(
+            self.n_vars,
+            summed_coefficients,
+        )?)
     }
 }
 
@@ -451,5 +504,37 @@ mod tests {
         let p = poly_5ab_7bc_8d();
         let eval = p.evaluate(&fq_from_vec(vec![2, 4, 3, 5])).unwrap();
         assert_eq!(eval, Fq::from(11));
+    }
+
+    #[test]
+    fn test_polynomial_addition() {
+        // p = 5ab + 7bc + 8d
+        // q = 5ab + 7bc + 8d
+        // sum = 10ab + 14bc + 16d
+        // dense form
+        // [0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0]
+        let p = poly_5ab_7bc_8d();
+        let q = poly_5ab_7bc_8d();
+        let sum = (&p + &q).unwrap();
+
+        assert_eq!(
+            sum.coefficients,
+            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn test_scalar_multiplication() {
+        // p = 5ab + 7bc + 8d
+        // mul with 2
+        // 2p = 10ab + 14bc + 16d
+        // dense form
+        // [0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0]
+        let p = poly_5ab_7bc_8d();
+        let two_p = p.scalar_multiply(&Fq::from(2));
+        assert_eq!(
+            two_p.coefficients,
+            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+        );
     }
 }
