@@ -191,6 +191,14 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
 
     // TODO: add explanation for this
     fn mul(self, rhs: Self) -> Self::Output {
+        if self.n_vars == 0 {
+            return rhs.scalar_multiply(&self.coefficients[0]);
+        }
+
+        if rhs.n_vars == 0 {
+            return self.scalar_multiply(&rhs.coefficients[0]);
+        }
+
         // It is assumed that both lhs and rhs don't share common variables
         // if they did then this multiplication will be multivariate
         // the resulting polynomial number of variables is the sum of the lhs and rhs n_vars
@@ -572,6 +580,15 @@ mod tests {
         // [0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0]
         let p = poly_5ab_7bc_8d();
         let two_p = p.scalar_multiply(&Fq::from(2));
+        assert_eq!(
+            two_p.coefficients,
+            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+        );
+
+        // scalar mul with two polynomials
+        let p = poly_5ab_7bc_8d();
+        let scalar_poly = MultiLinearPolynomial::new(0, vec![(Fq::from(2), vec![])]).unwrap();
+        let two_p = &p * &scalar_poly;
         assert_eq!(
             two_p.coefficients,
             fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
