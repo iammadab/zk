@@ -189,6 +189,7 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
 impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     type Output = MultiLinearPolynomial<F>;
 
+    // TODO: add explanation for this
     fn mul(self, rhs: Self) -> Self::Output {
         // It is assumed that both lhs and rhs don't share common variables
         // if they did then this multiplication will be multivariate
@@ -668,5 +669,27 @@ mod tests {
         expected_coefficients[104] = Fq::from(30);
         expected_coefficients[136] = Fq::from(12);
         assert_eq!(pq.coefficients, expected_coefficients);
+    }
+
+    #[test]
+    fn test_3_multilinear_multiplication() {
+        // (2a + 3b) * 4c * 5d
+        let p = MultiLinearPolynomial::new(
+            2,
+            vec![
+                (Fq::from(2), vec![true, false]),
+                (Fq::from(3), vec![false, true]),
+            ],
+        )
+        .unwrap();
+        let q = MultiLinearPolynomial::new(1, vec![(Fq::from(4), vec![true])]).unwrap();
+        let r = MultiLinearPolynomial::new(1, vec![(Fq::from(5), vec![true])]).unwrap();
+
+        let result = &(&p * &q) * &r;
+
+        let mut expected_coefficients = vec![Fq::from(0); 16];
+        expected_coefficients[13] = Fq::from(40);
+        expected_coefficients[14] = Fq::from(60);
+        assert_eq!(result.coefficients, expected_coefficients);
     }
 }
