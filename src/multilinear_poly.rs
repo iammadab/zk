@@ -100,17 +100,14 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Interpolate a set of values over the boolean hypercube
     fn interpolate(&self, values: &[F]) -> Self {
-        let mut result: Vec<Self> = vec![];
-        let num_of_variables = (values.len() as f32).log2().ceil() as usize;
+        let num_of_variables = (values.len() as f32).log2().ceil() as u32;
+        let mut result = Self::additive_identity(num_of_variables);
         for (i, value) in values.iter().enumerate() {
-            let poly = Self::lagrange_basis_poly(i, num_of_variables).scalar_multiply(value);
-            if result.is_empty() {
-                result.push(poly);
-            } else {
-                result[0] = (&result[0] + &poly).unwrap();
-            };
+            let poly =
+                Self::lagrange_basis_poly(i, num_of_variables as usize).scalar_multiply(value);
+            result = (&result + &poly).unwrap();
         }
-        result[0].clone()
+        result
     }
 
     /// Generate a checker polynomial for a boolean value that
@@ -151,7 +148,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Additive identity poly
     fn additive_identity(num_of_vars: u32) -> Self {
-        Self::new(num_of_vars, vec![(F::zero(), vec![false; num_of_vars as usize])]).unwrap()
+        Self::new(
+            num_of_vars,
+            vec![(F::zero(), vec![false; num_of_vars as usize])],
+        )
+        .unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
