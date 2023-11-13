@@ -98,6 +98,40 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         Ok(evaluated_poly.coefficients[0])
     }
 
+    /// Interpolate a set of values over the boolean hypercube
+    fn interpolate(&self, values: &[F]) -> Self {
+        let mut result: Vec<Self> = vec![];
+        for (i, value) in values.iter().enumerate() {
+            // let poly = Self::lagrange_basis_poly(i, num_of_vars).scalar_multiply(value);
+            // if result.is_empty() {
+            //     result.push(poly);
+            // } else {
+            //     result[0] = result[0] + poly
+            // };
+        }
+        result[0].clone()
+    }
+
+    fn lagrange_basis_poly(index: usize, num_of_vars: usize) -> Self {
+        todo!()
+    }
+
+    /// Multilinear polynomial to check if a variable in the boolean space is 0
+    fn check_zero() -> Self {
+        // p = 1 - a
+        Self::new(
+            1,
+            vec![(F::one(), vec![false]), (F::one().neg(), vec![true])],
+        )
+        .unwrap()
+    }
+
+    /// Multilinear polynomial to check if a variable in the boolean space is 1
+    fn check_one() -> Self {
+        // p = a
+        Self::new(1, vec![(F::one(), vec![true])]).unwrap()
+    }
+
     /// Co-efficient wise multiplication with scalar
     fn scalar_multiply(&self, scalar: &F) -> Self {
         // TODO: try implementing inplace operations
@@ -272,10 +306,17 @@ fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'s
     Ok(selector)
 }
 
+/// Convert a number to a binary string of a given size
+fn binary_string(index: usize, bit_count: usize) -> String {
+    let binary = format!("{:b}", index);
+    "0".repeat(bit_count - binary.len()) + &binary
+}
+
 #[cfg(test)]
 mod tests {
     use crate::multilinear_poly::{selector_to_index, MultiLinearPolynomial};
-    use ark_ff::{Fp64, MontBackend, MontConfig};
+    use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
+    use std::ops::Neg;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
@@ -708,5 +749,24 @@ mod tests {
         expected_coefficients[13] = Fq::from(40);
         expected_coefficients[14] = Fq::from(60);
         assert_eq!(result.coefficients, expected_coefficients);
+    }
+
+    #[test]
+    fn test_check_zero() {
+        let zero_checker = MultiLinearPolynomial::<Fq>::check_zero();
+        assert_eq!(zero_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::one());
+        assert_eq!(zero_checker.evaluate(&[Fq::one()]).unwrap(), Fq::zero());
+        assert_eq!(
+            zero_checker.evaluate(&[Fq::from(5)]).unwrap(),
+            Fq::from(4).neg()
+        );
+    }
+
+    #[test]
+    fn test_check_one() {
+        let one_checker = MultiLinearPolynomial::<Fq>::check_one();
+        assert_eq!(one_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::zero());
+        assert_eq!(one_checker.evaluate(&[Fq::one()]).unwrap(), Fq::one());
+        assert_eq!(one_checker.evaluate(&[Fq::from(20)]).unwrap(), Fq::from(20));
     }
 }
