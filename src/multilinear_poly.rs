@@ -99,7 +99,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Interpolate a set of values over the boolean hypercube
-    fn interpolate(&self, values: &[F]) -> Self {
+    fn interpolate(values: &[F]) -> Self {
         let num_of_variables = (values.len() as f32).log2().ceil() as u32;
         let mut result = Self::additive_identity(num_of_variables);
         for (i, value) in values.iter().enumerate() {
@@ -846,6 +846,41 @@ mod tests {
         assert_eq!(
             five_checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
             Fq::zero()
+        );
+    }
+
+    #[test]
+    fn test_interpolation() {
+        // y = [2, 4, 8, 3]
+        // p(a, b) = 2 + 6a + 2b - 7ab
+        // [a, b] = [1, 2]
+        let poly = MultiLinearPolynomial::<Fq>::interpolate(&fq_from_vec(vec![2, 4, 8, 3]));
+        assert_eq!(poly.n_vars, 2);
+
+        let mut expected_coefficients = vec![Fq::from(0); 4];
+        expected_coefficients[0] = Fq::from(2);
+        expected_coefficients[1] = Fq::from(6);
+        expected_coefficients[2] = Fq::from(2);
+        expected_coefficients[3] = Fq::from(7).neg();
+
+        assert_eq!(poly.coefficients, expected_coefficients);
+
+        // verify evaluation points
+        assert_eq!(
+            poly.evaluate(&fq_from_vec(vec![0, 0])).unwrap(),
+            Fq::from(2)
+        );
+        assert_eq!(
+            poly.evaluate(&fq_from_vec(vec![0, 1])).unwrap(),
+            Fq::from(4)
+        );
+        assert_eq!(
+            poly.evaluate(&fq_from_vec(vec![1, 0])).unwrap(),
+            Fq::from(8)
+        );
+        assert_eq!(
+            poly.evaluate(&fq_from_vec(vec![1, 1])).unwrap(),
+            Fq::from(3)
         );
     }
 }
