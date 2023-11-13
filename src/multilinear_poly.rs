@@ -101,19 +101,31 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Interpolate a set of values over the boolean hypercube
     fn interpolate(&self, values: &[F]) -> Self {
         let mut result: Vec<Self> = vec![];
+        let num_of_variables = (values.len() as f32).log2().ceil() as usize;
         for (i, value) in values.iter().enumerate() {
-            // let poly = Self::lagrange_basis_poly(i, num_of_vars).scalar_multiply(value);
-            // if result.is_empty() {
-            //     result.push(poly);
-            // } else {
-            //     result[0] = result[0] + poly
-            // };
+            let poly = Self::lagrange_basis_poly(i, num_of_variables).scalar_multiply(value);
+            if result.is_empty() {
+                result.push(poly);
+            } else {
+                result[0] = (&result[0] + &poly).unwrap();
+            };
         }
         result[0].clone()
     }
 
+    /// Generate a checker polynomial for a boolean value that
+    /// outputs 1 if the boolean values match, 0 otherwise
     fn lagrange_basis_poly(index: usize, num_of_vars: usize) -> Self {
-        todo!()
+        let binary_value = binary_string(index, num_of_vars);
+        let mut result = Self::multiplicative_identity();
+        for char in binary_value.chars() {
+            if char == '1' {
+                result = &result * &Self::check_one();
+            } else {
+                result = &result * &Self::check_zero();
+            }
+        }
+        result
     }
 
     /// Multilinear polynomial to check if a variable in the boolean space is 0
@@ -130,6 +142,16 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     fn check_one() -> Self {
         // p = a
         Self::new(1, vec![(F::one(), vec![true])]).unwrap()
+    }
+
+    /// Multiplicative identity poly
+    fn multiplicative_identity() -> Self {
+        Self::new(0, vec![(F::one(), vec![])]).unwrap()
+    }
+
+    /// Additive identity poly
+    fn additive_identity(num_of_vars: u32) -> Self {
+        Self::new(num_of_vars, vec![(F::zero(), vec![false; num_of_vars as usize])]).unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
@@ -752,6 +774,22 @@ mod tests {
     }
 
     #[test]
+    fn test_multiplicative_identity() {
+        let p = poly_5ab_7bc_8d();
+        let mult_identity = MultiLinearPolynomial::<Fq>::multiplicative_identity();
+        let r = &p * &mult_identity;
+        assert_eq!(p, r);
+    }
+
+    #[test]
+    fn test_additive_identity() {
+        let p = poly_5ab_7bc_8d();
+        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity(p.n_vars);
+        let r = (&p + &add_identity).unwrap();
+        assert_eq!(p, r);
+    }
+
+    #[test]
     fn test_check_zero() {
         let zero_checker = MultiLinearPolynomial::<Fq>::check_zero();
         assert_eq!(zero_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::one());
@@ -768,5 +806,45 @@ mod tests {
         assert_eq!(one_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::zero());
         assert_eq!(one_checker.evaluate(&[Fq::one()]).unwrap(), Fq::one());
         assert_eq!(one_checker.evaluate(&[Fq::from(20)]).unwrap(), Fq::from(20));
+    }
+
+    #[test]
+    fn test_lagrange_basis_polynomial() {
+        // generate a poly that checks for 101 (5)
+        // number of variables = 3
+        let five_checker = MultiLinearPolynomial::<Fq>::lagrange_basis_poly(5, 3);
+        assert_eq!(five_checker.n_vars, 3);
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![0, 0, 0])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![0, 0, 1])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![0, 1, 0])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![0, 1, 1])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![1, 0, 0])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![1, 0, 1])).unwrap(),
+            Fq::one()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![1, 1, 0])).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            five_checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
+            Fq::zero()
+        );
     }
 }
