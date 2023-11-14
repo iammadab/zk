@@ -1,4 +1,5 @@
 use ark_ff::{Fp64, MontBackend, MontConfig};
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use thaler::multilinear_poly::MultiLinearPolynomial;
 
@@ -18,6 +19,60 @@ fn poly_a() -> MultiLinearPolynomial<Fq> {
         ],
     )
     .unwrap()
+}
+
+fn poly_a_evaluations() -> Vec<Fq> {
+    // p = 2ab + 8bc
+    let p = poly_a();
+    let mut evaluations = vec![];
+    evaluations.push(
+        p.evaluate(&[Fq::from(0), Fq::from(0), Fq::from(0)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(0), Fq::from(0), Fq::from(1)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(0), Fq::from(1), Fq::from(0)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(0), Fq::from(1), Fq::from(1)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(1), Fq::from(0), Fq::from(0)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(1), Fq::from(0), Fq::from(1)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(1), Fq::from(1), Fq::from(0)])
+            .unwrap(),
+    );
+    evaluations.push(
+        p.evaluate(&[Fq::from(1), Fq::from(1), Fq::from(1)])
+            .unwrap(),
+    );
+    evaluations
+}
+
+fn arkworks_dense_poly() -> DenseMultilinearExtension<Fq> {
+    DenseMultilinearExtension::from_evaluations_slice(3, &poly_a_evaluations())
+}
+
+fn arkworks_multilinear_poly_evaluation_benchmark(c: &mut Criterion) {
+    c.bench_function("arkworks multlinear evaluation", |b| {
+        let poly = arkworks_dense_poly();
+        b.iter(|| {
+            let result = poly
+                .evaluate(&[Fq::from(2), Fq::from(5), Fq::from(10)])
+                .unwrap();
+        });
+    });
 }
 
 fn multilinear_poly_evaluation_benchmark(c: &mut Criterion) {
@@ -83,6 +138,7 @@ fn multilinear_poly_scalar_mul_benchmark(c: &mut Criterion) {
 
 criterion_group!(
     benches,
+    arkworks_multilinear_poly_evaluation_benchmark,
     multilinear_poly_evaluation_benchmark,
     multilinear_poly_addition_benchmark,
     multilinear_poly_multiplication_benchmark,
