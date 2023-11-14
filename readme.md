@@ -1,8 +1,6 @@
-# Implementations from Proofs, Arguments and Zero Knowledge
+Implementations from Proofs, Arguments and Zero Knowledge
 
-- [Univariate Polynomial Representation](/src/polynomial.rs#L5)
-- [Low Degree Univariate Extension]()
-- [Multilinear Polynomial Representation]()
-- [Multilinear Extension]()
+- [Univariate Polynomial](/src/polynomial.rs) ✅
+- [Multilinear Polynomial](/src/multilinear_poly.rs) ✅
 - [Sumcheck]() (WIP)
 - [GKR]() (TODO)
