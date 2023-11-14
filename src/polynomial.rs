@@ -19,24 +19,19 @@ impl<F: PrimeField> Polynomial<F> {
 
     /// Evaluate polynomial at a given point x
     pub fn evaluate(&self, x: &F) -> F {
-        // naive implementation
-        // TODO: apply distributive law to see if things are faster (do benchmarks first)
+        // 5 + 2x + 3x^2
+        // can be evaluated as
+        // ((3 * x + 2) * x) + 5 = 3x^2 + 2x + 5 -> 2 multiplications
+        // rather than
+        // 5 + 2 * x + 3 * x * x -> 3 multiplications
+        // 2 mul instead of 3 and this scales with the degree
         self.coefficients
             .iter()
-            .enumerate()
-            .fold(F::zero(), |acc, (exp, coeff)| {
-                acc + x.pow(&[exp as u64]) * coeff
-            })
-        // self.coefficients
-        //     .iter()
-        //     .rev()
-        //     // .enumerate()
-        //     .fold(F::zero(), |acc, coeff| {
-        //         acc * x + coeff
-        //     })
+            .rev()
+            .fold(F::zero(), |acc, coeff| acc * x + coeff)
     }
 
-    // TODO: add comments
+    /// Interpolate a set of y values over the interpolating set [0, 1, 2, ...]
     pub fn interpolate(ys: Vec<F>) -> Self {
         let mut xs = vec![];
         for i in 0..ys.len() {
@@ -48,7 +43,6 @@ impl<F: PrimeField> Polynomial<F> {
     /// returns a new polynomial that interpolates all the given points
     // TODO: prevent duplication in the x values (use a new type)
     // TODO: use new type to prevent x and y from being of different lengths
-    // TODO: figure out caching
     pub fn interpolate_xy(xs: Vec<F>, ys: Vec<F>) -> Self {
         let mut result = Polynomial::new(vec![]);
 

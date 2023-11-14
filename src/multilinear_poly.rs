@@ -9,7 +9,16 @@ use std::ops::{Add, Mul};
 type PolynomialTerm<F> = (F, Vec<bool>);
 
 #[derive(Clone, PartialEq, Debug)]
-// TODO: add documentation explaining the structure
+/// Dense representation of the multilinear polynomial
+/// the coefficient vector has a slot for each combination of variables
+/// e.g. number_of_variables = 3 a, b, c
+/// coefficient_vec = [constant, a, b, ab, c, ac, bc, abc]
+/// each variable has an implicit id that allows for efficient lookups in the coefficient_vec
+/// each variable is assigned a power of 2
+/// [a, b, c] = [2^0, 2^1, 2^2] = [1, 2, 4]
+/// now to index any combination of variables, just sum the individual ids
+/// e.g. ab = 1 + 2 = index 3
+///     or bc = 2 + 4 = index 6
 pub struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: u32,
     coefficients: Vec<F>,
@@ -17,7 +26,6 @@ pub struct MultiLinearPolynomial<F: PrimeField> {
 
 impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Instantiate a new Multilinear polynomial, from polynomial terms
-    // TODO: use error object not string
     pub fn new(
         number_of_variables: u32,
         terms: Vec<PolynomialTerm<F>>,
@@ -104,7 +112,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Interpolate a set of values over the boolean hypercube
     pub fn interpolate(values: &[F]) -> Self {
         let num_of_variables = (values.len() as f32).log2().ceil() as u32;
-        let mut result = Self::additive_identity(num_of_variables);
+        let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
             let poly =
                 Self::lagrange_basis_poly(i, num_of_variables as usize).scalar_multiply(value);
@@ -150,12 +158,8 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Additive identity poly
-    fn additive_identity(num_of_vars: u32) -> Self {
-        Self::new(
-            num_of_vars,
-            vec![(F::zero(), vec![false; num_of_vars as usize])],
-        )
-        .unwrap()
+    fn additive_identity() -> Self {
+        Self::new(0, vec![(F::zero(), vec![])]).unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
@@ -226,22 +230,26 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
     type Output = Result<MultiLinearPolynomial<F>, &'static str>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        // TODO: we might be able to add different variable length polynomials
-        //  as long as they have correct coefficient to variable
-        if self.coefficients.len() != rhs.coefficients.len() {
-            return Err("cannot add polynomials with different variables");
+        // Addition doesn't require that the number of coefficient should match
+        // both RHS and Self will always have coefficients that are powers of 2
+        // as non of the implement functions violates this invariant.
+        // only thing that can affect this is manual manipulation of the coefficient vector
+
+        // To add we clone the longer coefficient vector then sum the smaller one into that
+        let (n_vars, mut longer_coeff, shorter_coeff) =
+            if self.coefficients.len() > rhs.coefficients.len() {
+                (self.n_vars, self.coefficients.clone(), &rhs.coefficients)
+            } else {
+                (rhs.n_vars, rhs.coefficients.clone(), &self.coefficients)
+            };
+
+        for (i, coeff) in shorter_coeff.iter().enumerate() {
+            longer_coeff[i] = longer_coeff[i] + coeff;
         }
 
-        let summed_coefficients = self
-            .coefficients
-            .iter()
-            .zip(rhs.coefficients.iter())
-            .map(|(a, b)| *a + b)
-            .collect::<Vec<F>>();
-
         Ok(MultiLinearPolynomial::new_with_coefficient(
-            self.n_vars,
-            summed_coefficients,
+            n_vars,
+            longer_coeff,
         )?)
     }
 }
@@ -249,15 +257,13 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
 impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     type Output = MultiLinearPolynomial<F>;
 
-    // TODO: add explanation for this
     fn mul(self, rhs: Self) -> Self::Output {
+        // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
         if self.n_vars == 0 {
             return rhs.scalar_multiply(&self.coefficients[0]);
-        }
-
-        if rhs.n_vars == 0 {
+        } else if rhs.n_vars == 0 {
             return self.scalar_multiply(&rhs.coefficients[0]);
-        }
+        };
 
         // It is assumed that both lhs and rhs don't share common variables
         // if they did then this multiplication will be multivariate
@@ -268,6 +274,10 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
                 MultiLinearPolynomial::<F>::variable_combination_count(self.n_vars + rhs.n_vars)
             ];
 
+        // for each term multiplication, if any is zero, we don't compute anything as the result vector started
+        // with all zeros.
+        // if both are non zero, we mul the coefficient, then figure out the correct slot for this new result
+        // e.g. 2a * 3b = 6ab (6 has to be inserted in the slot for ab)
         for i in 0..self.coefficients.len() {
             for j in 0..rhs.coefficients.len() {
                 if self.coefficients[i].is_zero() || rhs.coefficients[j].is_zero() {
@@ -788,7 +798,7 @@ mod tests {
     #[test]
     fn test_additive_identity() {
         let p = poly_5ab_7bc_8d();
-        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity(p.n_vars);
+        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity();
         let r = (&p + &add_identity).unwrap();
         assert_eq!(p, r);
     }
