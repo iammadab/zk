@@ -234,22 +234,26 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
     type Output = Result<MultiLinearPolynomial<F>, &'static str>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        // TODO: we might be able to add different variable length polynomials
-        //  as long as they have correct coefficient to variable
-        if self.coefficients.len() != rhs.coefficients.len() {
-            return Err("cannot add polynomials with different variables");
+        // Addition doesn't require that the number of coefficient should match
+        // both RHS and Self will always have coefficients that are powers of 2
+        // as non of the implement functions violates this invariant.
+        // only thing that can affect this is manual manipulation of the coefficient vector
+
+        // To add we clone the longer coefficient vector then sum the smaller one into that
+        let (n_vars, mut longer_coeff, shorter_coeff) =
+            if self.coefficients.len() > rhs.coefficients.len() {
+                (self.n_vars, self.coefficients.clone(), &rhs.coefficients)
+            } else {
+                (rhs.n_vars, rhs.coefficients.clone(), &self.coefficients)
+            };
+
+        for (i, coeff) in shorter_coeff.iter().enumerate() {
+            longer_coeff[i] = longer_coeff[i] + coeff;
         }
 
-        let summed_coefficients = self
-            .coefficients
-            .iter()
-            .zip(rhs.coefficients.iter())
-            .map(|(a, b)| *a + b)
-            .collect::<Vec<F>>();
-
         Ok(MultiLinearPolynomial::new_with_coefficient(
-            self.n_vars,
-            summed_coefficients,
+            n_vars,
+            longer_coeff,
         )?)
     }
 }
@@ -257,7 +261,6 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
 impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     type Output = MultiLinearPolynomial<F>;
 
-    // TODO: add explanation for this
     fn mul(self, rhs: Self) -> Self::Output {
         // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
         if self.n_vars == 0 {
