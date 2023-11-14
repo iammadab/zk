@@ -10,7 +10,7 @@ type PolynomialTerm<F> = (F, Vec<bool>);
 
 #[derive(Clone, PartialEq, Debug)]
 // TODO: add documentation explaining the structure
-struct MultiLinearPolynomial<F: PrimeField> {
+pub struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: u32,
     coefficients: Vec<F>,
 }
@@ -18,7 +18,10 @@ struct MultiLinearPolynomial<F: PrimeField> {
 impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Instantiate a new Multilinear polynomial, from polynomial terms
     // TODO: use error object not string
-    fn new(number_of_variables: u32, terms: Vec<PolynomialTerm<F>>) -> Result<Self, &'static str> {
+    pub fn new(
+        number_of_variables: u32,
+        terms: Vec<PolynomialTerm<F>>,
+    ) -> Result<Self, &'static str> {
         let mut coefficients =
             vec![F::zero(); Self::variable_combination_count(number_of_variables)];
         for term in terms {
@@ -34,7 +37,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Instantiate Multilinear polynomial directly from coefficients
-    fn new_with_coefficient(
+    pub fn new_with_coefficient(
         number_of_variables: u32,
         coefficients: Vec<F>,
     ) -> Result<Self, &'static str> {
@@ -50,7 +53,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Partially assign values to variables in the polynomial
     /// Returns the resulting polynomial once those variables have been fixed
-    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
+    pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
         // When partially evaluate a variable in a monomial, we need to multiply the variable assignment
         // with the previous coefficient, then move the new coefficient to the appropriate monomial
         // e.g p = 5abc partially evaluating a = 2
@@ -77,7 +80,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Assign a value to every variable in the polynomial, result is a Field element
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+    pub fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
         // Associates every assignment with the correct selector vector and calls
         // partial evaluate on the expanded assignment
 
@@ -99,7 +102,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Interpolate a set of values over the boolean hypercube
-    fn interpolate(values: &[F]) -> Self {
+    pub fn interpolate(values: &[F]) -> Self {
         let num_of_variables = (values.len() as f32).log2().ceil() as u32;
         let mut result = Self::additive_identity(num_of_variables);
         for (i, value) in values.iter().enumerate() {
@@ -156,7 +159,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Co-efficient wise multiplication with scalar
-    fn scalar_multiply(&self, scalar: &F) -> Self {
+    pub fn scalar_multiply(&self, scalar: &F) -> Self {
         // TODO: try implementing inplace operations
         let mut updated_coefficients = self
             .coefficients

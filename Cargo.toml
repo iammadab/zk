@@ -16,3 +16,7 @@ criterion = "0.5.1"
 [[bench]]
 name = "polynomial_benchmark"
 harness = false
+
+[[bench]]
+name = "multilinear_poly_benchmark"
+harness = false
