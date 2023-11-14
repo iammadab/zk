@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 ark-bls12-381 = "0.4.0"
 ark-ff = "0.4.2"
+ark-poly = "0.4.2"
 rand = "0.8.5"
 
 [dev-dependencies]
@@ -15,4 +16,8 @@ criterion = "0.5.1"
 
 [[bench]]
 name = "polynomial_benchmark"
+harness = false
+
+[[bench]]
+name = "multilinear_poly_benchmark"
 harness = false
