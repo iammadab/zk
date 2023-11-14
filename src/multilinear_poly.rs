@@ -112,7 +112,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Interpolate a set of values over the boolean hypercube
     pub fn interpolate(values: &[F]) -> Self {
         let num_of_variables = (values.len() as f32).log2().ceil() as u32;
-        let mut result = Self::additive_identity(num_of_variables);
+        let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
             let poly =
                 Self::lagrange_basis_poly(i, num_of_variables as usize).scalar_multiply(value);
@@ -158,12 +158,8 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Additive identity poly
-    fn additive_identity(num_of_vars: u32) -> Self {
-        Self::new(
-            num_of_vars,
-            vec![(F::zero(), vec![false; num_of_vars as usize])],
-        )
-        .unwrap()
+    fn additive_identity() -> Self {
+        Self::new(0, vec![(F::zero(), vec![])]).unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
@@ -802,7 +798,7 @@ mod tests {
     #[test]
     fn test_additive_identity() {
         let p = poly_5ab_7bc_8d();
-        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity(p.n_vars);
+        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity();
         let r = (&p + &add_identity).unwrap();
         assert_eq!(p, r);
     }
