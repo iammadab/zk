@@ -28,9 +28,7 @@ impl<F: PrimeField> Polynomial<F> {
         self.coefficients
             .iter()
             .rev()
-            .fold(F::zero(), |acc, coeff| {
-                acc * x + coeff
-            })
+            .fold(F::zero(), |acc, coeff| acc * x + coeff)
     }
 
     /// Interpolate a set of y values over the interpolating set [0, 1, 2, ...]

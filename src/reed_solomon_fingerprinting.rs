@@ -1,4 +1,19 @@
-// TODO: add documentation describing reed solomon fingerprinting
+// Alice and Bob have a large file represented as a vector A, B respectively
+// each consisting of n values.
+// The goal is to determine if both files are equal while minimizing communication cost
+// The naive solution of just sending the set A to Bob works but communication cost is too high
+//
+// to solve this, Alice and Bob convert their vectors to polynomials
+// alice chooses a random point in some large field and evaluates her polynomial at that point
+// alice send (r, p_a(r)) to bob i.e the random point that the evaluation at that random point
+// both evalutes r at the same point and checks if the evaluations match
+// if they do then they have the same file if they don't then they have different files
+//
+// This is based on the fact that 2 polynomials of at most degree d can only agree at
+// d points, unless the polynomials are the same.
+// If the evaluation domain is a lot larger than d then the probability of picking a one of
+// the d points is  d / evaluation_domain. (this is known as the soundness error)
+// i.e probability of getting deceived.
 
 #[cfg(test)]
 mod tests {
