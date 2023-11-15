@@ -59,6 +59,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
+    /// Return the number of variables in the poly
+    pub fn n_vars(&self) -> usize {
+        self.n_vars as usize
+    }
+
     /// Partially assign values to variables in the polynomial
     /// Returns the resulting polynomial once those variables have been fixed
     pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
@@ -153,12 +158,12 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Multiplicative identity poly
-    fn multiplicative_identity() -> Self {
+    pub fn multiplicative_identity() -> Self {
         Self::new(0, vec![(F::one(), vec![])]).unwrap()
     }
 
     /// Additive identity poly
-    fn additive_identity() -> Self {
+    pub fn additive_identity() -> Self {
         Self::new(0, vec![(F::zero(), vec![])]).unwrap()
     }
 
@@ -331,8 +336,9 @@ fn selector_from_usize(value: usize, min_size: usize) -> Vec<bool> {
     result
 }
 
+// TODO: move to until file
 /// Returns a Vec<bool> of a given size, with default value set to false, except the position index
-fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
+pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
     if position > size - 1 {
         return Err("position index out of bounds");
     }

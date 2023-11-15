@@ -1,7 +1,7 @@
 use ark_ff::{Fp64, MontBackend, MontConfig};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::str::CharIndices;
-use thaler::polynomial::Polynomial;
+use thaler::univariate_poly::UnivariatePolynomial;
 
 #[derive(MontConfig)]
 #[modulus = "17"]
@@ -9,8 +9,8 @@ use thaler::polynomial::Polynomial;
 pub struct FqConfig;
 pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
-fn poly_a() -> Polynomial<Fq> {
-    Polynomial::new(vec![
+fn poly_a() -> UnivariatePolynomial<Fq> {
+    UnivariatePolynomial::new(vec![
         Fq::from(12),
         Fq::from(25),
         Fq::from(18),
@@ -20,8 +20,8 @@ fn poly_a() -> Polynomial<Fq> {
     ])
 }
 
-fn poly_b() -> Polynomial<Fq> {
-    Polynomial::new(vec![Fq::from(4), Fq::from(3), Fq::from(2)])
+fn poly_b() -> UnivariatePolynomial<Fq> {
+    UnivariatePolynomial::new(vec![Fq::from(4), Fq::from(3), Fq::from(2)])
 }
 
 fn polynomial_evaluation_benchmark(c: &mut Criterion) {
@@ -50,7 +50,7 @@ fn polynomial_multiplication_benchmark(c: &mut Criterion) {
 fn polynomial_interpolation_benchmark(c: &mut Criterion) {
     c.bench_function("polynomial interpolation", |b| {
         b.iter(|| {
-            Polynomial::interpolate_xy(
+            UnivariatePolynomial::interpolate_xy(
                 vec![
                     Fq::from(0),
                     Fq::from(1),
