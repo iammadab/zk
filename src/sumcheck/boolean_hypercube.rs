@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 /// Structure for point iteration over boolean hypercube
 /// e.g. BooleanHyperCube 2 variables
 /// Some(00), Some(01), Some(10), Some(11), None
-struct BooleanHyperCube<F: PrimeField> {
+pub struct BooleanHyperCube<F: PrimeField> {
     bit_size: usize,
     total_points: usize,
     current_point: usize,
@@ -13,7 +13,7 @@ struct BooleanHyperCube<F: PrimeField> {
 }
 
 impl<F: PrimeField> BooleanHyperCube<F> {
-    fn new(bit_size: usize) -> Self {
+    pub fn new(bit_size: usize) -> Self {
         Self {
             bit_size,
             total_points: 2_usize.pow(bit_size as u32),
