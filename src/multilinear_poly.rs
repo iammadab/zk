@@ -349,7 +349,7 @@ pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>,
 }
 
 /// Convert a number to a binary string of a given size
-fn binary_string(index: usize, bit_count: usize) -> String {
+pub fn binary_string(index: usize, bit_count: usize) -> String {
     let binary = format!("{:b}", index);
     "0".repeat(bit_count - binary.len()) + &binary
 }
@@ -367,6 +367,7 @@ mod tests {
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
     // TODO: move this functionality into the polynomial struct
+    // TODO: make this generic over field
     fn fq_from_vec(values: Vec<i64>) -> Vec<Fq> {
         values.into_iter().map(Fq::from).collect()
     }
