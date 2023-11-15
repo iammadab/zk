@@ -30,12 +30,16 @@ impl<F: PrimeField> Prover<F> {
             self.challenges.push(challenge.unwrap());
 
             // generate partial evaluation input for stored challenges
+            // TODO: abstract this
             let challenge_assignments = self
                 .challenges
                 .iter()
                 .enumerate()
                 .map(|(i, challenge)| {
-                    (selector_from_position(self.poly.n_vars(), i + 1), challenge)
+                    (
+                        selector_from_position(self.poly.n_vars(), i + 1).unwrap(),
+                        challenge,
+                    )
                 })
                 .collect::<Vec<_>>();
 
@@ -46,7 +50,9 @@ impl<F: PrimeField> Prover<F> {
         }
     }
 
-    fn skip_first_then_sum_over_boolean_hypercube(poly: &MultiLinearPolynomial<F>) -> MultiLinearPolynomial<F> {
+    fn skip_first_then_sum_over_boolean_hypercube(
+        poly: &MultiLinearPolynomial<F>,
+    ) -> MultiLinearPolynomial<F> {
         // the variable names will be known and fixed
         // could create a boolean hyper cube iterator
         // we zip the var names with each value in the iter
