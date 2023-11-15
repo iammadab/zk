@@ -1,2 +1,3 @@
 mod boolean_hypercube;
-mod sumcheck;
+mod verifier;
+mod prover;
