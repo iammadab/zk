@@ -1,5 +1,5 @@
-use ark_ff::PrimeField;
 use crate::multilinear_poly::MultiLinearPolynomial;
+use ark_ff::PrimeField;
 
 /// Sumcheck Verifier
 struct Verifier<'a, F: PrimeField> {
