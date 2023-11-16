@@ -67,7 +67,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Partially assign values to variables in the polynomial
     /// Returns the resulting polynomial once those variables have been fixed
     pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
-        // When partially evaluate a variable in a monomial, we need to multiply the variable assignment
+        // When partially evaluating a variable in a monomial, we need to multiply the variable assignment
         // with the previous coefficient, then move the new coefficient to the appropriate monomial
         // e.g p = 5abc partially evaluating a = 2
         // new coefficient will be 5*2 = 10 and new monomial will be bc
