@@ -1054,27 +1054,6 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_coefficient_remapping() {
-    //     // Assuming a three variable poly a, b, c
-    //     // but poly representation contains just 2a + 3c + 5ac
-    //     // [a, b, c] -> [1, 2, 4]
-    //     // 2a will be at index 1, 3c will be at index 4 and
-    //     // 5ac will be at index 5
-    //     let mut coefficient_map =
-    //         BTreeMap::from([(1, Fq::from(2)), (4, Fq::from(3)), (5, Fq::from(5))]);
-    //
-    //     // to remap, we need c to become b i.e 2 -> 1
-    //     let mapping_instruction = vec![(2, 1)];
-    //
-    //     remap_coefficient_keys(3, &mut coefficient_map, mapping_instruction);
-    //
-    //     assert_eq!(coefficient_map.len(), 3);
-    //     assert_eq!(coefficient_map.get(&1), Some(Fq::from(2)).as_ref());
-    //     assert_eq!(coefficient_map.get(&2), Some(Fq::from(3)).as_ref());
-    //     assert_eq!(coefficient_map.get(&3), Some(Fq::from(5)).as_ref());
-    // }
-
     #[test]
     fn test_poly_relabelling() {
         // poly of 4 variables, [a, b, c, d] -> [1, 2, 4, 8]
