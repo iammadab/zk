@@ -149,12 +149,16 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         result
     }
 
-    // TODO: add documentation
-    fn relabel(&self) -> Self {
-        // figure out the variables that exists and the ones that don't
-        // figure out the mapping instructions
-        // apply the remapping instruction
-        todo!()
+    /// Relabelling removes
+    fn relabel(self) -> Self {
+        let variable_presence = self.variable_presence_vector();
+        let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
+        let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
+        let new_var_count = variable_presence
+            .iter()
+            .fold(0_u32, |acc, curr| acc + *curr as u32);
+        relabelled_poly.n_vars = new_var_count;
+        relabelled_poly
     }
 
     /// Determines which variables are represented in the polynomial
@@ -399,10 +403,42 @@ fn mapping_instruction_from_variable_presence(
     mapping_vector
 }
 
+/// Converts mapping instruction to powers of 2
+fn to_power_of_two(instruction: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    instruction
+        .into_iter()
+        .map(|(a, b)| (2_usize.pow(a as u32), 2_usize.pow(b as u32)))
+        .collect()
+}
+
+/// Use remapping instructions to remap a polynomial coefficients
+fn remap_coefficient_keys<F: PrimeField>(
+    n_vars: u32,
+    mut poly: MultiLinearPolynomial<F>,
+    mapping_instructions: Vec<(usize, usize)>,
+) -> MultiLinearPolynomial<F> {
+    let mapping_instruction_as_powers_of_2 = to_power_of_two(mapping_instructions);
+    for (old_var, new_var) in mapping_instruction_as_powers_of_2 {
+        let old_var_indexes = MultiLinearPolynomial::<F>::get_variable_indexes(
+            n_vars,
+            &selector_from_usize(old_var, n_vars as usize),
+        )
+        .unwrap();
+        for index in old_var_indexes {
+            if let Some(coeff) = poly.coefficients.remove(&index) {
+                let new_index = index - old_var + new_var;
+                *poly.coefficients.entry(new_index).or_insert(F::zero()) += coeff
+            }
+        }
+    }
+    poly
+}
+
 #[cfg(test)]
 mod tests {
     use crate::multilinear_poly::{
-        mapping_instruction_from_variable_presence, selector_to_index, MultiLinearPolynomial,
+        mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
+        to_power_of_two, MultiLinearPolynomial,
     };
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::collections::BTreeMap;
@@ -1009,8 +1045,78 @@ mod tests {
         );
 
         assert_eq!(
-            mapping_instruction_from_variable_presence(&[false, true, false, false, true, false]),
-            vec![(1, 0), (4, 1)]
+            to_power_of_two(mapping_instruction_from_variable_presence(&[
+                false, true, false, false, true, false
+            ])),
+            vec![(2, 1), (16, 2)]
+        );
+    }
+
+    // #[test]
+    // fn test_coefficient_remapping() {
+    //     // Assuming a three variable poly a, b, c
+    //     // but poly representation contains just 2a + 3c + 5ac
+    //     // [a, b, c] -> [1, 2, 4]
+    //     // 2a will be at index 1, 3c will be at index 4 and
+    //     // 5ac will be at index 5
+    //     let mut coefficient_map =
+    //         BTreeMap::from([(1, Fq::from(2)), (4, Fq::from(3)), (5, Fq::from(5))]);
+    //
+    //     // to remap, we need c to become b i.e 2 -> 1
+    //     let mapping_instruction = vec![(2, 1)];
+    //
+    //     remap_coefficient_keys(3, &mut coefficient_map, mapping_instruction);
+    //
+    //     assert_eq!(coefficient_map.len(), 3);
+    //     assert_eq!(coefficient_map.get(&1), Some(Fq::from(2)).as_ref());
+    //     assert_eq!(coefficient_map.get(&2), Some(Fq::from(3)).as_ref());
+    //     assert_eq!(coefficient_map.get(&3), Some(Fq::from(5)).as_ref());
+    // }
+
+    #[test]
+    fn test_poly_relabelling() {
+        // poly of 4 variables, [a, b, c, d] -> [1, 2, 4, 8]
+        // p = 2ab + 3cd + 5acd + 6bd
+        // partial evaluate at b = 1 and c = 1
+        // q = 2a(1) + 3(1)d + 5a(1)d + 6(1)d
+        // q = 2a + 3d + 5ad + 6d = 2a + 9d + 5ad
+        // after relabelling (d -> b)
+        // q = 2a + 9b + 5ab
+
+        let p = MultiLinearPolynomial::new(
+            4,
+            vec![
+                (Fq::from(2), vec![true, true, false, false]),
+                (Fq::from(3), vec![false, false, true, true]),
+                (Fq::from(5), vec![true, false, true, true]),
+                (Fq::from(6), vec![false, true, false, true]),
+            ],
+        )
+        .unwrap();
+
+        // partial eval b = 1 c = 1
+        // q = 2a + 9d + 5ad
+        let q = p
+            .partial_evaluate(&[
+                (vec![false, true, false, false], &Fq::one()),
+                (vec![false, false, true, false], &Fq::one()),
+            ])
+            .unwrap();
+        // .relabel();
+
+        assert_eq!(
+            q.coefficients,
+            BTreeMap::from([(1, Fq::from(2)), (8, Fq::from(9)), (9, Fq::from(5)),])
+        );
+
+        // next we relabel
+        // that changes d to b
+        // so 2a + 9d + 5ad changes to 2a + 9b + 5ab
+        let q = q.relabel();
+        assert_eq!(q.n_vars, 2);
+        assert_eq!(
+            q.coefficients,
+            BTreeMap::from([(1, Fq::from(2)), (2, Fq::from(9)), (3, Fq::from(5)),])
         );
     }
 }
