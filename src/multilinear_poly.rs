@@ -149,7 +149,9 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         result
     }
 
-    /// Relabelling removes
+    /// Relabelling removes variables that are no longer used (shrinking the polynomial)
+    /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
+    /// we can relabel to 2a + 9b uses 2 variables
     fn relabel(self) -> Self {
         let variable_presence = self.variable_presence_vector();
         let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
@@ -1102,8 +1104,8 @@ mod tests {
                 (vec![false, false, true, false], &Fq::one()),
             ])
             .unwrap();
-        // .relabel();
 
+        assert_eq!(q.n_vars, 4);
         assert_eq!(
             q.coefficients,
             BTreeMap::from([(1, Fq::from(2)), (8, Fq::from(9)), (9, Fq::from(5)),])
