@@ -148,6 +148,30 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         result
     }
 
+    // TODO: add documentation
+    fn relabel(&self) -> Self {
+        // figure out the variables that exists and the ones that don't
+        // figure out the mapping instructions
+        // apply the remapping instruction
+        todo!()
+    }
+
+    /// Determines which variables are represented in the polynomial
+    /// e.g. a polynomial of 3 variables should have [a, b, c]
+    /// if the poly is of the form 3a + 4c then it only represents [a, c]
+    /// the presence vector will be [true, false, true]
+    fn variable_presence_vector(&self) -> Vec<bool> {
+        self.coefficients
+            .keys()
+            .fold(vec![false; self.n_vars as usize], |acc, key| {
+                let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
+                acc.into_iter()
+                    .zip(current_bool_rep.into_iter())
+                    .map(|(a, b)| a | b)
+                    .collect()
+            })
+    }
+
     /// Multilinear polynomial to check if a variable in the boolean space is 0
     fn check_zero() -> Self {
         // p = 1 - a
@@ -916,5 +940,22 @@ mod tests {
             poly.evaluate(&fq_from_vec(vec![1, 1])).unwrap(),
             Fq::from(3)
         );
+    }
+
+    #[test]
+    fn test_variable_presence_vector() {
+        // p = 3a + 2c
+        // number of variables at creation = 3
+        // actual number of variables is 2 as b is not represented
+        let poly = MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fq::from(3), vec![true, false, false]),
+                (Fq::from(2), vec![false, false, true]),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(poly.variable_presence_vector(), vec![true, false, true]);
     }
 }
