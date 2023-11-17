@@ -1,5 +1,6 @@
 use ark_ff::PrimeField;
 use std::collections::BTreeMap;
+use std::env::var;
 use std::ops::{Add, Mul};
 
 /// Polynomial term represents a monomial
@@ -379,9 +380,30 @@ fn binary_string(index: usize, bit_count: usize) -> String {
     "0".repeat(bit_count - binary.len()) + &binary
 }
 
+/// Generate remapping instruction for truncating a presence vector
+/// e.g. [t, f, t] t at index 2 should be pushed to index 1 as that contains false
+/// so mapping = [(2, 1)]
+fn mapping_instruction_from_variable_presence(
+    variable_presence_vector: &[bool],
+) -> Vec<(usize, usize)> {
+    let mut next_var = 0;
+    let mut mapping_vector = vec![];
+    for (index, is_present) in variable_presence_vector.iter().enumerate() {
+        if *is_present {
+            if next_var != index {
+                mapping_vector.push((index, next_var));
+            }
+            next_var += 1;
+        }
+    }
+    mapping_vector
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly::{selector_to_index, MultiLinearPolynomial};
+    use crate::multilinear_poly::{
+        mapping_instruction_from_variable_presence, selector_to_index, MultiLinearPolynomial,
+    };
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::collections::BTreeMap;
     use std::ops::Neg;
@@ -957,5 +979,38 @@ mod tests {
         .unwrap();
 
         assert_eq!(poly.variable_presence_vector(), vec![true, false, true]);
+    }
+
+    #[test]
+    fn test_mapping_instruction_from_variable_presence() {
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, false, false, true]),
+            vec![(3, 1)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, false, false, true, true]),
+            vec![(3, 1), (4, 2)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[false, false, true, true]),
+            vec![(2, 0), (3, 1)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, true]),
+            vec![]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[false, false]),
+            vec![]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[false, true, false, false, true, false]),
+            vec![(1, 0), (4, 1)]
+        );
     }
 }
