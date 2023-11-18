@@ -3,6 +3,11 @@ use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
 use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
 
+
+// TODO: implementation doesn't use fiat shamir so it doesn't enforce certain checks
+//  as fiat shamir will be implemented soon (no need to do unnecessary work)
+//
+
 /// Sumcheck Prover
 struct Prover<F: PrimeField> {
     poly: MultiLinearPolynomial<F>,
@@ -11,6 +16,7 @@ struct Prover<F: PrimeField> {
 }
 
 impl<F: PrimeField> Prover<F> {
+    /// Instantiate a new sumcheck prover
     fn new(poly: MultiLinearPolynomial<F>) -> Self {
         let sum = sum_over_boolean_hypercube::<F>(&poly);
         Self {
@@ -20,6 +26,7 @@ impl<F: PrimeField> Prover<F> {
         }
     }
 
+    /// Prove the nth round of the sum check protocol
     fn prove_round(&mut self, round: usize, challenge: Option<F>) -> UnivariatePolynomial<F> {
         if round == 0 {
             skip_first_var_then_sum_over_boolean_hypercube::<F>(&self.poly)
@@ -47,7 +54,7 @@ impl<F: PrimeField> Prover<F> {
     }
 }
 
-// TODO: there is an optimization that prevents you from having to do this all the type
+// TODO: there is an optimization that prevents you from having to do this all the rounds
 //  by evaluating the polynomial from the back and caching the intermediate results
 /// Keep the first variable free then sum over the boolean hypercube
 /// Assumes polynomial has no unused free variables i.e poly has been relabelled
