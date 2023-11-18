@@ -3,7 +3,6 @@ use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
 use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
 
-
 // TODO: implementation doesn't use fiat shamir so it doesn't enforce certain checks
 //  as fiat shamir will be implemented soon (no need to do unnecessary work)
 //
@@ -49,7 +48,13 @@ impl<F: PrimeField> Prover<F> {
                 .unwrap()
                 .relabel();
 
-            skip_first_var_then_sum_over_boolean_hypercube::<F>(&challenge_poly)
+            // if we are at the last round, no need to sum over the boolean hypercube
+            // just return the partially evaluated polynomial (which should be univariate)
+            if round == self.poly.n_vars() - 1 {
+                challenge_poly.try_into().unwrap()
+            } else {
+                skip_first_var_then_sum_over_boolean_hypercube::<F>(&challenge_poly)
+            }
         }
     }
 }
@@ -100,7 +105,7 @@ mod tests {
     use crate::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::prover::{
         partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
-        sum_over_boolean_hypercube,
+        sum_over_boolean_hypercube, Prover,
     };
     use crate::univariate_poly::UnivariatePolynomial;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
@@ -171,6 +176,47 @@ mod tests {
                 (vec![true, false, false, false], &Fq::from(3)),
                 (vec![false, true, false, false], &Fq::from(4))
             ],
+        );
+    }
+
+    #[test]
+    fn test_sumcheck_prover() {
+        // p(a, b, c) = 2ab + 3bc
+        let p = p_2ab_3bc();
+
+        // at init, prover calculates the sum over the boolean hypercube
+        // should sum to 10
+        let mut prover = Prover::new(p.clone());
+        assert_eq!(prover.sum, Fq::from(10));
+
+        // round 0
+        // prover fixes a, partially evaluates b and c at the boolean hypercube
+        // p(a) = 4a + 3
+        // verifier challenge = 5
+        let uni_poly = prover.prove_round(0, None);
+        assert_eq!(
+            uni_poly,
+            UnivariatePolynomial::new(vec![Fq::from(3), Fq::from(4)])
+        );
+
+        // round 1
+        // verifier challenge for last round was 9
+        // prover assigns a = 5, fixes b, and sum c over boolean hypercube
+        // p(b) = 23b
+        // verifer challenge = 9
+        let uni_poly = prover.prove_round(1, Some(Fq::from(5)));
+        assert_eq!(
+            uni_poly,
+            UnivariatePolynomial::new(vec![Fq::zero(), Fq::from(23)])
+        );
+
+        // round 2
+        // prover assigns a = 5, b = 9 then does a partial evaluation
+        // p(c) = 90 + 27c
+        let uni_poly = prover.prove_round(2, Some(Fq::from(9)));
+        assert_eq!(
+            uni_poly,
+            UnivariatePolynomial::new(vec![Fq::from(90), Fq::from(27)])
         );
     }
 }
