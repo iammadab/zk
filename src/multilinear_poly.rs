@@ -1,4 +1,6 @@
 use ark_ff::PrimeField;
+use std::collections::BTreeMap;
+use std::env::var;
 use std::ops::{Add, Mul};
 
 /// Polynomial term represents a monomial
@@ -21,7 +23,7 @@ type PolynomialTerm<F> = (F, Vec<bool>);
 ///     or bc = 2 + 4 = index 6
 pub struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: u32,
-    coefficients: Vec<F>,
+    coefficients: BTreeMap<usize, F>,
 }
 
 impl<F: PrimeField> MultiLinearPolynomial<F> {
@@ -30,13 +32,14 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         number_of_variables: u32,
         terms: Vec<PolynomialTerm<F>>,
     ) -> Result<Self, &'static str> {
-        let mut coefficients =
-            vec![F::zero(); Self::variable_combination_count(number_of_variables)];
+        let mut coefficients = BTreeMap::new();
         for term in terms {
             if term.1.len() != number_of_variables as usize {
                 return Err("the selector array len should be the same as the number of variables");
             }
-            coefficients[selector_to_index(&term.1)] += term.0;
+            *coefficients
+                .entry(selector_to_index(&term.1))
+                .or_insert(F::zero()) += term.0;
         }
         Ok(Self {
             n_vars: number_of_variables,
@@ -47,10 +50,12 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Instantiate Multilinear polynomial directly from coefficients
     pub fn new_with_coefficient(
         number_of_variables: u32,
-        coefficients: Vec<F>,
+        coefficients: BTreeMap<usize, F>,
     ) -> Result<Self, &'static str> {
-        if coefficients.len() != Self::variable_combination_count(number_of_variables) {
-            return Err("coefficients must be a dense representation of the number of variables");
+        if let Some((largest_key, value)) = coefficients.last_key_value() {
+            if largest_key >= &Self::variable_combination_count(number_of_variables) {
+                return Err("coefficient map represents more than specificed number of variables");
+            }
         }
 
         Ok(Self {
@@ -83,10 +88,15 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         for (selector, coeff) in assignments {
             let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
             for i in variable_indexes {
-                let result_index = i - selector_to_index(selector);
-                let updated_coefficient = evaluated_polynomial.coefficients[i] * *coeff;
-                evaluated_polynomial.coefficients[result_index] += updated_coefficient;
-                evaluated_polynomial.coefficients[i] = F::zero();
+                // update only if there is an associated coefficient for this variable index
+                if let Some(old_coeff) = evaluated_polynomial.coefficients.remove(&i) {
+                    let result_index = i - selector_to_index(selector);
+                    let updated_coefficient = old_coeff * *coeff;
+                    *evaluated_polynomial
+                        .coefficients
+                        .entry(result_index)
+                        .or_insert(F::zero()) += updated_coefficient;
+                }
             }
         }
         Ok(evaluated_polynomial)
@@ -111,7 +121,10 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
         let evaluated_poly = self.partial_evaluate(&indexed_assignments)?;
 
-        Ok(evaluated_poly.coefficients[0])
+        Ok(*evaluated_poly
+            .coefficients
+            .get(&0)
+            .expect("full evaluation returns a constant"))
     }
 
     /// Interpolate a set of values over the boolean hypercube
@@ -141,6 +154,36 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         result
     }
 
+    /// Relabelling removes variables that are no longer used (shrinking the polynomial)
+    /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
+    /// we can relabel to 2a + 9b uses 2 variables
+    fn relabel(self) -> Self {
+        let variable_presence = self.variable_presence_vector();
+        let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
+        let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
+        let new_var_count = variable_presence
+            .iter()
+            .fold(0_u32, |acc, curr| acc + *curr as u32);
+        relabelled_poly.n_vars = new_var_count;
+        relabelled_poly
+    }
+
+    /// Determines which variables are represented in the polynomial
+    /// e.g. a polynomial of 3 variables should have [a, b, c]
+    /// if the poly is of the form 3a + 4c then it only represents [a, c]
+    /// the presence vector will be [true, false, true]
+    fn variable_presence_vector(&self) -> Vec<bool> {
+        self.coefficients
+            .keys()
+            .fold(vec![false; self.n_vars as usize], |acc, key| {
+                let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
+                acc.into_iter()
+                    .zip(current_bool_rep.into_iter())
+                    .map(|(a, b)| a | b)
+                    .collect()
+            })
+    }
+
     /// Multilinear polynomial to check if a variable in the boolean space is 0
     fn check_zero() -> Self {
         // p = 1 - a
@@ -164,7 +207,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Additive identity poly
     pub fn additive_identity() -> Self {
-        Self::new(0, vec![(F::zero(), vec![])]).unwrap()
+        Self::new(0, vec![]).unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
@@ -174,7 +217,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             .coefficients
             .clone()
             .into_iter()
-            .map(|coeff| coeff * scalar)
+            .map(|(index, coeff)| (index, coeff * scalar))
             .collect();
         Self::new_with_coefficient(self.n_vars, updated_coefficients)
             .expect("number of variables are the same in scalar mul")
@@ -248,8 +291,8 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
                 (rhs.n_vars, rhs.coefficients.clone(), &self.coefficients)
             };
 
-        for (i, coeff) in shorter_coeff.iter().enumerate() {
-            longer_coeff[i] = longer_coeff[i] + coeff;
+        for (index, coeff) in shorter_coeff.iter() {
+            *longer_coeff.entry(*index).or_insert(F::zero()) += coeff;
         }
 
         Ok(MultiLinearPolynomial::new_with_coefficient(
@@ -265,36 +308,31 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     fn mul(self, rhs: Self) -> Self::Output {
         // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
         if self.n_vars == 0 {
-            return rhs.scalar_multiply(&self.coefficients[0]);
+            return rhs.scalar_multiply(&self.coefficients.get(&0).unwrap_or(&F::zero()));
         } else if rhs.n_vars == 0 {
-            return self.scalar_multiply(&rhs.coefficients[0]);
+            return self.scalar_multiply(&rhs.coefficients.get(&0).unwrap_or(&F::zero()));
         };
 
         // It is assumed that both lhs and rhs don't share common variables
         // if they did then this multiplication will be multivariate
         // the resulting polynomial number of variables is the sum of the lhs and rhs n_vars
-        let mut new_poly_coefficients =
-            vec![
-                F::zero();
-                MultiLinearPolynomial::<F>::variable_combination_count(self.n_vars + rhs.n_vars)
-            ];
+        let mut new_poly_coefficients = BTreeMap::new();
 
-        // for each term multiplication, if any is zero, we don't compute anything as the result vector started
-        // with all zeros.
-        // if both are non zero, we mul the coefficient, then figure out the correct slot for this new result
-        // e.g. 2a * 3b = 6ab (6 has to be inserted in the slot for ab)
-        for i in 0..self.coefficients.len() {
-            for j in 0..rhs.coefficients.len() {
-                if self.coefficients[i].is_zero() || rhs.coefficients[j].is_zero() {
+        for (i, self_coeff) in self.coefficients.iter() {
+            for (j, rhs_coeff) in rhs.coefficients.iter() {
+                if self_coeff.is_zero() || rhs_coeff.is_zero() {
                     continue;
                 }
-                let new_coefficient = self.coefficients[i] * rhs.coefficients[j];
-                let mut left_index_vec = selector_from_usize(i, self.n_vars as usize);
-                let mut right_index_vec = selector_from_usize(j, rhs.n_vars as usize);
+
+                let new_coefficient = *self_coeff * rhs_coeff;
+                let mut left_index_vec = selector_from_usize(*i, self.n_vars as usize);
+                let mut right_index_vec = selector_from_usize(*j, rhs.n_vars as usize);
                 left_index_vec.append(&mut right_index_vec);
 
                 let result_index = selector_to_index(&left_index_vec);
-                new_poly_coefficients[result_index] += new_coefficient;
+                *new_poly_coefficients
+                    .entry(result_index)
+                    .or_insert(F::zero()) += new_coefficient;
             }
         }
 
@@ -354,10 +392,64 @@ pub fn binary_string(index: usize, bit_count: usize) -> String {
     "0".repeat(bit_count - binary.len()) + &binary
 }
 
+/// Generate remapping instruction for truncating a presence vector
+/// e.g. [t, f, t] t at index 2 should be pushed to index 1 as that contains false
+/// so mapping = [(2, 1)]
+fn mapping_instruction_from_variable_presence(
+    variable_presence_vector: &[bool],
+) -> Vec<(usize, usize)> {
+    let mut next_var = 0;
+    let mut mapping_vector = vec![];
+    for (index, is_present) in variable_presence_vector.iter().enumerate() {
+        if *is_present {
+            if next_var != index {
+                mapping_vector.push((index, next_var));
+            }
+            next_var += 1;
+        }
+    }
+    mapping_vector
+}
+
+/// Converts mapping instruction to powers of 2
+fn to_power_of_two(instruction: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    instruction
+        .into_iter()
+        .map(|(a, b)| (2_usize.pow(a as u32), 2_usize.pow(b as u32)))
+        .collect()
+}
+
+/// Use remapping instructions to remap a polynomial coefficients
+fn remap_coefficient_keys<F: PrimeField>(
+    n_vars: u32,
+    mut poly: MultiLinearPolynomial<F>,
+    mapping_instructions: Vec<(usize, usize)>,
+) -> MultiLinearPolynomial<F> {
+    let mapping_instruction_as_powers_of_2 = to_power_of_two(mapping_instructions);
+    for (old_var, new_var) in mapping_instruction_as_powers_of_2 {
+        let old_var_indexes = MultiLinearPolynomial::<F>::get_variable_indexes(
+            n_vars,
+            &selector_from_usize(old_var, n_vars as usize),
+        )
+        .unwrap();
+        for index in old_var_indexes {
+            if let Some(coeff) = poly.coefficients.remove(&index) {
+                let new_index = index - old_var + new_var;
+                *poly.coefficients.entry(new_index).or_insert(F::zero()) += coeff
+            }
+        }
+    }
+    poly
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly::{selector_to_index, MultiLinearPolynomial};
+    use crate::multilinear_poly::{
+        mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
+        to_power_of_two, MultiLinearPolynomial,
+    };
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
+    use std::collections::BTreeMap;
     use std::ops::Neg;
 
     #[derive(MontConfig)]
@@ -372,6 +464,16 @@ mod tests {
         values.into_iter().map(Fq::from).collect()
     }
 
+    fn fq_map_from_vec(values: Vec<i64>) -> BTreeMap<usize, Fq> {
+        let mut result = BTreeMap::new();
+        for (index, val) in values.into_iter().enumerate() {
+            if val != 0 {
+                result.insert(index, Fq::from(val));
+            }
+        }
+        result
+    }
+
     #[test]
     fn test_polynomial_instantiation() {
         // variables = [a, b]
@@ -383,7 +485,7 @@ mod tests {
             MultiLinearPolynomial::new(2, vec![(Fq::from(2), vec![true, true])])
                 .unwrap()
                 .coefficients,
-            vec![Fq::from(0), Fq::from(0), Fq::from(0), Fq::from(2)]
+            BTreeMap::from([(3, Fq::from(2))]) // vec![Fq::from(0), Fq::from(0), Fq::from(0), Fq::from(2)]
         );
 
         // Poly = 2a + 3b + 5ab
@@ -399,7 +501,7 @@ mod tests {
             )
             .unwrap()
             .coefficients,
-            vec![Fq::from(0), Fq::from(2), Fq::from(3), Fq::from(5)]
+            BTreeMap::from([(1, Fq::from(2)), (2, Fq::from(3)), (3, Fq::from(5))])
         );
 
         // constant = 5
@@ -408,7 +510,7 @@ mod tests {
             MultiLinearPolynomial::new(2, vec![(Fq::from(5), vec![false, false])])
                 .unwrap()
                 .coefficients,
-            vec![Fq::from(5), Fq::from(0), Fq::from(0), Fq::from(0)]
+            BTreeMap::from([(0, Fq::from(5))])
         );
 
         // Simplification
@@ -426,7 +528,7 @@ mod tests {
             )
             .unwrap()
             .coefficients,
-            vec![Fq::from(0), Fq::from(0), Fq::from(4), Fq::from(5)]
+            BTreeMap::from([(2, Fq::from(4)), (3, Fq::from(5))])
         );
     }
 
@@ -541,7 +643,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             p_13_4c_8d.coefficients,
-            fq_from_vec(vec![13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
         );
 
         // p = 13 + 4c + 8d
@@ -556,7 +658,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             p_21_8d.coefficients,
-            fq_from_vec(vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0])
         );
     }
 
@@ -582,7 +684,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             eval.coefficients,
-            fq_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         );
     }
 
@@ -611,7 +713,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             eval.coefficients,
-            fq_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         );
     }
 
@@ -651,7 +753,7 @@ mod tests {
 
         assert_eq!(
             sum.coefficients,
-            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
         );
     }
 
@@ -666,7 +768,7 @@ mod tests {
         let two_p = p.scalar_multiply(&Fq::from(2));
         assert_eq!(
             two_p.coefficients,
-            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
         );
 
         // scalar mul with two polynomials
@@ -675,7 +777,7 @@ mod tests {
         let two_p = &p * &scalar_poly;
         assert_eq!(
             two_p.coefficients,
-            fq_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
+            fq_map_from_vec(vec![0, 0, 0, 10, 0, 0, 14, 0, 16, 0, 0, 0, 0, 0, 0, 0])
         );
     }
 
@@ -690,7 +792,10 @@ mod tests {
         let q = MultiLinearPolynomial::new(1, vec![(Fq::from(6), vec![true])]).unwrap();
         let pq = &p * &q;
         assert_eq!(pq.n_vars, 3);
-        assert_eq!(pq.coefficients, fq_from_vec(vec![0, 0, 0, 0, 0, 0, 0, 30]));
+        assert_eq!(
+            pq.coefficients,
+            fq_map_from_vec(vec![0, 0, 0, 0, 0, 0, 0, 30])
+        );
 
         // p = 3ac + 2ab
         // q = 7de
@@ -707,14 +812,14 @@ mod tests {
         let pq = &p * &q;
         assert_eq!(pq.n_vars, 5);
 
-        let mut expected_coefficients = vec![Fq::from(0); 32];
+        let mut expected_coefficients = vec![0; 32];
         // [a, b, c, d, e] = [1, 2, 4, 8, 16]
         // set 14abde = 1 + 2 + 8 + 16 = 27
         // set 21acde = 1 + 4 + 8 + 16 = 29
-        expected_coefficients[27] = Fq::from(14);
-        expected_coefficients[29] = Fq::from(21);
+        expected_coefficients[27] = 14;
+        expected_coefficients[29] = 21;
 
-        assert_eq!(pq.coefficients, expected_coefficients);
+        assert_eq!(pq.coefficients, fq_map_from_vec(expected_coefficients));
     }
 
     #[test]
@@ -759,17 +864,17 @@ mod tests {
 
         assert_eq!(pq.n_vars, 8);
 
-        let mut expected_coefficients = vec![Fq::from(0); 256];
-        expected_coefficients[17] = Fq::from(8);
-        expected_coefficients[97] = Fq::from(10);
-        expected_coefficients[129] = Fq::from(4);
-        expected_coefficients[22] = Fq::from(12);
-        expected_coefficients[102] = Fq::from(15);
-        expected_coefficients[134] = Fq::from(6);
-        expected_coefficients[24] = Fq::from(24);
-        expected_coefficients[104] = Fq::from(30);
-        expected_coefficients[136] = Fq::from(12);
-        assert_eq!(pq.coefficients, expected_coefficients);
+        let mut expected_coefficients = vec![0; 256];
+        expected_coefficients[17] = 8;
+        expected_coefficients[97] = 10;
+        expected_coefficients[129] = 4;
+        expected_coefficients[22] = 12;
+        expected_coefficients[102] = 15;
+        expected_coefficients[134] = 6;
+        expected_coefficients[24] = 24;
+        expected_coefficients[104] = 30;
+        expected_coefficients[136] = 12;
+        assert_eq!(pq.coefficients, fq_map_from_vec(expected_coefficients));
     }
 
     #[test]
@@ -788,10 +893,10 @@ mod tests {
 
         let result = &(&p * &q) * &r;
 
-        let mut expected_coefficients = vec![Fq::from(0); 16];
-        expected_coefficients[13] = Fq::from(40);
-        expected_coefficients[14] = Fq::from(60);
-        assert_eq!(result.coefficients, expected_coefficients);
+        let mut expected_coefficients = vec![0; 16];
+        expected_coefficients[13] = 40;
+        expected_coefficients[14] = 60;
+        assert_eq!(result.coefficients, fq_map_from_vec(expected_coefficients));
     }
 
     #[test]
@@ -877,13 +982,13 @@ mod tests {
         let poly = MultiLinearPolynomial::<Fq>::interpolate(&fq_from_vec(vec![2, 4, 8, 3]));
         assert_eq!(poly.n_vars, 2);
 
-        let mut expected_coefficients = vec![Fq::from(0); 4];
-        expected_coefficients[0] = Fq::from(2);
-        expected_coefficients[1] = Fq::from(6);
-        expected_coefficients[2] = Fq::from(2);
-        expected_coefficients[3] = Fq::from(7).neg();
+        let mut expected_coefficients = vec![0; 4];
+        expected_coefficients[0] = 2;
+        expected_coefficients[1] = 6;
+        expected_coefficients[2] = 2;
+        expected_coefficients[3] = -7;
 
-        assert_eq!(poly.coefficients, expected_coefficients);
+        assert_eq!(poly.coefficients, fq_map_from_vec(expected_coefficients));
 
         // verify evaluation points
         assert_eq!(
@@ -901,6 +1006,105 @@ mod tests {
         assert_eq!(
             poly.evaluate(&fq_from_vec(vec![1, 1])).unwrap(),
             Fq::from(3)
+        );
+    }
+
+    #[test]
+    fn test_variable_presence_vector() {
+        // p = 3a + 2c
+        // number of variables at creation = 3
+        // actual number of variables is 2 as b is not represented
+        let poly = MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fq::from(3), vec![true, false, false]),
+                (Fq::from(2), vec![false, false, true]),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(poly.variable_presence_vector(), vec![true, false, true]);
+    }
+
+    #[test]
+    fn test_mapping_instruction_from_variable_presence() {
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, false, false, true]),
+            vec![(3, 1)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, false, false, true, true]),
+            vec![(3, 1), (4, 2)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[false, false, true, true]),
+            vec![(2, 0), (3, 1)]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[true, true]),
+            vec![]
+        );
+
+        assert_eq!(
+            mapping_instruction_from_variable_presence(&[false, false]),
+            vec![]
+        );
+
+        assert_eq!(
+            to_power_of_two(mapping_instruction_from_variable_presence(&[
+                false, true, false, false, true, false
+            ])),
+            vec![(2, 1), (16, 2)]
+        );
+    }
+
+    #[test]
+    fn test_poly_relabelling() {
+        // poly of 4 variables, [a, b, c, d] -> [1, 2, 4, 8]
+        // p = 2ab + 3cd + 5acd + 6bd
+        // partial evaluate at b = 1 and c = 1
+        // q = 2a(1) + 3(1)d + 5a(1)d + 6(1)d
+        // q = 2a + 3d + 5ad + 6d = 2a + 9d + 5ad
+        // after relabelling (d -> b)
+        // q = 2a + 9b + 5ab
+
+        let p = MultiLinearPolynomial::new(
+            4,
+            vec![
+                (Fq::from(2), vec![true, true, false, false]),
+                (Fq::from(3), vec![false, false, true, true]),
+                (Fq::from(5), vec![true, false, true, true]),
+                (Fq::from(6), vec![false, true, false, true]),
+            ],
+        )
+        .unwrap();
+
+        // partial eval b = 1 c = 1
+        // q = 2a + 9d + 5ad
+        let q = p
+            .partial_evaluate(&[
+                (vec![false, true, false, false], &Fq::one()),
+                (vec![false, false, true, false], &Fq::one()),
+            ])
+            .unwrap();
+
+        assert_eq!(q.n_vars, 4);
+        assert_eq!(
+            q.coefficients,
+            BTreeMap::from([(1, Fq::from(2)), (8, Fq::from(9)), (9, Fq::from(5)),])
+        );
+
+        // next we relabel
+        // that changes d to b
+        // so 2a + 9d + 5ad changes to 2a + 9b + 5ab
+        let q = q.relabel();
+        assert_eq!(q.n_vars, 2);
+        assert_eq!(
+            q.coefficients,
+            BTreeMap::from([(1, Fq::from(2)), (2, Fq::from(9)), (3, Fq::from(5)),])
         );
     }
 }
