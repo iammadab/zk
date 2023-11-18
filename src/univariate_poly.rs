@@ -1,3 +1,4 @@
+use crate::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 use std::ops;
 
@@ -139,9 +140,28 @@ impl<F: PrimeField> ops::Mul for &UnivariatePolynomial<F> {
     }
 }
 
+impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F> {
+    type Error = &'static str;
+
+    fn try_from(value: MultiLinearPolynomial<F>) -> Result<Self, Self::Error> {
+        if value.n_vars() > 1 {
+            return Err("cannot convert multilinear polynomial with more than one variable to univariate poly");
+        }
+
+        let coefficients = value.coefficients();
+
+        // TODO: might need to relabel the poly before getting the coefficients
+        Ok(UnivariatePolynomial::new(vec![
+            *coefficients.get(&0).unwrap_or(&F::zero()),
+            *coefficients.get(&1).unwrap_or(&F::zero()),
+        ]))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::UnivariatePolynomial;
+    use crate::multilinear_poly::MultiLinearPolynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend, PrimeField};
 
@@ -258,5 +278,45 @@ mod tests {
             fq_from_vec(vec![565, 1631, 3537, -7]),
         );
         assert_eq!(p, poly_from_vec(vec![0, -12, 0, 5]));
+    }
+
+    #[test]
+    fn test_from_multilinear() {
+        // p = 2ab + 3bc
+        let p = MultiLinearPolynomial::<Fq>::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
+
+        // should not be able to build uni poly from multilinear poly with 3 variables
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.clone().try_into();
+        assert_eq!(uni_poly_result.is_err(), true);
+
+        // partial evaluate b
+        // p = 2a + 3c
+        let p = p
+            .partial_evaluate(&[(vec![false, true, false], &Fq::from(1))])
+            .unwrap();
+
+        // should fail, 2 variables
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.clone().try_into();
+        assert_eq!(uni_poly_result.is_err(), true);
+
+        // Partial evaluate a
+        // p = 2 + 3c
+        let p = p
+            .partial_evaluate(&[(vec![true, false, false], &Fq::from(1))])
+            .unwrap()
+            .relabel();
+
+        // should be successful, p has just 1 variable
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.try_into();
+        assert_eq!(uni_poly_result.is_err(), false);
+        let uni_poly = uni_poly_result.unwrap();
+        assert_eq!(uni_poly, poly_from_vec(vec![2, 3]));
     }
 }

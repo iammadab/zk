@@ -69,6 +69,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         self.n_vars as usize
     }
 
+    /// Return the coefficent map of the polynomial
+    pub fn coefficients(&self) -> BTreeMap<usize, F> {
+        self.coefficients.clone()
+    }
+
     /// Partially assign values to variables in the polynomial
     /// Returns the resulting polynomial once those variables have been fixed
     pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
@@ -157,7 +162,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Relabelling removes variables that are no longer used (shrinking the polynomial)
     /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
     /// we can relabel to 2a + 9b uses 2 variables
-    fn relabel(self) -> Self {
+    pub fn relabel(self) -> Self {
         let variable_presence = self.variable_presence_vector();
         let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
         let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
