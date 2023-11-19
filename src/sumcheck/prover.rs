@@ -8,25 +8,28 @@ use ark_ff::PrimeField;
 //
 
 /// Sumcheck Prover
-struct Prover<F: PrimeField> {
+pub struct Prover<F: PrimeField> {
     poly: MultiLinearPolynomial<F>,
     sum: F,
     challenges: Vec<F>,
 }
 
 impl<F: PrimeField> Prover<F> {
-    /// Instantiate a new sumcheck prover
-    fn new(poly: MultiLinearPolynomial<F>) -> Self {
+    /// Instantiate new sumcheck prover
+    pub fn new(poly: MultiLinearPolynomial<F>) -> (Self, F) {
         let sum = sum_over_boolean_hypercube::<F>(&poly);
-        Self {
-            poly,
+        (
+            Self {
+                poly,
+                sum,
+                challenges: Vec::new(),
+            },
             sum,
-            challenges: Vec::new(),
-        }
+        )
     }
 
     /// Prove the nth round of the sum check protocol
-    fn prove_round(&mut self, round: usize, challenge: Option<F>) -> UnivariatePolynomial<F> {
+    pub fn prove_round(&mut self, round: usize, challenge: Option<F>) -> UnivariatePolynomial<F> {
         if round == 0 {
             skip_first_var_then_sum_over_boolean_hypercube::<F>(&self.poly)
         } else {
@@ -186,8 +189,8 @@ mod tests {
 
         // at init, prover calculates the sum over the boolean hypercube
         // should sum to 10
-        let mut prover = Prover::new(p.clone());
-        assert_eq!(prover.sum, Fq::from(10));
+        let (mut prover, sum) = Prover::new(p.clone());
+        assert_eq!(sum, Fq::from(10));
 
         // round 0
         // prover fixes a, partially evaluates b and c at the boolean hypercube
