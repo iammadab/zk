@@ -9,7 +9,9 @@ edition = "2021"
 ark-bls12-381 = "0.4.0"
 ark-ff = "0.4.2"
 ark-poly = "0.4.2"
+ark-std = "0.4.0"
 rand = "0.8.5"
+sha3 = "0.10.8"
 
 [dev-dependencies]
 criterion = "0.5.1"

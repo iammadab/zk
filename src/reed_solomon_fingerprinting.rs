@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::polynomial::Polynomial;
+    use crate::univariate_poly::UnivariatePolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig, UniformRand};
     use rand::random;
@@ -44,8 +44,8 @@ mod tests {
             let b = a.clone();
 
             // Reed solomon encoding (take the vector as co-efficients of a polynomial)
-            let p_a = Polynomial::new(a);
-            let p_b = Polynomial::new(b);
+            let p_a = UnivariatePolynomial::new(a);
+            let p_b = UnivariatePolynomial::new(b);
 
             let random_field_element = Fr::rand(&mut rng);
 
@@ -69,8 +69,8 @@ mod tests {
                 Fr::rand(&mut rng),
             ];
 
-            let p_a = Polynomial::new(a);
-            let p_b = Polynomial::new(b);
+            let p_a = UnivariatePolynomial::new(a);
+            let p_b = UnivariatePolynomial::new(b);
 
             let random_field_element = Fr::rand(&mut rng);
 

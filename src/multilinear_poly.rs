@@ -64,10 +64,20 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
+    /// Return the number of variables in the poly
+    pub fn n_vars(&self) -> usize {
+        self.n_vars as usize
+    }
+
+    /// Return the coefficent map of the polynomial
+    pub fn coefficients(&self) -> BTreeMap<usize, F> {
+        self.coefficients.clone()
+    }
+
     /// Partially assign values to variables in the polynomial
     /// Returns the resulting polynomial once those variables have been fixed
     pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
-        // When partially evaluate a variable in a monomial, we need to multiply the variable assignment
+        // When partially evaluating a variable in a monomial, we need to multiply the variable assignment
         // with the previous coefficient, then move the new coefficient to the appropriate monomial
         // e.g p = 5abc partially evaluating a = 2
         // new coefficient will be 5*2 = 10 and new monomial will be bc
@@ -152,7 +162,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Relabelling removes variables that are no longer used (shrinking the polynomial)
     /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
     /// we can relabel to 2a + 9b uses 2 variables
-    fn relabel(self) -> Self {
+    pub fn relabel(self) -> Self {
         let variable_presence = self.variable_presence_vector();
         let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
         let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
@@ -196,12 +206,12 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Multiplicative identity poly
-    fn multiplicative_identity() -> Self {
+    pub fn multiplicative_identity() -> Self {
         Self::new(0, vec![(F::one(), vec![])]).unwrap()
     }
 
     /// Additive identity poly
-    fn additive_identity() -> Self {
+    pub fn additive_identity() -> Self {
         Self::new(0, vec![]).unwrap()
     }
 
@@ -369,8 +379,9 @@ fn selector_from_usize(value: usize, min_size: usize) -> Vec<bool> {
     result
 }
 
+// TODO: move to until file
 /// Returns a Vec<bool> of a given size, with default value set to false, except the position index
-fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
+pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'static str> {
     if position > size - 1 {
         return Err("position index out of bounds");
     }
@@ -381,7 +392,7 @@ fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>, &'s
 }
 
 /// Convert a number to a binary string of a given size
-fn binary_string(index: usize, bit_count: usize) -> String {
+pub fn binary_string(index: usize, bit_count: usize) -> String {
     let binary = format!("{:b}", index);
     "0".repeat(bit_count - binary.len()) + &binary
 }
@@ -453,6 +464,7 @@ mod tests {
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
     // TODO: move this functionality into the polynomial struct
+    // TODO: make this generic over field
     fn fq_from_vec(values: Vec<i64>) -> Vec<Fq> {
         values.into_iter().map(Fq::from).collect()
     }

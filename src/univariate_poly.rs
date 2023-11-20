@@ -1,14 +1,15 @@
+use crate::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 use std::ops;
 
 #[derive(Debug, PartialEq)]
-pub struct Polynomial<F: PrimeField> {
+pub struct UnivariatePolynomial<F: PrimeField> {
     /// Dense co-efficient representation of the polynomial
     /// lower degree co-efficients to higher degree co-efficients
     coefficients: Vec<F>,
 }
 
-impl<F: PrimeField> Polynomial<F> {
+impl<F: PrimeField> UnivariatePolynomial<F> {
     /// Instantiate a new polynomial
     pub fn new(coefficients: Vec<F>) -> Self {
         Self { coefficients }
@@ -44,10 +45,10 @@ impl<F: PrimeField> Polynomial<F> {
     // TODO: prevent duplication in the x values (use a new type)
     // TODO: use new type to prevent x and y from being of different lengths
     pub fn interpolate_xy(xs: Vec<F>, ys: Vec<F>) -> Self {
-        let mut result = Polynomial::new(vec![]);
+        let mut result = UnivariatePolynomial::new(vec![]);
 
         for (lagrange_basis_index, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
-            let mut lagrange_basis = Polynomial::new(vec![F::from(1_u8)]);
+            let mut lagrange_basis = UnivariatePolynomial::new(vec![F::from(1_u8)]);
 
             // compute the lagrange basis polynomial
             for (x_index, x_value) in xs.iter().enumerate() {
@@ -56,14 +57,14 @@ impl<F: PrimeField> Polynomial<F> {
                 }
 
                 // numerator = x -xs[i] where i != lagrange_basis_index
-                let numerator = Polynomial::new(vec![-x_value.clone(), F::from(1_u8)]);
+                let numerator = UnivariatePolynomial::new(vec![-x_value.clone(), F::from(1_u8)]);
                 let denominator = (*x - x_value).inverse().unwrap();
 
                 lagrange_basis =
-                    &lagrange_basis * &(&numerator * &Polynomial::new(vec![denominator]));
+                    &lagrange_basis * &(&numerator * &UnivariatePolynomial::new(vec![denominator]));
             }
 
-            let monomial = &lagrange_basis * &Polynomial::new(vec![*y]);
+            let monomial = &lagrange_basis * &UnivariatePolynomial::new(vec![*y]);
             // TODO: implement add assign
             result = &result + &monomial;
         }
@@ -86,17 +87,17 @@ impl<F: PrimeField> Polynomial<F> {
     }
 }
 
-impl<F: PrimeField> ops::Add for &Polynomial<F> {
-    type Output = Polynomial<F>;
+impl<F: PrimeField> ops::Add for &UnivariatePolynomial<F> {
+    type Output = UnivariatePolynomial<F>;
 
     fn add(self, other: Self) -> Self::Output {
         // TODO: improve implementation
         if self.is_zero() {
-            return Polynomial::new(other.coefficients.clone());
+            return UnivariatePolynomial::new(other.coefficients.clone());
         }
 
         if other.is_zero() {
-            return Polynomial::new(self.coefficients.clone());
+            return UnivariatePolynomial::new(self.coefficients.clone());
         }
 
         let (mut new_coefficients, other_coeff) =
@@ -110,16 +111,16 @@ impl<F: PrimeField> ops::Add for &Polynomial<F> {
             new_coefficients[i] += other_coeff[i];
         }
 
-        Polynomial::new(new_coefficients)
+        UnivariatePolynomial::new(new_coefficients)
     }
 }
 
-impl<F: PrimeField> ops::Mul for &Polynomial<F> {
-    type Output = Polynomial<F>;
+impl<F: PrimeField> ops::Mul for &UnivariatePolynomial<F> {
+    type Output = UnivariatePolynomial<F>;
 
     fn mul(self, other: Self) -> Self::Output {
         if self.is_zero() || other.is_zero() {
-            return Polynomial::new(vec![]);
+            return UnivariatePolynomial::new(vec![]);
         }
 
         // Given 2 polynomials A, B of degree a, b respectively
@@ -135,13 +136,32 @@ impl<F: PrimeField> ops::Mul for &Polynomial<F> {
             }
         }
 
-        Polynomial::new(product_coefficients)
+        UnivariatePolynomial::new(product_coefficients)
+    }
+}
+
+impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F> {
+    type Error = &'static str;
+
+    fn try_from(value: MultiLinearPolynomial<F>) -> Result<Self, Self::Error> {
+        if value.n_vars() > 1 {
+            return Err("cannot convert multilinear polynomial with more than one variable to univariate poly");
+        }
+
+        let coefficients = value.coefficients();
+
+        // TODO: might need to relabel the poly before getting the coefficients
+        Ok(UnivariatePolynomial::new(vec![
+            *coefficients.get(&0).unwrap_or(&F::zero()),
+            *coefficients.get(&1).unwrap_or(&F::zero()),
+        ]))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Polynomial;
+    use super::UnivariatePolynomial;
+    use crate::multilinear_poly::MultiLinearPolynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend, PrimeField};
 
@@ -156,11 +176,11 @@ mod tests {
         values.into_iter().map(Fq::from).collect()
     }
 
-    fn poly_from_vec(coefficients: Vec<i64>) -> Polynomial<Fq> {
-        Polynomial::new(fq_from_vec(coefficients))
+    fn poly_from_vec(coefficients: Vec<i64>) -> UnivariatePolynomial<Fq> {
+        UnivariatePolynomial::new(fq_from_vec(coefficients))
     }
 
-    fn poly_zero() -> Polynomial<Fq> {
+    fn poly_zero() -> UnivariatePolynomial<Fq> {
         poly_from_vec(vec![])
     }
 
@@ -233,26 +253,70 @@ mod tests {
     fn test_polynomial_interpolation() {
         // p = 2x
         // evaluations = [(0, 0), (1, 2)]
-        let p = Polynomial::interpolate_xy(fq_from_vec(vec![0, 1]), fq_from_vec(vec![0, 2]));
+        let p =
+            UnivariatePolynomial::interpolate_xy(fq_from_vec(vec![0, 1]), fq_from_vec(vec![0, 2]));
         assert_eq!(p, poly_from_vec(vec![0, 2]));
 
         // p = 2x^2 + 5
         // evaluations = [(0, 5), (1, 7), (2, 13)]
-        let p = Polynomial::interpolate_xy(fq_from_vec(vec![0, 1, 2]), fq_from_vec(vec![5, 7, 13]));
+        let p = UnivariatePolynomial::interpolate_xy(
+            fq_from_vec(vec![0, 1, 2]),
+            fq_from_vec(vec![5, 7, 13]),
+        );
         assert_eq!(p, poly_from_vec(vec![5, 0, 2]));
 
         // p = 8x^5 + 12x^4 + 7x^3 + 1x^2 + 8x + 12
-        let p = Polynomial::interpolate_xy(
+        let p = UnivariatePolynomial::interpolate_xy(
             fq_from_vec(vec![0, 1, 3, 4, 5, 8]),
             fq_from_vec(vec![12, 48, 3150, 11772, 33452, 315020]),
         );
         assert_eq!(p, poly_from_vec(vec![12, 25, 18, 24, 12, 8]));
 
         // p = 5x^3 - 12x
-        let p = Polynomial::interpolate_xy(
+        let p = UnivariatePolynomial::interpolate_xy(
             fq_from_vec(vec![5, 7, 9, 1]),
             fq_from_vec(vec![565, 1631, 3537, -7]),
         );
         assert_eq!(p, poly_from_vec(vec![0, -12, 0, 5]));
+    }
+
+    #[test]
+    fn test_from_multilinear() {
+        // p = 2ab + 3bc
+        let p = MultiLinearPolynomial::<Fq>::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
+
+        // should not be able to build uni poly from multilinear poly with 3 variables
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.clone().try_into();
+        assert_eq!(uni_poly_result.is_err(), true);
+
+        // partial evaluate b
+        // p = 2a + 3c
+        let p = p
+            .partial_evaluate(&[(vec![false, true, false], &Fq::from(1))])
+            .unwrap();
+
+        // should fail, 2 variables
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.clone().try_into();
+        assert_eq!(uni_poly_result.is_err(), true);
+
+        // Partial evaluate a
+        // p = 2 + 3c
+        let p = p
+            .partial_evaluate(&[(vec![true, false, false], &Fq::from(1))])
+            .unwrap()
+            .relabel();
+
+        // should be successful, p has just 1 variable
+        let uni_poly_result: Result<UnivariatePolynomial<_>, _> = p.try_into();
+        assert_eq!(uni_poly_result.is_err(), false);
+        let uni_poly = uni_poly_result.unwrap();
+        assert_eq!(uni_poly, poly_from_vec(vec![2, 3]));
     }
 }
