@@ -8,7 +8,7 @@ pub struct Transcript {
 impl Transcript {
     fn new() -> Self {
         Self {
-            hasher: Keccak256::new()
+            hasher: Keccak256::new(),
         }
     }
 
