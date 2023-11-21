@@ -66,7 +66,7 @@ impl<F: PrimeField> Prover<F> {
 //  by evaluating the polynomial from the back and caching the intermediate results
 /// Keep the first variable free then sum over the boolean hypercube
 /// Assumes polynomial has no unused free variables i.e poly has been relabelled
-fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
+pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
     poly: &MultiLinearPolynomial<F>,
 ) -> UnivariatePolynomial<F> {
     // evaluating at every variable other than the first one
@@ -86,7 +86,7 @@ fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
 }
 
 /// Generate partial evaluation points given var positions and evaluation values as iterators
-fn partial_evaluation_points<'a, F: PrimeField>(
+pub fn partial_evaluation_points<'a, F: PrimeField>(
     n_vars: usize,
     positions: impl Iterator<Item = usize>,
     evals: impl Iterator<Item = &'a F>,
