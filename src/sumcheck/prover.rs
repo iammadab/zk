@@ -72,6 +72,11 @@ pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
     // evaluating at every variable other than the first one
     let n_vars_to_eval = poly.n_vars() - 1;
 
+    if n_vars_to_eval == 0 {
+        // only one variable is free
+        return poly.clone().try_into().unwrap();
+    }
+
     let mut sum = MultiLinearPolynomial::<F>::additive_identity();
 
     // for each point in the boolean hypercube, perform a partial evaluation

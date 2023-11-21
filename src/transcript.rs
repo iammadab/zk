@@ -1,4 +1,4 @@
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use sha3::{Digest, Keccak256};
 
 pub struct Transcript {
@@ -25,6 +25,6 @@ impl Transcript {
 
     pub(crate) fn sample_field_element<F: PrimeField>(&mut self) -> F {
         let challenge = self.sample_challenge();
-        F::from_random_bytes(&challenge).unwrap()
+        F::from_be_bytes_mod_order(&challenge)
     }
 }

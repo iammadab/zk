@@ -11,6 +11,7 @@ pub mod boolean_hypercube;
 mod prover;
 mod verifier;
 
+#[derive(Debug)]
 struct SumcheckProof<F: PrimeField> {
     poly: MultiLinearPolynomial<F>,
     sum: F,
@@ -40,7 +41,7 @@ impl Sumcheck {
         transcript.append(sum.into_bigint().to_bytes_be().as_slice());
         add_multilinear_poly_to_transcript(&poly, &mut transcript);
 
-        for i in 0..poly.n_vars() {
+        for _ in 0..poly.n_vars() {
             // partially evaluate the polynomial at the generated challenge points
             let challenge_assignments =
                 partial_evaluation_points(poly.n_vars(), 0..challenges.len(), challenges.iter());
@@ -130,8 +131,10 @@ fn add_univariate_poly_to_transcript<F: PrimeField>(
 #[cfg(test)]
 mod tests {
     use crate::multilinear_poly::MultiLinearPolynomial;
-    use crate::sumcheck::add_multilinear_poly_to_transcript;
+    use crate::sumcheck::{add_multilinear_poly_to_transcript, Sumcheck};
     use crate::transcript::Transcript;
+    use sha3::digest::typenum::Sum;
+
     use ark_ff::{Fp64, MontBackend, MontConfig, One};
 
     #[derive(MontConfig)]
@@ -140,11 +143,32 @@ mod tests {
     struct FqConfig;
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
+    fn p_2ab_3bc() -> MultiLinearPolynomial<Fq> {
+        MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap()
+    }
+
     #[test]
-    fn test_add_poly_to_transcript() {
-        let mut transcript = Transcript::new();
-        let poly = MultiLinearPolynomial::<Fq>::additive_identity();
-        add_multilinear_poly_to_transcript(&poly, &mut transcript);
-        assert_eq!(transcript.sample_field_element::<Fq>(), Fq::one());
+    fn test_sumcheck_protocol_correct_sum() {
+        // p = 2ab + 3bc
+        // sum over boolean hypercube = 10
+        let p = p_2ab_3bc();
+        let sumcheck_proof = Sumcheck::prove(p, Fq::from(10));
+        assert!(Sumcheck::verify(sumcheck_proof));
+    }
+
+    #[test]
+    fn test_sumcheck_protocol_invalid_sum() {
+        // p = 2ab + 3bc
+        // sum over boolean hypercube = 10
+        let p = p_2ab_3bc();
+        let sumcheck_proof = Sumcheck::prove(p, Fq::from(200));
+        assert!(!Sumcheck::verify(sumcheck_proof));
     }
 }
