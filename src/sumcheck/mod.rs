@@ -1,8 +1,8 @@
-use ark_ff::{BigInteger, PrimeField};
 use crate::multilinear_poly::MultiLinearPolynomial;
 use crate::sumcheck::prover::Prover;
 use crate::transcript::Transcript;
 use crate::univariate_poly::UnivariatePolynomial;
+use ark_ff::{BigInteger, PrimeField};
 
 pub mod boolean_hypercube;
 mod prover;
@@ -31,7 +31,10 @@ impl Sumcheck {
 }
 
 /// Add a polynomial to a transcript object
-fn add_poly_to_transcript<F: PrimeField>(poly: &MultiLinearPolynomial<F>, transcript: &mut Transcript) {
+fn add_poly_to_transcript<F: PrimeField>(
+    poly: &MultiLinearPolynomial<F>,
+    transcript: &mut Transcript,
+) {
     transcript.append(&poly.n_vars().to_be_bytes());
     for (var_id, coeff) in poly.coefficients() {
         transcript.append(&var_id.to_be_bytes());
@@ -41,10 +44,10 @@ fn add_poly_to_transcript<F: PrimeField>(poly: &MultiLinearPolynomial<F>, transc
 
 #[cfg(test)]
 mod tests {
-    use ark_ff::{Fp64, MontBackend, MontConfig, One};
     use crate::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::add_poly_to_transcript;
     use crate::transcript::Transcript;
+    use ark_ff::{Fp64, MontBackend, MontConfig, One};
 
     #[derive(MontConfig)]
     #[modulus = "17"]
