@@ -15,6 +15,11 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
         Self { coefficients }
     }
 
+    /// Returns the list of coefficients as a slice
+    pub fn coefficients(&self) -> &[F] {
+        self.coefficients.as_slice()
+    }
+
     // TODO: implement method to simplify coefficients by truncation
     //  e.g. [0, 2, 0, 0] is equivalent to [0, 2]
 

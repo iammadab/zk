@@ -1,4 +1,4 @@
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use sha3::{Digest, Keccak256};
 
 pub struct Transcript {
@@ -6,13 +6,13 @@ pub struct Transcript {
 }
 
 impl Transcript {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            hasher: Keccak256::new()
+            hasher: Keccak256::new(),
         }
     }
 
-    fn append(&mut self, new_data: &[u8]) {
+    pub(crate) fn append(&mut self, new_data: &[u8]) {
         self.hasher.update(&mut new_data.clone());
     }
 
@@ -23,8 +23,8 @@ impl Transcript {
         result_hash
     }
 
-    fn sample_field_element<F: PrimeField>(&mut self) -> F {
+    pub(crate) fn sample_field_element<F: PrimeField>(&mut self) -> F {
         let challenge = self.sample_challenge();
-        F::from_random_bytes(&challenge).unwrap()
+        F::from_be_bytes_mod_order(&challenge)
     }
 }
