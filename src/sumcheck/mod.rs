@@ -1,15 +1,14 @@
 use crate::multilinear_poly::MultiLinearPolynomial;
-use crate::sumcheck::prover::{
-    partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube, Prover,
+use crate::sumcheck::util::{
+    add_multilinear_poly_to_transcript, add_univariate_poly_to_transcript,
+    partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
 };
 use crate::transcript::Transcript;
 use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
-use std::ops::Mul;
 
 pub mod boolean_hypercube;
-mod prover;
-mod verifier;
+mod util;
 
 #[derive(Debug)]
 struct SumcheckProof<F: PrimeField> {
@@ -106,35 +105,13 @@ impl Sumcheck {
     }
 }
 
-/// Add a multilinear polynomial to a transcript object
-fn add_multilinear_poly_to_transcript<F: PrimeField>(
-    poly: &MultiLinearPolynomial<F>,
-    transcript: &mut Transcript,
-) {
-    transcript.append(&poly.n_vars().to_be_bytes());
-    for (var_id, coeff) in poly.coefficients() {
-        transcript.append(&var_id.to_be_bytes());
-        transcript.append(&coeff.into_bigint().to_bytes_be().as_slice());
-    }
-}
-
-/// Add a univariate polynomial to a transcript object
-fn add_univariate_poly_to_transcript<F: PrimeField>(
-    poly: &UnivariatePolynomial<F>,
-    transcript: &mut Transcript,
-) {
-    for coeff in poly.coefficients() {
-        transcript.append(coeff.into_bigint().to_bytes_be().as_slice())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::multilinear_poly::MultiLinearPolynomial;
-    use crate::sumcheck::{add_multilinear_poly_to_transcript, Sumcheck};
     use crate::transcript::Transcript;
     use sha3::digest::typenum::Sum;
 
+    use crate::sumcheck::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig, One};
 
     #[derive(MontConfig)]
