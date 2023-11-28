@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
 use std::env::var;
 use std::ops::{Add, Mul};
@@ -134,7 +135,18 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Interpolate a set of values over the boolean hypercube
     pub fn interpolate(values: &[F]) -> Self {
-        let num_of_variables = (values.len() as f32).log2().ceil() as u32;
+        // if no points to interpolate, return zero poly
+        if values.is_empty() {
+            return Self::new(0, vec![]).unwrap();
+        }
+
+        let num_of_variables = if values.len() == 1 {
+            // if only 1 point to interpolate, num_of_variables = 1
+            1
+        } else {
+            (values.len() as f32).log2().ceil() as u32
+        };
+
         let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
             let poly =
@@ -275,7 +287,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Returns the number of elements in the dense polynomial representation
     fn variable_combination_count(number_of_variables: u32) -> usize {
-        2_i32.pow(number_of_variables) as usize
+        1 << number_of_variables
     }
 }
 
@@ -1111,5 +1123,22 @@ mod tests {
             q.coefficients,
             BTreeMap::from([(1, Fq::from(2)), (2, Fq::from(9)), (3, Fq::from(5)),])
         );
+    }
+
+    #[test]
+    fn fake_test() {
+        let w1 = MultiLinearPolynomial::<Fq>::interpolate(&[
+            Fq::from(15)
+        ]);
+        let w2 = MultiLinearPolynomial::<Fq>::interpolate(&[
+            Fq::from(5),
+            Fq::from(3)
+        ]);
+        let w3 = MultiLinearPolynomial::<Fq>::interpolate(&[
+            Fq::from(2),
+            Fq::from(3),
+            Fq::from(3),
+            Fq::from(1)
+        ]);
     }
 }
