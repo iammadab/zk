@@ -1127,18 +1127,13 @@ mod tests {
 
     #[test]
     fn fake_test() {
-        let w1 = MultiLinearPolynomial::<Fq>::interpolate(&[
-            Fq::from(15)
-        ]);
-        let w2 = MultiLinearPolynomial::<Fq>::interpolate(&[
-            Fq::from(5),
-            Fq::from(3)
-        ]);
+        let w1 = MultiLinearPolynomial::<Fq>::interpolate(&[Fq::from(15)]);
+        let w2 = MultiLinearPolynomial::<Fq>::interpolate(&[Fq::from(5), Fq::from(3)]);
         let w3 = MultiLinearPolynomial::<Fq>::interpolate(&[
             Fq::from(2),
             Fq::from(3),
             Fq::from(3),
-            Fq::from(1)
+            Fq::from(1),
         ]);
     }
 }
