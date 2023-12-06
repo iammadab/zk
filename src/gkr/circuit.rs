@@ -65,7 +65,6 @@ impl Circuit {
             .rev()
             .map(|layer| {
                 let mut layer_evaluations = vec![F::zero(); layer.len];
-                dbg!(layer.len);
 
                 // add gate evaluations
                 for wire in &layer.add_gates {
@@ -116,7 +115,7 @@ mod tests {
             .expect("should eval");
 
         assert_eq!(circuit_eval.len(), 2);
-        assert_eq!(circuit_eval[1], vec![Fr::from(5), Fr::from(20)]);
-        assert_eq!(circuit_eval[0], vec![Fr::from(100)]);
+        assert_eq!(circuit_eval[0], vec![Fr::from(5), Fr::from(20)]);
+        assert_eq!(circuit_eval[1], vec![Fr::from(100)]);
     }
 }
