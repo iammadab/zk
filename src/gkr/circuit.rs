@@ -1,3 +1,4 @@
+use crate::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
 #[derive(Clone)]
@@ -30,6 +31,21 @@ impl Layer {
             add_gates,
             mul_gates,
         }
+    }
+}
+
+/// Generate the add_i and mult_i multilinear extension polynomials given a layer
+impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
+    fn from(value: Layer) -> Self {
+        // a layer has a set of add gates and mult gates
+        // each collection has the expected parameters
+        // we might need a way to convert each number to the boolean hypercube
+        // we need to know the length of the next layer to know how many bits we need for it's representation
+        // how do we resolve this?
+        // if we assume fan out of 2, can we use that to help with this?
+        // well we know the next layer length is *2 so we just do log based 2 and we should be good
+
+        todo!()
     }
 }
 

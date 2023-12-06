@@ -160,15 +160,23 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// outputs 1 if the boolean values match, 0 otherwise
     fn lagrange_basis_poly(index: usize, num_of_vars: usize) -> Self {
         let binary_value = binary_string(index, num_of_vars);
-        let mut result = Self::multiplicative_identity();
-        for char in binary_value.chars() {
-            if char == '1' {
-                result = &result * &Self::check_one();
-            } else {
-                result = &result * &Self::check_zero();
-            }
-        }
-        result
+        Self::bit_string_checker(binary_value)
+    }
+
+    /// Given some bit string of len n e.g. 0100
+    /// constructs an n-var multilinear polynomial that evaluates to 1
+    /// when the given bit string is given as input
+    /// and evaluates to 0 for anyother bit string
+    pub fn bit_string_checker(bit_string: String) -> Self {
+        bit_string
+            .chars()
+            .fold(Self::multiplicative_identity(), |acc, char| {
+                if char == '1' {
+                    &acc * &Self::check_one()
+                } else {
+                    &acc * &Self::check_zero()
+                }
+            })
     }
 
     /// Relabelling removes variables that are no longer used (shrinking the polynomial)
