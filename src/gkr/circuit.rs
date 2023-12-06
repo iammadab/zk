@@ -1,7 +1,6 @@
 use crate::multilinear_poly::{binary_string, MultiLinearPolynomial};
 use ark_ff::PrimeField;
 
-#[derive(Clone)]
 /// Represents a gate wiring (2 inputs 1 output)
 struct Gate {
     out: usize,
@@ -27,7 +26,6 @@ impl Gate {
     }
 }
 
-#[derive(Clone)]
 /// Holds the add and mul gates in a given layer
 struct Layer {
     add_gates: Vec<Gate>,
@@ -53,7 +51,6 @@ impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
         // we assume input fan in of 2
         let input_var_count = layer_var_count * 2;
 
-        // next we iterate over all the add gates and then build the function
         let add_mle = value.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
@@ -95,6 +92,7 @@ impl Circuit {
 impl Circuit {
     /// Evaluate the circuit on a given input
     // TODO: this doesn't return the input back, decide if returning the input makes sense.
+    // TODO: test this with a larger depth e.g. 4 or 5
     fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
         if self.layers.is_empty() {
             return Err("cannot evaluate circuit is empty");
