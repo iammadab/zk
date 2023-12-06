@@ -1,4 +1,4 @@
-use crate::multilinear_poly::MultiLinearPolynomial;
+use crate::multilinear_poly::{binary_string, MultiLinearPolynomial};
 use ark_ff::PrimeField;
 
 #[derive(Clone)]
@@ -12,6 +12,19 @@ struct Gate {
 impl Gate {
     fn new(out: usize, in_a: usize, in_b: usize) -> Self {
         Self { out, in_a, in_b }
+    }
+
+    // TODO: add documentation
+    // Should return the bit representation for a, b, and c as a long string
+    // will need to pass the size of the bits, making some assumption about
+    // the structure of the circuit
+    fn to_bit_string(&self, out_var_count: usize, in_var_count: usize) -> String {
+        let out_binary_string = binary_string(self.out, out_var_count);
+        let in_a_binary_string = binary_string(self.in_a, in_var_count);
+        let in_b_binary_string = binary_string(self.in_b, in_var_count);
+
+        out_binary_string + &in_a_binary_string + &in_b_binary_string
+        // todo!()
     }
 }
 
@@ -133,5 +146,16 @@ mod tests {
         assert_eq!(circuit_eval.len(), 2);
         assert_eq!(circuit_eval[0], vec![Fr::from(5), Fr::from(20)]);
         assert_eq!(circuit_eval[1], vec![Fr::from(100)]);
+    }
+
+    #[test]
+    fn test_gate_to_binary_string() {
+        let g1 = Gate::new(0, 0, 1);
+        let gate_bit = g1.to_bit_string(1, 1);
+        assert_eq!(gate_bit, "001".to_string());
+
+        let g2 = Gate::new(1, 2, 3);
+        let gate_bit = g2.to_bit_string(1, 2);
+        assert_eq!(gate_bit, "11011");
     }
 }
