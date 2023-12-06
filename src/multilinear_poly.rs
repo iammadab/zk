@@ -237,7 +237,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
     /// Co-efficient wise multiplication with scalar
     pub fn scalar_multiply(&self, scalar: &F) -> Self {
-        // TODO: try implementing inplace operations
+        // TODO: consider inplace operations
         let mut updated_coefficients = self
             .coefficients
             .clone()
@@ -1134,14 +1134,40 @@ mod tests {
     }
 
     #[test]
-    fn fake_test() {
-        let w1 = MultiLinearPolynomial::<Fq>::interpolate(&[Fq::from(15)]);
-        let w2 = MultiLinearPolynomial::<Fq>::interpolate(&[Fq::from(5), Fq::from(3)]);
-        let w3 = MultiLinearPolynomial::<Fq>::interpolate(&[
-            Fq::from(2),
-            Fq::from(3),
-            Fq::from(3),
-            Fq::from(1),
-        ]);
+    fn test_bit_string_checker() {
+        // poly to check 001
+        let checker = MultiLinearPolynomial::<Fq>::bit_string_checker("001".to_string());
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![0, 0, 0])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![0, 0, 1])).unwrap(),
+            Fq::from(1)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![0, 1, 0])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![0, 1, 1])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![1, 0, 0])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![1, 0, 1])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![1, 1, 0])).unwrap(),
+            Fq::from(0)
+        );
+        assert_eq!(
+            checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
+            Fq::from(0)
+        );
     }
 }
