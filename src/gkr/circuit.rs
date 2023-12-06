@@ -24,7 +24,6 @@ impl Gate {
         let in_b_binary_string = binary_string(self.in_b, in_var_count);
 
         out_binary_string + &in_a_binary_string + &in_b_binary_string
-        // todo!()
     }
 }
 
@@ -50,15 +49,34 @@ impl Layer {
 /// Generate the add_i and mult_i multilinear extension polynomials given a layer
 impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
     fn from(value: Layer) -> Self {
-        // a layer has a set of add gates and mult gates
-        // each collection has the expected parameters
-        // we might need a way to convert each number to the boolean hypercube
-        // we need to know the length of the next layer to know how many bits we need for it's representation
-        // how do we resolve this?
-        // if we assume fan out of 2, can we use that to help with this?
-        // well we know the next layer length is *2 so we just do log based 2 and we should be good
+        let layer_var_count = value.len;
+        // we assume input fan in of 2
+        let input_var_count = layer_var_count * 2;
 
-        todo!()
+        // next we iterate over all the add gates and then build the function
+        let add_mle = value.add_gates.iter().fold(
+            MultiLinearPolynomial::<F>::additive_identity(),
+            |acc, gate| {
+                // what do we do per gate?
+                // we need to convert it to a string we know the var count for each
+                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
+                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
+
+                (&acc + &gate_bit_checker).unwrap()
+            },
+        );
+
+        let mult_mle = value.mul_gates.iter().fold(
+            MultiLinearPolynomial::<F>::additive_identity(),
+            |acc, gate| {
+                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
+                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
+
+                (&acc + &gate_bit_checker).unwrap()
+            },
+        );
+
+        [add_mle, mult_mle]
     }
 }
 
