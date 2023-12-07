@@ -46,12 +46,13 @@ impl Layer {
 
 /// Generate the add_i and mult_i multilinear extension polynomials given a layer
 impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
-    fn from(value: Layer) -> Self {
-        let layer_var_count = value.len;
+    fn from(layer: Layer) -> Self {
+        // TODO: find the log
+        let layer_var_count = layer.len;
         // we assume input fan in of 2
         let input_var_count = layer_var_count * 2;
 
-        let add_mle = value.add_gates.iter().fold(
+        let add_mle = layer.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
                 // what do we do per gate?
@@ -63,7 +64,7 @@ impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
             },
         );
 
-        let mult_mle = value.mul_gates.iter().fold(
+        let mult_mle = layer.mul_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
                 let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
@@ -162,6 +163,34 @@ mod tests {
         assert_eq!(circuit_eval.len(), 2);
         assert_eq!(circuit_eval[0], vec![Fr::from(5), Fr::from(20)]);
         assert_eq!(circuit_eval[1], vec![Fr::from(100)]);
+
+        // Larger circuit
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
+        let layer_2 = Layer::new(
+            vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
+            vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
+        );
+        let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]);
+        let circuit_eval = circuit
+            .evaluate(vec![
+                Fr::from(1),
+                Fr::from(2),
+                Fr::from(3),
+                Fr::from(4),
+                Fr::from(5),
+                Fr::from(6),
+                Fr::from(7),
+                Fr::from(8),
+            ])
+            .unwrap();
+        assert_eq!(circuit_eval.len(), 3);
+        assert_eq!(
+            circuit_eval[0],
+            vec![Fr::from(2), Fr::from(12), Fr::from(11), Fr::from(15)]
+        );
+        assert_eq!(circuit_eval[1], vec![Fr::from(14), Fr::from(165)]);
+        assert_eq!(circuit_eval[2], vec![Fr::from(179)]);
     }
 
     #[test]
@@ -174,4 +203,10 @@ mod tests {
         let gate_bit = g2.to_bit_string(1, 2);
         assert_eq!(gate_bit, "11011");
     }
+
+    // #[test]
+    // fn test_add_and_mul_mle_generation() {
+    //     //
+    //
+    // }
 }
