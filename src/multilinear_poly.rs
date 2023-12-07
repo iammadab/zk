@@ -140,12 +140,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             return Self::new(0, vec![]).unwrap();
         }
 
-        let num_of_variables = if values.len() == 1 {
-            // if only 1 point to interpolate, num_of_variables = 1
-            1
-        } else {
-            (values.len() as f32).log2().ceil() as u32
-        };
+        let num_of_variables = bit_count_for_n_elem(values.len());
 
         let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
@@ -465,6 +460,11 @@ fn remap_coefficient_keys<F: PrimeField>(
         }
     }
     poly
+}
+
+/// Determines the number of bits needed to represent a number
+pub fn bit_count_for_n_elem(size: usize) -> usize {
+    format!("{:b}", size - 1).len()
 }
 
 #[cfg(test)]

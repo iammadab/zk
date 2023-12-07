@@ -1,4 +1,4 @@
-use crate::multilinear_poly::{binary_string, MultiLinearPolynomial};
+use crate::multilinear_poly::{binary_string, bit_count_for_n_elem, MultiLinearPolynomial};
 use ark_ff::PrimeField;
 
 /// Represents a gate wiring (2 inputs 1 output)
@@ -45,12 +45,13 @@ impl Layer {
 }
 
 /// Generate the add_i and mult_i multilinear extension polynomials given a layer
-impl<F: PrimeField> From<Layer> for [MultiLinearPolynomial<F>; 2] {
-    fn from(layer: Layer) -> Self {
-        // TODO: find the log
-        let layer_var_count = layer.len;
+impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
+    fn from(layer: &Layer) -> Self {
+        let layer_var_count = bit_count_for_n_elem(layer.len);
+        dbg!(layer_var_count);
         // we assume input fan in of 2
-        let input_var_count = layer_var_count * 2;
+        let input_var_count = bit_count_for_n_elem(layer.len * 2);
+        dbg!(input_var_count);
 
         let add_mle = layer.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
@@ -136,7 +137,18 @@ impl Circuit {
 mod tests {
     use crate::gkr::circuit::{Circuit, Gate, Layer};
 
+    use crate::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
+
+    fn test_circuit() -> Circuit {
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
+        let layer_2 = Layer::new(
+            vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
+            vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
+        );
+        Circuit::new(vec![layer_0, layer_1, layer_2])
+    }
 
     #[test]
     fn test_circuit_evaluation() {
@@ -165,13 +177,7 @@ mod tests {
         assert_eq!(circuit_eval[1], vec![Fr::from(100)]);
 
         // Larger circuit
-        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);
-        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
-        let layer_2 = Layer::new(
-            vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
-            vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
-        );
-        let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]);
+        let circuit = test_circuit();
         let circuit_eval = circuit
             .evaluate(vec![
                 Fr::from(1),
@@ -204,9 +210,19 @@ mod tests {
         assert_eq!(gate_bit, "11011");
     }
 
-    // #[test]
-    // fn test_add_and_mul_mle_generation() {
-    //     //
-    //
-    // }
+    #[test]
+    fn test_add_and_mul_mle_generation() {
+        // add_mle and mul_mle should correctly identify the add and mul gates respectively
+        let circuit = test_circuit();
+
+        // circuit has 3 layers
+
+        // layer 0 - output layer
+        let [add_1, mul_1]: [MultiLinearPolynomial<Fr>; 2] = (&circuit.layers[0]).into();
+        // the number of variables for the add function should be 3
+        assert_eq!(add_1.n_vars(), 3);
+        // the number of variables for the mul function should be 0
+        assert_eq!(mul_1.n_vars(), 0);
+        // TODO: need a function that can sum over boolean hypercube
+    }
 }

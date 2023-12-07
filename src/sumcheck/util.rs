@@ -32,6 +32,13 @@ pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
     sum.relabel().try_into().unwrap()
 }
 
+/// Sum a polynomial over the boolean hypercube
+pub fn sum_over_boolean_hyper_cube<F: PrimeField>(poly: &MultiLinearPolynomial<F>) -> F {
+    BooleanHyperCube::<F>::new(poly.n_vars()).fold(F::zero(), |sum, point| {
+        sum + poly.evaluate(point.as_slice()).unwrap()
+    })
+}
+
 /// Generate partial evaluation points given var positions and evaluation values as iterators
 pub fn partial_evaluation_points<'a, F: PrimeField>(
     n_vars: usize,
@@ -63,5 +70,34 @@ pub fn add_univariate_poly_to_transcript<F: PrimeField>(
 ) {
     for coeff in poly.coefficients() {
         transcript.append(coeff.into_bigint().to_bytes_be().as_slice())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::multilinear_poly::MultiLinearPolynomial;
+    use ark_ff::{Fp64, MontBackend, MontConfig};
+    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+
+    #[derive(MontConfig)]
+    #[modulus = "17"]
+    #[generator = "3"]
+    struct FqConfig;
+    type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
+    #[test]
+    fn test_sum_over_boolean_hypercube() {
+        let poly = MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
+
+        // expected sum = 10
+        let sum = sum_over_boolean_hyper_cube(&poly);
+        assert_eq!(sum, Fq::from(10));
     }
 }
