@@ -8,7 +8,7 @@ use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 
 pub mod boolean_hypercube;
-mod util;
+pub mod util;
 
 #[derive(Debug)]
 struct SumcheckProof<F: PrimeField> {

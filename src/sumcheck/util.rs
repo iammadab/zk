@@ -76,8 +76,8 @@ pub fn add_univariate_poly_to_transcript<F: PrimeField>(
 #[cfg(test)]
 mod test {
     use crate::multilinear_poly::MultiLinearPolynomial;
-    use ark_ff::{Fp64, MontBackend, MontConfig};
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+    use ark_ff::{Fp64, MontBackend, MontConfig};
 
     #[derive(MontConfig)]
     #[modulus = "17"]

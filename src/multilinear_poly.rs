@@ -113,6 +113,10 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         // Associates every assignment with the correct selector vector and calls
         // partial evaluate on the expanded assignment
 
+        if self.n_vars == 0 {
+            return Ok(*self.coefficients.get(&0).unwrap_or(&F::zero()));
+        }
+
         if assignments.len() != self.n_vars as usize {
             return Err("evaluate requires an assignment for every variable");
         }
@@ -1169,5 +1173,11 @@ mod tests {
             checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
             Fq::from(0)
         );
+    }
+
+    #[test]
+    fn test_evaluate_zero_poly() {
+        let zero_poly = MultiLinearPolynomial::<Fq>::additive_identity();
+        assert_eq!(zero_poly.evaluate(&[]).unwrap(), Fq::from(0));
     }
 }

@@ -138,6 +138,7 @@ mod tests {
     use crate::gkr::circuit::{Circuit, Gate, Layer};
 
     use crate::multilinear_poly::MultiLinearPolynomial;
+    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
     fn test_circuit() -> Circuit {
@@ -223,6 +224,21 @@ mod tests {
         assert_eq!(add_1.n_vars(), 3);
         // the number of variables for the mul function should be 0
         assert_eq!(mul_1.n_vars(), 0);
-        // TODO: need a function that can sum over boolean hypercube
+        // the sum over the boolean hypercube should equate to 1
+        // as we have only 1 add gate
+        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&add_1), Fr::from(1));
+        // the only eval should be what we expect (a, b, c) -> (0, 0, 1)
+        assert_eq!(
+            add_1
+                .evaluate(&[Fr::from(0), Fr::from(0), Fr::from(1)])
+                .unwrap(),
+            Fr::from(1)
+        );
+        dbg!(&mul_1);
+        // mul gate should sum to 0 over the boolean hypercube
+        // TODO: fix evaluate to return 0 on no vars
+        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&mul_1), Fr::from(0));
+
+        // TODO: allow the ability to evaluate with more than n-vars
     }
 }
