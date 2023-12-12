@@ -48,10 +48,8 @@ impl Layer {
 impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
     fn from(layer: &Layer) -> Self {
         let layer_var_count = bit_count_for_n_elem(layer.len);
-        dbg!(layer_var_count);
         // we assume input fan in of 2
         let input_var_count = bit_count_for_n_elem(layer.len * 2);
-        dbg!(input_var_count);
 
         let add_mle = layer.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
