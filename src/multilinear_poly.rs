@@ -413,7 +413,7 @@ pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>,
 /// Convert a number to a binary string of a given size
 pub fn binary_string(index: usize, bit_count: usize) -> String {
     let binary = format!("{:b}", index);
-    "0".repeat(bit_count - binary.len()) + &binary
+    "0".repeat(bit_count.checked_sub(binary.len()).unwrap_or(0)) + &binary
 }
 
 /// Generate remapping instruction for truncating a presence vector
