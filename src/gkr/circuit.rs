@@ -1,5 +1,7 @@
 use crate::gkr::layer::Layer;
+use crate::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
+use ark_std::iterable::Iterable;
 
 /// A circuit is just a stacked collection of layers
 struct Circuit {
@@ -28,30 +30,47 @@ impl Circuit {
 
         let mut current_layer_input = input;
 
-        Ok(self
-            .layers
-            .iter()
-            .rev()
-            .map(|layer| {
-                let mut layer_evaluations = vec![F::zero(); layer.len()];
+        let mut evaluations = vec![];
 
-                // add gate evaluations
-                for wire in &layer.add_gates {
-                    layer_evaluations[wire.out] =
-                        current_layer_input[wire.in_a] + current_layer_input[wire.in_b];
-                }
+        for layer in self.layers.iter().rev() {
+            let mut layer_evaluations = vec![F::zero(); layer.len()];
 
-                // mul gate evaluations
-                for wire in &layer.mul_gates {
-                    layer_evaluations[wire.out] =
-                        current_layer_input[wire.in_a] * current_layer_input[wire.in_b];
-                }
+            // add gate evaluations
+            for wire in &layer.add_gates {
+                layer_evaluations[wire.out] =
+                    current_layer_input[wire.in_a] + current_layer_input[wire.in_b];
+            }
 
-                current_layer_input = layer_evaluations.clone();
+            // mul gate evaluations
+            for wire in &layer.mul_gates {
+                layer_evaluations[wire.out] =
+                    current_layer_input[wire.in_a] * current_layer_input[wire.in_b];
+            }
 
-                layer_evaluations
-            })
-            .collect())
+            current_layer_input = layer_evaluations.clone();
+
+            evaluations.push(layer_evaluations);
+        }
+
+        evaluations.reverse();
+
+        Ok(evaluations)
+    }
+
+    /// Returns the mle extensions for evaluations at layer
+    /// Evaluation order: [output_layer ...]
+    /// output_layer index = 0
+    fn w<F: PrimeField>(
+        evaluations: &[Vec<F>],
+        layer_index: usize,
+    ) -> Result<MultiLinearPolynomial<F>, &'static str> {
+        if layer_index >= evaluations.len() {
+            return Err("invalid layer index");
+        }
+
+        Ok(MultiLinearPolynomial::<F>::interpolate(
+            &evaluations[layer_index],
+        ))
     }
 }
 
@@ -97,8 +116,8 @@ mod tests {
             .expect("should eval");
 
         assert_eq!(circuit_eval.len(), 2);
-        assert_eq!(circuit_eval[0], vec![Fr::from(5), Fr::from(20)]);
-        assert_eq!(circuit_eval[1], vec![Fr::from(100)]);
+        assert_eq!(circuit_eval[0], vec![Fr::from(100)]);
+        assert_eq!(circuit_eval[1], vec![Fr::from(5), Fr::from(20)]);
 
         // Larger circuit
         let circuit = test_circuit();
@@ -115,12 +134,12 @@ mod tests {
             ])
             .unwrap();
         assert_eq!(circuit_eval.len(), 3);
+        assert_eq!(circuit_eval[0], vec![Fr::from(179)]);
+        assert_eq!(circuit_eval[1], vec![Fr::from(14), Fr::from(165)]);
         assert_eq!(
-            circuit_eval[0],
+            circuit_eval[2],
             vec![Fr::from(2), Fr::from(12), Fr::from(11), Fr::from(15)]
         );
-        assert_eq!(circuit_eval[1], vec![Fr::from(14), Fr::from(165)]);
-        assert_eq!(circuit_eval[2], vec![Fr::from(179)]);
     }
 
     #[test]
@@ -272,6 +291,17 @@ mod tests {
                 ])
                 .unwrap(),
             Fr::from(1)
+        );
+    }
+
+    #[test]
+    fn test_w_function() {
+        let evaluations = vec![vec![Fr::from(1), Fr::from(2)]];
+        // try to generate w mle for non-existent layer
+        assert!(Circuit::w(evaluations.as_slice(), 1).is_err(),);
+        assert_eq!(
+            Circuit::w(evaluations.as_slice(), 0).unwrap(),
+            MultiLinearPolynomial::<Fr>::interpolate(evaluations[0].as_slice())
         );
     }
 }
