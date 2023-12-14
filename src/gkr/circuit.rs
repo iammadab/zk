@@ -4,7 +4,7 @@ use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
 
 /// A circuit is just a stacked collection of layers
-struct Circuit {
+pub struct Circuit {
     layers: Vec<Layer>,
 }
 
@@ -19,7 +19,7 @@ impl Circuit {
     /// Evaluate the circuit on a given input
     // TODO: this doesn't return the input back, decide if returning the input makes sense.
     // TODO: test this with a larger depth e.g. 4 or 5
-    fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
+    pub fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
         if self.layers.is_empty() {
             return Err("cannot evaluate circuit is empty");
         }
@@ -60,7 +60,7 @@ impl Circuit {
     /// Returns the mle extensions for evaluations at layer
     /// Evaluation order: [output_layer ...]
     /// output_layer index = 0
-    fn w<F: PrimeField>(
+    pub fn w<F: PrimeField>(
         evaluations: &[Vec<F>],
         layer_index: usize,
     ) -> Result<MultiLinearPolynomial<F>, &'static str> {
@@ -72,10 +72,22 @@ impl Circuit {
             &evaluations[layer_index],
         ))
     }
+
+    /// Returns the add_mle and mul_mle for the given layer
+    pub fn add_mul_mle<F: PrimeField>(
+        &self,
+        layer_index: usize,
+    ) -> Result<[MultiLinearPolynomial<F>; 2], &'static str> {
+        if layer_index >= self.layers.len() {
+            return Err("invalid layer index");
+        }
+
+        Ok((&self.layers[layer_index]).into())
+    }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
 
     use crate::gkr::gate::Gate;
@@ -83,7 +95,7 @@ mod tests {
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
-    fn test_circuit() -> Circuit {
+    pub fn test_circuit() -> Circuit {
         let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);
         let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
         let layer_2 = Layer::new(

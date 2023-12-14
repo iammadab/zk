@@ -63,14 +63,73 @@ impl<F: PrimeField> GateEvalExtension<F> {
             return Err("invalid variable length, b and c should each be the same size as w_mle");
         }
 
-        let mut bc = b.to_vec();
-        bc.extend(c.to_vec());
+        let mut rbc = self.r.clone();
+        rbc.extend(b.clone());
+        rbc.extend(c.to_vec());
 
-        let add_result = self.add_mle.evaluate(bc.as_slice()).unwrap()
-            * (self.w_mle.evaluate(b).unwrap() + self.w_mle.evaluate(c).unwrap());
-        let mul_result = self.mul_mle.evaluate(bc.as_slice()).unwrap()
-            * (self.w_mle.evaluate(b).unwrap() * self.w_mle.evaluate(c).unwrap());
+        let b_val = self.w_mle.evaluate(b).unwrap();
+        let c_val = self.w_mle.evaluate(c).unwrap();
+
+        let add_result = self.add_mle.evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
+        let mul_result = self.mul_mle.evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
 
         Ok(add_result + mul_result)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::gkr::circuit::tests::test_circuit;
+    use crate::gkr::circuit::Circuit;
+    use crate::gkr::gate_eval_extension::GateEvalExtension;
+    use ark_bls12_381::Fr;
+
+    #[test]
+    fn test_gate_eval_extension() {
+        // construct and evaluate circuit
+        let circuit = test_circuit();
+        let circuit_eval = circuit
+            .evaluate(vec![
+                Fr::from(1),
+                Fr::from(2),
+                Fr::from(3),
+                Fr::from(4),
+                Fr::from(5),
+                Fr::from(6),
+                Fr::from(7),
+                Fr::from(8),
+            ])
+            .unwrap();
+
+        // construct relevant mles
+        // add and mul mle from layer 1, (a, b, c) -> (len(1), len(2), len(2)) -> 5 total variables
+        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        // w_mle from layer 2 with len(2)
+        let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
+
+        // setting r = 0
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(0)], add_1.clone(), mul_1.clone(), w_2.clone())
+                .unwrap();
+        // eval at b = 0 and c = 1, expected result = 14
+        assert_eq!(
+            gate_eval_ext
+                .evaluate(&[Fr::from(0), Fr::from(0)], &[Fr::from(0), Fr::from(1)])
+                .unwrap(),
+            Fr::from(14)
+        );
+
+        // TODO: implement method for summing over the boolean hypercube
+        //  the idea is to show that summing over all other combinations gives 0
+
+        // setting r = 1
+        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(1)], add_1, mul_1, w_2).unwrap();
+        // eval at b = 2, and c = 3, expected result = 165
+        assert_eq!(
+            gate_eval_ext
+                .evaluate(&[Fr::from(1), Fr::from(0)], &[Fr::from(1), Fr::from(1)])
+                .unwrap(),
+            Fr::from(165)
+        );
     }
 }
