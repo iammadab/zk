@@ -1,5 +1,3 @@
-extern crate core;
-
 mod gkr;
 pub mod multilinear_poly;
 mod reed_solomon_fingerprinting;

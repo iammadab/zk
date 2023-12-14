@@ -11,6 +11,7 @@ pub struct Layer {
 
 impl Layer {
     /// Instantiate a new gate layer, calculate the total gate count
+    // TODO: don't allow the creation of empty layers
     pub fn new(add_gates: Vec<Gate>, mul_gates: Vec<Gate>) -> Self {
         Self {
             len: add_gates.len() + mul_gates.len(),
