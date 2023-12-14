@@ -1,81 +1,5 @@
-use crate::multilinear_poly::{binary_string, bit_count_for_n_elem, MultiLinearPolynomial};
+use crate::gkr::layer::Layer;
 use ark_ff::PrimeField;
-
-/// Represents a gate wiring (2 inputs 1 output)
-struct Gate {
-    out: usize,
-    in_a: usize,
-    in_b: usize,
-}
-
-impl Gate {
-    fn new(out: usize, in_a: usize, in_b: usize) -> Self {
-        Self { out, in_a, in_b }
-    }
-
-    // TODO: add documentation
-    // Should return the bit representation for a, b, and c as a long string
-    // will need to pass the size of the bits, making some assumption about
-    // the structure of the circuit
-    fn to_bit_string(&self, out_var_count: usize, in_var_count: usize) -> String {
-        let out_binary_string = binary_string(self.out, out_var_count);
-        let in_a_binary_string = binary_string(self.in_a, in_var_count);
-        let in_b_binary_string = binary_string(self.in_b, in_var_count);
-
-        out_binary_string + &in_a_binary_string + &in_b_binary_string
-    }
-}
-
-/// Holds the add and mul gates in a given layer
-struct Layer {
-    add_gates: Vec<Gate>,
-    mul_gates: Vec<Gate>,
-    len: usize,
-}
-
-impl Layer {
-    /// Instantiate a new gate layer, calculate the total gate count
-    fn new(add_gates: Vec<Gate>, mul_gates: Vec<Gate>) -> Self {
-        Self {
-            len: add_gates.len() + mul_gates.len(),
-            add_gates,
-            mul_gates,
-        }
-    }
-}
-
-/// Generate the add_i and mult_i multilinear extension polynomials given a layer
-impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
-    fn from(layer: &Layer) -> Self {
-        let layer_var_count = bit_count_for_n_elem(layer.len);
-        // we assume input fan in of 2
-        let input_var_count = bit_count_for_n_elem(layer.len * 2);
-
-        let add_mle = layer.add_gates.iter().fold(
-            MultiLinearPolynomial::<F>::additive_identity(),
-            |acc, gate| {
-                // what do we do per gate?
-                // we need to convert it to a string we know the var count for each
-                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
-                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
-
-                (&acc + &gate_bit_checker).unwrap()
-            },
-        );
-
-        let mult_mle = layer.mul_gates.iter().fold(
-            MultiLinearPolynomial::<F>::additive_identity(),
-            |acc, gate| {
-                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
-                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
-
-                (&acc + &gate_bit_checker).unwrap()
-            },
-        );
-
-        [add_mle, mult_mle]
-    }
-}
 
 /// A circuit is just a stacked collection of layers
 struct Circuit {
@@ -98,7 +22,7 @@ impl Circuit {
             return Err("cannot evaluate circuit is empty");
         }
 
-        if (self.layers.last().unwrap().len * 2) != input.len() {
+        if (self.layers.last().unwrap().len() * 2) != input.len() {
             return Err("not enough values for input layer");
         }
 
@@ -109,7 +33,7 @@ impl Circuit {
             .iter()
             .rev()
             .map(|layer| {
-                let mut layer_evaluations = vec![F::zero(); layer.len];
+                let mut layer_evaluations = vec![F::zero(); layer.len()];
 
                 // add gate evaluations
                 for wire in &layer.add_gates {
@@ -133,8 +57,9 @@ impl Circuit {
 
 #[cfg(test)]
 mod tests {
-    use crate::gkr::circuit::{Circuit, Gate, Layer};
+    use crate::gkr::circuit::{Circuit, Layer};
 
+    use crate::gkr::gate::Gate;
     use crate::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
@@ -160,10 +85,10 @@ mod tests {
 
         // instantiate circuit
         let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)]);
-        assert_eq!(layer_0.len, 1);
+        assert_eq!(layer_0.len(), 1);
 
         let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
-        assert_eq!(layer_1.len, 2);
+        assert_eq!(layer_1.len(), 2);
 
         let circuit = Circuit::new(vec![layer_0, layer_1]);
 
