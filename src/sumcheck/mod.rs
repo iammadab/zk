@@ -1,3 +1,4 @@
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::util::{
@@ -11,14 +12,14 @@ pub mod boolean_hypercube;
 pub mod util;
 
 #[derive(Debug)]
-struct SumcheckProof<F: PrimeField> {
-    poly: MultiLinearPolynomial<F>,
+struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
+    poly: P,
     sum: F,
-    uni_polys: Vec<UnivariatePolynomial<F>>,
+    uni_polys: Vec<P>,
 }
 
-impl<F: PrimeField> SumcheckProof<F> {
-    fn new(poly: MultiLinearPolynomial<F>, sum: F) -> Self {
+impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
+    fn new(poly: P, sum: F) -> Self {
         Self {
             poly,
             sum,
@@ -31,14 +32,14 @@ struct Sumcheck {}
 
 impl Sumcheck {
     /// Generate a sum check proof given the poly and the claimed sum
-    fn prove<F: PrimeField>(poly: MultiLinearPolynomial<F>, sum: F) -> SumcheckProof<F> {
+    fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P> {
         let mut uni_polys = vec![];
         let mut challenges = vec![];
         let mut transcript = Transcript::new();
 
         // add the poly and sum to the transcript
         transcript.append(sum.into_bigint().to_bytes_be().as_slice());
-        add_multilinear_poly_to_transcript(&poly, &mut transcript);
+        transcript.append(poly.to_bytes().as_slice());
 
         for _ in 0..poly.n_vars() {
             // partially evaluate the polynomial at the generated challenge points
@@ -49,8 +50,8 @@ impl Sumcheck {
                 .unwrap()
                 .relabel();
 
-            let uni_poly = skip_first_var_then_sum_over_boolean_hypercube(&challenge_poly);
-            add_univariate_poly_to_transcript(&uni_poly, &mut transcript);
+            let uni_poly = skip_first_var_then_sum_over_boolean_hypercube(challenge_poly);
+            transcript.append(uni_poly.to_bytes().as_slice());
             uni_polys.push(uni_poly);
 
             // sample challenge
@@ -65,7 +66,7 @@ impl Sumcheck {
     }
 
     /// Verify a sumcheck proof
-    fn verify<F: PrimeField>(proof: SumcheckProof<F>) -> bool {
+    fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool {
         if proof.uni_polys.len() != proof.poly.n_vars() {
             // number of round poly's should match total number of rounds
             return false;
@@ -76,25 +77,28 @@ impl Sumcheck {
 
         // add the poly and sum to the transcript
         transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
-        add_multilinear_poly_to_transcript(&proof.poly, &mut transcript);
+        transcript.append(&proof.poly.to_bytes().as_slice());
 
         let mut claimed_sum = proof.sum;
 
         for poly in proof.uni_polys {
+            // TODO: this evaluations should take a single value rather than a slice
+            // TODO: also remove unwrap
             // assert that p(0) + p(1) = sum
-            let p_0 = poly.evaluate(&F::zero());
-            let p_1 = poly.evaluate(&F::one());
+            let p_0 = poly.evaluate(&[F::zero()]).unwrap();
+            let p_1 = poly.evaluate(&[F::one()]).unwrap();
 
             if claimed_sum != (p_0 + p_1) {
                 return false;
             }
 
             // add poly to transcript
-            add_univariate_poly_to_transcript(&poly, &mut transcript);
+            transcript.append(&poly.to_bytes().as_slice());
 
             // sample challenge and update claimed sum
             let challenge = transcript.sample_field_element::<F>();
-            claimed_sum = poly.evaluate(&challenge);
+            // TODO: should take a single value here rather than slice
+            claimed_sum = poly.evaluate(&[challenge]).unwrap();
             challenges.push(challenge);
         }
 

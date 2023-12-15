@@ -1,3 +1,4 @@
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
@@ -25,6 +26,32 @@ type PolynomialTerm<F> = (F, Vec<bool>);
 pub struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: u32,
     coefficients: BTreeMap<usize, F>,
+}
+
+// TODO: cleanup
+impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
+    fn n_vars(&self) -> usize {
+        todo!()
+    }
+
+    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+        todo!()
+    }
+
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn relabel(self) -> Self {
+        todo!()
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
 }
 
 impl<F: PrimeField> MultiLinearPolynomial<F> {

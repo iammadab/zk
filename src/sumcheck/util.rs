@@ -1,3 +1,4 @@
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
@@ -8,28 +9,31 @@ use ark_ff::{BigInteger, PrimeField};
 //  by evaluating the polynomial from the back and caching the intermediate results
 /// Keep the first variable free then sum over the boolean hypercube
 /// Assumes polynomial has no unused free variables i.e poly has been relabelled
-pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField>(
-    poly: &MultiLinearPolynomial<F>,
-) -> UnivariatePolynomial<F> {
-    // evaluating at every variable other than the first one
-    let n_vars_to_eval = poly.n_vars() - 1;
+pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField, P: MultiLinearExtension<F>>(
+    poly: P,
+) -> P {
+    todo!()
 
-    if n_vars_to_eval == 0 {
-        // only one variable is free
-        return poly.clone().try_into().unwrap();
-    }
-
-    let mut sum = MultiLinearPolynomial::<F>::additive_identity();
-
-    // for each point in the boolean hypercube, perform a partial evaluation
-    for point in BooleanHyperCube::<F>::new(n_vars_to_eval) {
-        let evaluation_points =
-            partial_evaluation_points(poly.n_vars(), 1..=n_vars_to_eval, &mut point.iter());
-        let partial_eval = poly.partial_evaluate(evaluation_points.as_slice()).unwrap();
-        sum = (&sum + &partial_eval).unwrap();
-    }
-
-    sum.relabel().try_into().unwrap()
+    // // evaluating at every variable other than the first one
+    // let n_vars_to_eval = poly.n_vars() - 1;
+    //
+    // if n_vars_to_eval == 0 {
+    //     // only one variable is free
+    //     return poly.clone();
+    // }
+    //
+    // let mut sum = MultiLinearPolynomial::<F>::additive_identity();
+    //
+    // // for each point in the boolean hypercube, perform a partial evaluation
+    // for point in BooleanHyperCube::<F>::new(n_vars_to_eval) {
+    //     let evaluation_points =
+    //         partial_evaluation_points(poly.n_vars(), 1..=n_vars_to_eval, &mut point.iter());
+    //     let partial_eval = poly.partial_evaluate(evaluation_points.as_slice()).unwrap();
+    //     sum = (&sum + &partial_eval).unwrap();
+    // }
+    //
+    // // TODO: do we check that this has just one variable here??
+    // sum.relabel()
 }
 
 /// Sum a polynomial over the boolean hypercube

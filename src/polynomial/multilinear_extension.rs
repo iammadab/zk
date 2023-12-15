@@ -1,7 +1,7 @@
 use ark_ff::PrimeField;
 
 // TODO: consider calling this polynomial extension
-pub trait MultiLinearExtension<F: PrimeField> {
+pub trait MultiLinearExtension<F: PrimeField>: Clone {
     /// Returns the number of variables in the extension
     fn n_vars(&self) -> usize;
 
@@ -23,3 +23,5 @@ pub trait MultiLinearExtension<F: PrimeField> {
     /// mostly used for transcript addition
     fn to_bytes(&self) -> Vec<u8>;
 }
+
+// TODO: consider implementing univariate trait that allows evaluate to only take a single value
