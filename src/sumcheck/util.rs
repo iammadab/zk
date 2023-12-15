@@ -1,7 +1,7 @@
-use crate::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
+use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
+use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
 use crate::transcript::Transcript;
-use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 
 // TODO: there is an optimization that prevents you from having to do this all the rounds
@@ -75,7 +75,7 @@ pub fn add_univariate_poly_to_transcript<F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-    use crate::multilinear_poly::MultiLinearPolynomial;
+    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_ff::{Fp64, MontBackend, MontConfig};
 

@@ -1,4 +1,4 @@
-use crate::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
 /// Multivariate Extension structure for gate evaluations in a circuit layer

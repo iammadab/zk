@@ -1,5 +1,5 @@
 use crate::gkr::gate::Gate;
-use crate::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolynomial};
+use crate::polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolynomial};
 use ark_ff::PrimeField;
 
 /// Holds the add and mul gates in a given layer

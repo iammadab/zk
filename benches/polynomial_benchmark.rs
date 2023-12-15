@@ -1,7 +1,7 @@
 use ark_ff::{Fp64, MontBackend, MontConfig};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::str::CharIndices;
-use thaler::univariate_poly::UnivariatePolynomial;
+use thaler::polynomial::univariate_poly::UnivariatePolynomial;
 
 #[derive(MontConfig)]
 #[modulus = "17"]

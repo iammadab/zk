@@ -1,10 +1,10 @@
-use crate::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::util::{
     add_multilinear_poly_to_transcript, add_univariate_poly_to_transcript,
     partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
 };
 use crate::transcript::Transcript;
-use crate::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 
 pub mod boolean_hypercube;
@@ -107,10 +107,10 @@ impl Sumcheck {
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly::MultiLinearPolynomial;
     use crate::transcript::Transcript;
     use sha3::digest::typenum::Sum;
 
+    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig, One};
 

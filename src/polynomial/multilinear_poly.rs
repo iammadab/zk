@@ -473,7 +473,7 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly::{
+    use crate::polynomial::multilinear_poly::{
         mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
         to_power_of_two, MultiLinearPolynomial,
     };
