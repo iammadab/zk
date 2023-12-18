@@ -22,9 +22,6 @@ pub trait MultiLinearExtension<F: PrimeField>: Clone {
     /// Additive Identity
     fn additive_identity() -> Self;
 
-    /// Multiplicative Identity
-    fn multiplicative_identity() -> Self;
-
     /// Convert the extension to a sequence of bytes
     /// mostly used for transcript addition
     fn to_bytes(&self) -> Vec<u8>;

@@ -116,11 +116,6 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
         Self::new(0, vec![]).unwrap()
     }
 
-    /// Multiplicative identity poly
-    fn multiplicative_identity() -> Self {
-        Self::new(0, vec![(F::one(), vec![])]).unwrap()
-    }
-
     /// Serialize the multilinear polynomial
     fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
@@ -310,6 +305,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Returns the number of elements in the dense polynomial representation
     fn variable_combination_count(number_of_variables: u32) -> usize {
         1 << number_of_variables
+    }
+
+    /// Multiplicative identity poly
+    fn multiplicative_identity() -> Self {
+        Self::new(0, vec![(F::one(), vec![])]).unwrap()
     }
 }
 

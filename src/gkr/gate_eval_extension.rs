@@ -56,7 +56,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
             add_mle,
             mul_mle,
             w_b_mle: w_mle.clone(),
-            w_c_mle: w_mle
+            w_c_mle: w_mle,
         })
     }
 }
@@ -93,17 +93,20 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn relabel(self) -> Self {
-        // is it sufficient to just relabel each component??
+        // when do we every need to relabel??
+        // the only thing that can be relabelled is what?
         //
         todo!()
     }
 
     fn additive_identity() -> Self {
-        todo!()
-    }
-
-    fn multiplicative_identity() -> Self {
-        todo!()
+        Self {
+            r: vec![],
+            add_mle: MultiLinearPolynomial::<F>::additive_identity(),
+            mul_mle: MultiLinearPolynomial::<F>::additive_identity(),
+            w_b_mle: MultiLinearPolynomial::<F>::additive_identity(),
+            w_c_mle: MultiLinearPolynomial::<F>::additive_identity(),
+        }
     }
 
     fn to_bytes(&self) -> Vec<u8> {
