@@ -1,5 +1,5 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
 use std::env::var;
@@ -30,27 +30,106 @@ pub struct MultiLinearPolynomial<F: PrimeField> {
 
 // TODO: cleanup
 impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
+    /// Return the number of variables in the poly
     fn n_vars(&self) -> usize {
-        todo!()
+        self.n_vars as usize
     }
 
+    /// Assign a value to every variable in the polynomial, result is a Field element
     fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
-        todo!()
+        // Associates every assignment with the correct selector vector and calls
+        // partial evaluate on the expanded assignment
+
+        if self.n_vars == 0 {
+            return Ok(*self.coefficients.get(&0).unwrap_or(&F::zero()));
+        }
+
+        if assignments.len() != self.n_vars as usize {
+            return Err("evaluate requires an assignment for every variable");
+        }
+
+        let mut indexed_assignments = vec![];
+        for (position, assignment) in assignments.into_iter().enumerate() {
+            indexed_assignments.push((
+                selector_from_position(self.n_vars as usize, position)?,
+                assignment,
+            ))
+        }
+
+        let evaluated_poly = self.partial_evaluate(&indexed_assignments)?;
+
+        Ok(*evaluated_poly
+            .coefficients
+            .get(&0)
+            .expect("full evaluation returns a constant"))
     }
 
-    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
-    where
-        Self: Sized,
-    {
-        todo!()
+    /// Partially assign values to variables in the polynomial
+    /// Returns the resulting polynomial once those variables have been fixed
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
+        // When partially evaluating a variable in a monomial, we need to multiply the variable assignment
+        // with the previous coefficient, then move the new coefficient to the appropriate monomial
+        // e.g p = 5abc partially evaluating a = 2
+        // new coefficient will be 5*2 = 10 and new monomial will be bc
+        // resulting in 10bc
+        // recall each variable has an index in the power of two
+        // [a, b, c] = [1, 2, 4]
+        // given a term e.g. abc the index is 1 + 2 + 4 = 7
+        // to get the index of the result, just subtract the variable being evaluated
+        // 7 - 1 = 6
+        // and bc = 2 + 4 = 6
+
+        let mut evaluated_polynomial = self.clone();
+        for (selector, coeff) in assignments {
+            let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
+            for i in variable_indexes {
+                // update only if there is an associated coefficient for this variable index
+                if let Some(old_coeff) = evaluated_polynomial.coefficients.remove(&i) {
+                    let result_index = i - selector_to_index(selector);
+                    let updated_coefficient = old_coeff * *coeff;
+                    *evaluated_polynomial
+                        .coefficients
+                        .entry(result_index)
+                        .or_insert(F::zero()) += updated_coefficient;
+                }
+            }
+        }
+        Ok(evaluated_polynomial)
     }
 
+    /// Relabelling removes variables that are no longer used (shrinking the polynomial)
+    /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
+    /// we can relabel to 2a + 9b uses 2 variables
     fn relabel(self) -> Self {
-        todo!()
+        let variable_presence = self.variable_presence_vector();
+        let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
+        let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
+        let new_var_count = variable_presence
+            .iter()
+            .fold(0_u32, |acc, curr| acc + *curr as u32);
+        relabelled_poly.n_vars = new_var_count;
+        relabelled_poly
     }
 
+    /// Additive identity poly
+    fn additive_identity() -> Self {
+        Self::new(0, vec![]).unwrap()
+    }
+
+    /// Multiplicative identity poly
+    fn multiplicative_identity() -> Self {
+        Self::new(0, vec![(F::one(), vec![])]).unwrap()
+    }
+
+    /// Serialize the multilinear polynomial
     fn to_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut result = vec![];
+        result.extend(self.n_vars.to_be_bytes());
+        for (var_id, coeff) in self.coefficients() {
+            result.extend(var_id.to_be_bytes());
+            result.extend(coeff.into_bigint().to_bytes_be());
+        }
+        result
     }
 }
 
@@ -92,76 +171,9 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
-    /// Return the number of variables in the poly
-    pub fn n_vars(&self) -> usize {
-        self.n_vars as usize
-    }
-
     /// Return the coefficent map of the polynomial
     pub fn coefficients(&self) -> BTreeMap<usize, F> {
         self.coefficients.clone()
-    }
-
-    /// Partially assign values to variables in the polynomial
-    /// Returns the resulting polynomial once those variables have been fixed
-    pub fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str> {
-        // When partially evaluating a variable in a monomial, we need to multiply the variable assignment
-        // with the previous coefficient, then move the new coefficient to the appropriate monomial
-        // e.g p = 5abc partially evaluating a = 2
-        // new coefficient will be 5*2 = 10 and new monomial will be bc
-        // resulting in 10bc
-        // recall each variable has an index in the power of two
-        // [a, b, c] = [1, 2, 4]
-        // given a term e.g. abc the index is 1 + 2 + 4 = 7
-        // to get the index of the result, just subtract the variable being evaluated
-        // 7 - 1 = 6
-        // and bc = 2 + 4 = 6
-
-        let mut evaluated_polynomial = self.clone();
-        for (selector, coeff) in assignments {
-            let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
-            for i in variable_indexes {
-                // update only if there is an associated coefficient for this variable index
-                if let Some(old_coeff) = evaluated_polynomial.coefficients.remove(&i) {
-                    let result_index = i - selector_to_index(selector);
-                    let updated_coefficient = old_coeff * *coeff;
-                    *evaluated_polynomial
-                        .coefficients
-                        .entry(result_index)
-                        .or_insert(F::zero()) += updated_coefficient;
-                }
-            }
-        }
-        Ok(evaluated_polynomial)
-    }
-
-    /// Assign a value to every variable in the polynomial, result is a Field element
-    pub fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
-        // Associates every assignment with the correct selector vector and calls
-        // partial evaluate on the expanded assignment
-
-        if self.n_vars == 0 {
-            return Ok(*self.coefficients.get(&0).unwrap_or(&F::zero()));
-        }
-
-        if assignments.len() != self.n_vars as usize {
-            return Err("evaluate requires an assignment for every variable");
-        }
-
-        let mut indexed_assignments = vec![];
-        for (position, assignment) in assignments.into_iter().enumerate() {
-            indexed_assignments.push((
-                selector_from_position(self.n_vars as usize, position)?,
-                assignment,
-            ))
-        }
-
-        let evaluated_poly = self.partial_evaluate(&indexed_assignments)?;
-
-        Ok(*evaluated_poly
-            .coefficients
-            .get(&0)
-            .expect("full evaluation returns a constant"))
     }
 
     /// Interpolate a set of values over the boolean hypercube
@@ -205,20 +217,6 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             })
     }
 
-    /// Relabelling removes variables that are no longer used (shrinking the polynomial)
-    /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
-    /// we can relabel to 2a + 9b uses 2 variables
-    pub fn relabel(self) -> Self {
-        let variable_presence = self.variable_presence_vector();
-        let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
-        let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
-        let new_var_count = variable_presence
-            .iter()
-            .fold(0_u32, |acc, curr| acc + *curr as u32);
-        relabelled_poly.n_vars = new_var_count;
-        relabelled_poly
-    }
-
     /// Determines which variables are represented in the polynomial
     /// e.g. a polynomial of 3 variables should have [a, b, c]
     /// if the poly is of the form 3a + 4c then it only represents [a, c]
@@ -249,16 +247,6 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     fn check_one() -> Self {
         // p = a
         Self::new(1, vec![(F::one(), vec![true])]).unwrap()
-    }
-
-    /// Multiplicative identity poly
-    pub fn multiplicative_identity() -> Self {
-        Self::new(0, vec![(F::one(), vec![])]).unwrap()
-    }
-
-    /// Additive identity poly
-    pub fn additive_identity() -> Self {
-        Self::new(0, vec![]).unwrap()
     }
 
     /// Co-efficient wise multiplication with scalar
@@ -500,6 +488,7 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::{
         mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
         to_power_of_two, MultiLinearPolynomial,

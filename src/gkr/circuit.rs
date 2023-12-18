@@ -91,6 +91,7 @@ pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
 
     use crate::gkr::gate::Gate;
+    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;

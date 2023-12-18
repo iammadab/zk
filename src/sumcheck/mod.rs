@@ -7,6 +7,7 @@ use crate::sumcheck::util::{
 };
 use crate::transcript::Transcript;
 use ark_ff::{BigInteger, PrimeField};
+use std::ops::Add;
 
 pub mod boolean_hypercube;
 pub mod util;
@@ -32,7 +33,10 @@ struct Sumcheck {}
 
 impl Sumcheck {
     /// Generate a sum check proof given the poly and the claimed sum
-    fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P> {
+    fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P>
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
+    {
         let mut uni_polys = vec![];
         let mut challenges = vec![];
         let mut transcript = Transcript::new();
@@ -66,7 +70,10 @@ impl Sumcheck {
     }
 
     /// Verify a sumcheck proof
-    fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool {
+    fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
+    {
         if proof.uni_polys.len() != proof.poly.n_vars() {
             // number of round poly's should match total number of rounds
             return false;

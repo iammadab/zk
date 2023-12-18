@@ -1,3 +1,4 @@
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 

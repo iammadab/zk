@@ -19,6 +19,12 @@ pub trait MultiLinearExtension<F: PrimeField>: Clone {
     /// we can relabel to 2a + 9b uses 2 variables
     fn relabel(self) -> Self;
 
+    /// Additive Identity
+    fn additive_identity() -> Self;
+
+    /// Multiplicative Identity
+    fn multiplicative_identity() -> Self;
+
     /// Convert the extension to a sequence of bytes
     /// mostly used for transcript addition
     fn to_bytes(&self) -> Vec<u8>;

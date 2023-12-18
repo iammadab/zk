@@ -1,4 +1,5 @@
 use crate::gkr::gate::Gate;
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolynomial};
 use ark_ff::PrimeField;
 
