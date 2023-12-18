@@ -13,7 +13,8 @@ struct GateEvalExtension<F: PrimeField> {
     r: Vec<F>,
     add_mle: MultiLinearPolynomial<F>,
     mul_mle: MultiLinearPolynomial<F>,
-    w_mle: MultiLinearPolynomial<F>,
+    w_b_mle: MultiLinearPolynomial<F>,
+    w_c_mle: MultiLinearPolynomial<F>,
 }
 
 impl<F: PrimeField> GateEvalExtension<F> {
@@ -54,7 +55,8 @@ impl<F: PrimeField> GateEvalExtension<F> {
             r,
             add_mle,
             mul_mle,
-            w_mle,
+            w_b_mle: w_mle.clone(),
+            w_c_mle: w_mle
         })
     }
 }
@@ -62,8 +64,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
 impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     fn n_vars(&self) -> usize {
         // n vars = |b| + |c|
-        // |b| = w_mle.n_vars();
-        self.w_mle.n_vars() * 2
+        self.w_b_mle.n_vars() + self.w_c_mle.n_vars()
     }
 
     fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
@@ -74,9 +75,9 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         let mut rbc = self.r.clone();
         rbc.extend(assignments.to_vec());
 
-        let mid = self.n_vars() / 2;
-        let b_val = self.w_mle.evaluate(&assignments[..mid]).unwrap();
-        let c_val = self.w_mle.evaluate(&assignments[mid..]).unwrap();
+        let mid = self.w_b_mle.n_vars();
+        let b_val = self.w_b_mle.evaluate(&assignments[..mid]).unwrap();
+        let c_val = self.w_c_mle.evaluate(&assignments[mid..]).unwrap();
 
         let add_result = self.add_mle.evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
         let mul_result = self.mul_mle.evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
@@ -92,6 +93,8 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn relabel(self) -> Self {
+        // is it sufficient to just relabel each component??
+        //
         todo!()
     }
 
