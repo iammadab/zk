@@ -181,7 +181,7 @@ pub mod tests {
         assert_eq!(mult_0.n_vars(), 0);
         // the sum over the boolean hypercube should equate to 1
         // as we have only 1 add gate
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&add_0), Fr::from(1));
+        assert_eq!(sum_over_boolean_hyper_cube(&add_0), Fr::from(1));
         // the only eval should be what we expect (a, b, c) -> (0, 0, 1)
         assert_eq!(
             add_0
@@ -190,7 +190,7 @@ pub mod tests {
             Fr::from(1)
         );
         // mul gate should sum to 0 over the boolean hypercube
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&mult_0), Fr::from(0));
+        assert_eq!(sum_over_boolean_hyper_cube(&mult_0), Fr::from(0));
 
         // layer 1
         let [add_1, mult_1]: [MultiLinearPolynomial<Fr>; 2] = (&circuit.layers[1]).into();
@@ -199,7 +199,7 @@ pub mod tests {
         // number of variables for mul should also be 5
         assert_eq!(mult_1.n_vars(), 5);
         // we have a single add gate, sum over boolean hypercube should be 1
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&add_1), Fr::from(1));
+        assert_eq!(sum_over_boolean_hyper_cube(&add_1), Fr::from(1));
         // exact evaluation should be (a, b, c) -> (0, 0, 1) -> (0, 00, 01)
         assert_eq!(
             add_1
@@ -214,7 +214,7 @@ pub mod tests {
             Fr::from(1)
         );
         // mul gate should sum to 1 over the boolean hypercube
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&mult_1), Fr::from(1));
+        assert_eq!(sum_over_boolean_hyper_cube(&mult_1), Fr::from(1));
         // exact evaluation should be (a, b, c) -> (1, 2, 3) -> (1, 10, 11)
         assert_eq!(
             mult_1
@@ -236,7 +236,7 @@ pub mod tests {
         // number of variables for mul should also be 8
         assert_eq!(mult_2.n_vars(), 8);
         // we have 2 add gates, sum over boolean hypercube should be 2
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&add_2), Fr::from(2));
+        assert_eq!(sum_over_boolean_hyper_cube(&add_2), Fr::from(2));
         // exact evaluations for add
         // (2, 4, 5) -> (10, 100, 101)
         // (3, 6, 7) -> (11, 110, 111)
@@ -271,7 +271,7 @@ pub mod tests {
             Fr::from(1)
         );
         // we also have 2 mul gates, sum over boolean hypercube should be 2
-        assert_eq!(sum_over_boolean_hyper_cube::<Fr>(&mult_2), Fr::from(2));
+        assert_eq!(sum_over_boolean_hyper_cube(&mult_2), Fr::from(2));
         // exact evaluations for mul
         // (0, 0, 1) -> (00, 000, 001)
         // (1, 2, 3) -> (01, 010, 011)

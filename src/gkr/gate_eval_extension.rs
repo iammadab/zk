@@ -2,6 +2,7 @@ use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
+#[derive(Clone)]
 /// Multivariate Extension structure for gate evaluations in a circuit layer
 /// Given three values a, b, c the structure will:
 /// - first check if a, b, c is a valid gate in the current layer
@@ -56,9 +57,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
             w_mle,
         })
     }
-}
 
-impl<F: PrimeField> GateEvalExtension<F> {
     fn evaluate(&self, b: &[F], c: &[F]) -> Result<F, &'static str> {
         if b.len() != self.w_mle.n_vars() || c.len() != self.w_mle.n_vars() {
             return Err("invalid variable length, b and c should each be the same size as w_mle");
@@ -78,11 +77,47 @@ impl<F: PrimeField> GateEvalExtension<F> {
     }
 }
 
+impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
+    fn n_vars(&self) -> usize {
+        // n vars = |b| + |c|
+        // |b| = w_mle.n_vars();
+        self.w_mle.n_vars() * 2
+    }
+
+    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+        todo!()
+    }
+
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn relabel(self) -> Self {
+        todo!()
+    }
+
+    fn additive_identity() -> Self {
+        todo!()
+    }
+
+    fn multiplicative_identity() -> Self {
+        todo!()
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
+    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
     #[test]
@@ -122,6 +157,7 @@ mod test {
 
         // TODO: implement method for summing over the boolean hypercube
         //  the idea is to show that summing over all other combinations gives 0
+        assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
         // setting r = 1
         let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(1)], add_1, mul_1, w_2).unwrap();

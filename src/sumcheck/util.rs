@@ -39,7 +39,7 @@ where
 }
 
 /// Sum a polynomial over the boolean hypercube
-pub fn sum_over_boolean_hyper_cube<F: PrimeField>(poly: &MultiLinearPolynomial<F>) -> F {
+pub fn sum_over_boolean_hyper_cube<F: PrimeField, P: MultiLinearExtension<F>>(poly: &P) -> F {
     BooleanHyperCube::<F>::new(poly.n_vars()).fold(F::zero(), |sum, point| {
         sum + poly.evaluate(point.as_slice()).unwrap()
     })
