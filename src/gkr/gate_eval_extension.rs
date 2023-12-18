@@ -57,24 +57,6 @@ impl<F: PrimeField> GateEvalExtension<F> {
             w_mle,
         })
     }
-
-    fn evaluate(&self, b: &[F], c: &[F]) -> Result<F, &'static str> {
-        if b.len() != self.w_mle.n_vars() || c.len() != self.w_mle.n_vars() {
-            return Err("invalid variable length, b and c should each be the same size as w_mle");
-        }
-
-        let mut rbc = self.r.clone();
-        rbc.extend(b.clone());
-        rbc.extend(c.to_vec());
-
-        let b_val = self.w_mle.evaluate(b).unwrap();
-        let c_val = self.w_mle.evaluate(c).unwrap();
-
-        let add_result = self.add_mle.evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
-        let mul_result = self.mul_mle.evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
-
-        Ok(add_result + mul_result)
-    }
 }
 
 impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
@@ -85,7 +67,21 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
-        todo!()
+        if assignments.len() != self.n_vars() {
+            return Err("invalid assignment length, should be twice the size of w_mle.n_vars()");
+        }
+
+        let mut rbc = self.r.clone();
+        rbc.extend(assignments.to_vec());
+
+        let mid = self.n_vars() / 2;
+        let b_val = self.w_mle.evaluate(&assignments[..mid]).unwrap();
+        let c_val = self.w_mle.evaluate(&assignments[mid..]).unwrap();
+
+        let add_result = self.add_mle.evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
+        let mul_result = self.mul_mle.evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
+
+        Ok(add_result + mul_result)
     }
 
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
@@ -117,6 +113,7 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
+    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
@@ -150,13 +147,10 @@ mod test {
         // eval at b = 0 and c = 1, expected result = 14
         assert_eq!(
             gate_eval_ext
-                .evaluate(&[Fr::from(0), Fr::from(0)], &[Fr::from(0), Fr::from(1)])
+                .evaluate(&[Fr::from(0), Fr::from(0), Fr::from(0), Fr::from(1)])
                 .unwrap(),
             Fr::from(14)
         );
-
-        // TODO: implement method for summing over the boolean hypercube
-        //  the idea is to show that summing over all other combinations gives 0
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
         // setting r = 1
@@ -164,9 +158,10 @@ mod test {
         // eval at b = 2, and c = 3, expected result = 165
         assert_eq!(
             gate_eval_ext
-                .evaluate(&[Fr::from(1), Fr::from(0)], &[Fr::from(1), Fr::from(1)])
+                .evaluate(&[Fr::from(1), Fr::from(0), Fr::from(1), Fr::from(1)])
                 .unwrap(),
             Fr::from(165)
         );
+        assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(165));
     }
 }
