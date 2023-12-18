@@ -1,8 +1,10 @@
+use crate::gkr::gate::Gate;
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
+use std::ops::Add;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 /// Multivariate Extension structure for gate evaluations in a circuit layer
 /// Given three values a, b, c the structure will:
 /// - first check if a, b, c is a valid gate in the current layer
@@ -110,7 +112,39 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut result = vec![];
+        for f in &self.r {
+            result.extend(f.into_bigint().to_bytes_be());
+        }
+        result.extend(self.add_mle.to_bytes());
+        result.extend(self.mul_mle.to_bytes());
+        result.extend(self.w_b_mle.to_bytes());
+        result.extend(self.w_c_mle.to_bytes());
+        result
+    }
+}
+
+// TODO: test gate eval addition
+// TODO: test gate eval addition with additive identity
+impl<F: PrimeField> Add for &GateEvalExtension<F> {
+    type Output = Result<GateEvalExtension<F>, &'static str>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.r != rhs.r {
+            // they are only allowed to be non equal if one of them is empty
+            if !self.r.is_empty() && !rhs.r.is_empty() {
+                return Err("cannot add gate extensions with different r values");
+            }
+        }
+
+        // addition is just the sum of the individual polynomials
+        Ok(GateEvalExtension {
+            r: self.r.clone(),
+            add_mle: (&self.add_mle + &rhs.add_mle)?,
+            mul_mle: (&self.mul_mle + &rhs.mul_mle)?,
+            w_b_mle: (&self.w_b_mle + &rhs.w_b_mle)?,
+            w_c_mle: (&self.w_c_mle + &rhs.w_c_mle)?,
+        })
     }
 }
 

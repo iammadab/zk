@@ -2,7 +2,6 @@ use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
-use std::env::var;
 use std::ops::{Add, Mul};
 
 /// Polynomial term represents a monomial
