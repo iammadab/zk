@@ -4,6 +4,8 @@ use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Add;
 
+// TODO: delete this file, found a better approach
+
 #[derive(Clone, Debug, PartialEq)]
 /// Multivariate Extension structure for gate evaluations in a circuit layer
 /// Given three values a, b, c the structure will:
@@ -223,7 +225,7 @@ mod test {
     use crate::gkr::gate_eval_extension::GateEvalExtension;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
-    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+    use crate::sumcheck::util::{skip_first_var_then_sum_over_boolean_hypercube, sum_over_boolean_hyper_cube};
     use crate::sumcheck::{Sumcheck, SumcheckProof};
     use ark_bls12_381::Fr;
 
@@ -333,6 +335,12 @@ mod test {
 
         // sum over boolean hypercube = 14
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
+
+        // TODO: delete or move this
+        let m = skip_first_var_then_sum_over_boolean_hypercube(gate_eval_ext.clone());
+        let a  = m.evaluate(&[Fr::from(0)]).unwrap();
+        let b = m.evaluate(&[Fr::from(1)]).unwrap();
+        dbg!(a + b);
 
         // generate false sumcheck proof
         // let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));

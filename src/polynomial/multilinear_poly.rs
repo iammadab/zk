@@ -203,7 +203,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Given some bit string of len n e.g. 0100
     /// constructs an n-var multilinear polynomial that evaluates to 1
     /// when the given bit string is given as input
-    /// and evaluates to 0 for anyother bit string
+    /// and evaluates to 0 for another bit string
     pub fn bit_string_checker(bit_string: String) -> Self {
         bit_string
             .chars()
