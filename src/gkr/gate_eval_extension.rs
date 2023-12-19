@@ -15,10 +15,10 @@ use std::ops::Add;
 /// boolean hypercube, a field element is returned.
 struct GateEvalExtension<F: PrimeField> {
     r: Vec<F>,
-    add_mle: MultiLinearPolynomial<F>,
-    mul_mle: MultiLinearPolynomial<F>,
-    w_b_mle: MultiLinearPolynomial<F>,
-    w_c_mle: MultiLinearPolynomial<F>,
+    add_mle: Vec<MultiLinearPolynomial<F>>,
+    mul_mle: Vec<MultiLinearPolynomial<F>>,
+    w_b_mle: Vec<MultiLinearPolynomial<F>>,
+    w_c_mle: Vec<MultiLinearPolynomial<F>>,
 }
 
 impl<F: PrimeField> GateEvalExtension<F> {
@@ -57,21 +57,38 @@ impl<F: PrimeField> GateEvalExtension<F> {
 
         Ok(Self {
             r,
-            add_mle,
-            mul_mle,
-            w_b_mle: w_mle.clone(),
-            w_c_mle: w_mle,
+            add_mle: vec![add_mle],
+            mul_mle: vec![mul_mle],
+            w_b_mle: vec![w_mle.clone()],
+            w_c_mle: vec![w_mle],
         })
     }
 
-    /// Return the number of variables for b in f(b, c)
-    fn b_vars(&self) -> usize {
-        self.w_b_mle.n_vars()
+    fn is_additive_identity(&self) -> bool {
+        if self.r.is_empty()
+            && self.add_mle.is_empty()
+            && self.mul_mle.is_empty()
+            && self.w_b_mle.is_empty()
+            && self.w_c_mle.is_empty()
+        {
+            return true;
+        }
+        false
     }
 
-    /// Return the number of variables for c in f(b, c)
+    /// Returns the number of f(b, c) function in the struct
+    fn count(&self) -> usize {
+        self.add_mle.len()
+    }
+
+    /// Returns the number of variables for b in f(b, c)
+    fn b_vars(&self) -> usize {
+        self.w_b_mle.first().map(|p| p.n_vars()).unwrap_or(0)
+    }
+
+    /// Returns the number of variables for c in f(b, c)
     fn c_vars(&self) -> usize {
-        self.w_c_mle.n_vars()
+        self.w_c_mle.first().map(|p| p.n_vars()).unwrap_or(0)
     }
 }
 
@@ -86,17 +103,23 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             return Err("invalid assignment length, should be twice the size of w_mle.n_vars()");
         }
 
+        let mut evaluation_result = F::zero();
+
         let mut rbc = self.r.clone();
         rbc.extend(assignments.to_vec());
 
-        let mid = self.w_b_mle.n_vars();
-        let b_val = self.w_b_mle.evaluate(&assignments[..mid]).unwrap();
-        let c_val = self.w_c_mle.evaluate(&assignments[mid..]).unwrap();
+        for i in 0..self.count() {
+            let mid = self.w_b_mle[i].n_vars();
+            let b_val = self.w_b_mle[i].evaluate(&assignments[..mid]).unwrap();
+            let c_val = self.w_c_mle[i].evaluate(&assignments[mid..]).unwrap();
 
-        let add_result = self.add_mle.evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
-        let mul_result = self.mul_mle.evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
+            let add_result = self.add_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
+            let mul_result = self.mul_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
 
-        Ok(add_result + mul_result)
+            evaluation_result += add_result + mul_result;
+        }
+
+        Ok(evaluation_result)
     }
 
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
@@ -106,6 +129,9 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         // partial evaluate add_mle and mul_mle
         // they expect r as first input before b and c
         // so we have to pad all the partial evaluation assignments
+
+        let mut result = self.clone();
+
         // TODO: clean this up, might not need to clone this much
         let rbc_partial_assignments = assignments
             .iter()
@@ -115,13 +141,6 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
                 (new_selector, *coeff)
             })
             .collect::<Vec<(Vec<bool>, &F)>>();
-
-        let new_add_mle = self
-            .add_mle
-            .partial_evaluate(rbc_partial_assignments.as_slice())?;
-        let new_mul_mle = self
-            .mul_mle
-            .partial_evaluate(rbc_partial_assignments.as_slice())?;
 
         // next partial eval for w_b_mle and w_c_mle
         // need to split assignments for b and c
@@ -140,39 +159,38 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             }
         }
 
-        let new_w_b_mle = self
-            .w_b_mle
-            .partial_evaluate(b_partial_assignments.as_slice())?;
-        let new_w_c_mle = self
-            .w_c_mle
-            .partial_evaluate(c_partial_assignments.as_slice())?;
+        for i in 0..self.count() {
+            result.add_mle[i] =
+                result.add_mle[i].partial_evaluate(rbc_partial_assignments.as_slice())?;
+            result.mul_mle[i] =
+                result.mul_mle[i].partial_evaluate(rbc_partial_assignments.as_slice())?;
 
-        Ok(GateEvalExtension {
-            r: self.r.clone(),
-            add_mle: new_add_mle,
-            mul_mle: new_mul_mle,
-            w_b_mle: new_w_b_mle,
-            w_c_mle: new_w_c_mle,
-        })
+            result.w_b_mle[i] =
+                result.w_b_mle[i].partial_evaluate(b_partial_assignments.as_slice())?;
+            result.w_c_mle[i] =
+                result.w_c_mle[i].partial_evaluate(c_partial_assignments.as_slice())?;
+        }
+
+        Ok(result)
     }
 
     fn relabel(self) -> Self {
         GateEvalExtension {
             r: self.r,
-            add_mle: self.add_mle.relabel(),
-            mul_mle: self.mul_mle.relabel(),
-            w_b_mle: self.w_b_mle.relabel(),
-            w_c_mle: self.w_c_mle.relabel(),
+            add_mle: self.add_mle.into_iter().map(|p| p.relabel()).collect(),
+            mul_mle: self.mul_mle.into_iter().map(|p| p.relabel()).collect(),
+            w_b_mle: self.w_b_mle.into_iter().map(|p| p.relabel()).collect(),
+            w_c_mle: self.w_c_mle.into_iter().map(|p| p.relabel()).collect(),
         }
     }
 
     fn additive_identity() -> Self {
         Self {
             r: vec![],
-            add_mle: MultiLinearPolynomial::<F>::additive_identity(),
-            mul_mle: MultiLinearPolynomial::<F>::additive_identity(),
-            w_b_mle: MultiLinearPolynomial::<F>::additive_identity(),
-            w_c_mle: MultiLinearPolynomial::<F>::additive_identity(),
+            add_mle: vec![],
+            mul_mle: vec![],
+            w_b_mle: vec![],
+            w_c_mle: vec![],
         }
     }
 
@@ -181,10 +199,18 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             acc.extend(r_v.into_bigint().to_bytes_be());
             acc
         });
-        result.extend(self.add_mle.to_bytes());
-        result.extend(self.mul_mle.to_bytes());
-        result.extend(self.w_b_mle.to_bytes());
-        result.extend(self.w_c_mle.to_bytes());
+        self.add_mle
+            .iter()
+            .for_each(|p| result.extend(p.to_bytes()));
+        self.mul_mle
+            .iter()
+            .for_each(|p| result.extend(p.to_bytes()));
+        self.w_b_mle
+            .iter()
+            .for_each(|p| result.extend(p.to_bytes()));
+        self.w_c_mle
+            .iter()
+            .for_each(|p| result.extend(p.to_bytes()));
         result
     }
 }
@@ -195,25 +221,40 @@ impl<F: PrimeField> Add for &GateEvalExtension<F> {
     type Output = Result<GateEvalExtension<F>, &'static str>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        // TODO: look into this contraption
-        let mut r = self.r.clone();
-        if self.r != rhs.r {
-            // they are only allowed to be non equal if one of them is empty
-            if !self.r.is_empty() && !rhs.r.is_empty() {
-                return Err("cannot add gate extensions with different r values");
-            }
-            if self.r.is_empty() {
-                r = rhs.r.clone();
-            }
+        if self.is_additive_identity() {
+            return Ok(rhs.clone());
         }
 
-        // addition is just the sum of the individual polynomials
+        if rhs.is_additive_identity() {
+            return Ok(self.clone());
+        }
+
+        // check that all polynomial have the same signature
+        if self.r != rhs.r {
+            return Err("cannot add gate extensions with different r values");
+        }
+        if (self.b_vars() != rhs.b_vars()) || (self.c_vars() != rhs.c_vars()) {
+            return Err("cannot add gate extensions with different polynomial signatures");
+        }
+
+        let mut new_add_mle = self.add_mle.clone();
+        new_add_mle.extend(rhs.add_mle.clone());
+
+        let mut new_mul_mle = self.mul_mle.clone();
+        new_mul_mle.extend(rhs.mul_mle.clone());
+
+        let mut new_w_b_mle = self.w_b_mle.clone();
+        new_w_b_mle.extend(rhs.w_b_mle.clone());
+
+        let mut new_w_c_mle = self.w_c_mle.clone();
+        new_w_c_mle.extend(rhs.w_c_mle.clone());
+
         Ok(GateEvalExtension {
-            r,
-            add_mle: (&self.add_mle + &rhs.add_mle)?,
-            mul_mle: (&self.mul_mle + &rhs.mul_mle)?,
-            w_b_mle: (&self.w_b_mle + &rhs.w_b_mle)?,
-            w_c_mle: (&self.w_c_mle + &rhs.w_c_mle)?,
+            r: self.r.clone(),
+            add_mle: new_add_mle,
+            mul_mle: new_mul_mle,
+            w_b_mle: new_w_b_mle,
+            w_c_mle: new_w_c_mle,
         })
     }
 }
@@ -225,7 +266,9 @@ mod test {
     use crate::gkr::gate_eval_extension::GateEvalExtension;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
-    use crate::sumcheck::util::{skip_first_var_then_sum_over_boolean_hypercube, sum_over_boolean_hyper_cube};
+    use crate::sumcheck::util::{
+        skip_first_var_then_sum_over_boolean_hypercube, sum_over_boolean_hyper_cube,
+    };
     use crate::sumcheck::{Sumcheck, SumcheckProof};
     use ark_bls12_381::Fr;
 
@@ -336,20 +379,12 @@ mod test {
         // sum over boolean hypercube = 14
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
-        // TODO: delete or move this
-        let m = skip_first_var_then_sum_over_boolean_hypercube(gate_eval_ext.clone());
-        let a  = m.evaluate(&[Fr::from(0)]).unwrap();
-        let b = m.evaluate(&[Fr::from(1)]).unwrap();
-        dbg!(a + b);
-
         // generate false sumcheck proof
-        // let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));
-        // assert!(!Sumcheck::verify(false_proof));
+        let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));
+        assert!(!Sumcheck::verify(false_proof));
 
         // generate correct sumcheck proof
         let correct_proof = Sumcheck::prove(gate_eval_ext, Fr::from(14));
-        Sumcheck::verify(correct_proof);
-
-        panic!("bam");
+        assert!(Sumcheck::verify(correct_proof));
     }
 }

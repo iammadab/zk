@@ -108,7 +108,6 @@ impl Sumcheck {
             challenges.push(challenge);
         }
 
-
         // final verifier check
         // p_v(r_v) = p(r_1, r_2, ..., r_v)
         let initial_poly_eval = proof.poly.evaluate(challenges.as_slice()).unwrap();
