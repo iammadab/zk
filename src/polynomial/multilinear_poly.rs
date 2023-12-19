@@ -224,7 +224,6 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         self.coefficients
             .keys()
             .fold(vec![false; self.n_vars as usize], |acc, key| {
-                dbg!(self.n_vars);
                 let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
                 acc.into_iter()
                     .zip(current_bool_rep.into_iter())

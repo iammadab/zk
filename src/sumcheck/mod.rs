@@ -13,7 +13,7 @@ pub mod boolean_hypercube;
 pub mod util;
 
 #[derive(Debug)]
-struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
+pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
     poly: P,
     sum: F,
     uni_polys: Vec<P>,
@@ -29,11 +29,11 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
     }
 }
 
-struct Sumcheck {}
+pub struct Sumcheck {}
 
 impl Sumcheck {
     /// Generate a sum check proof given the poly and the claimed sum
-    fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P>
+    pub fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P>
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
@@ -70,7 +70,7 @@ impl Sumcheck {
     }
 
     /// Verify a sumcheck proof
-    fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool
+    pub fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
@@ -108,6 +108,7 @@ impl Sumcheck {
             claimed_sum = poly.evaluate(&[challenge]).unwrap();
             challenges.push(challenge);
         }
+
 
         // final verifier check
         // p_v(r_v) = p(r_1, r_2, ..., r_v)

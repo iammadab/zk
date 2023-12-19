@@ -155,8 +155,6 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn relabel(self) -> Self {
-        // TODO: test this
-        // TODO: understand this
         GateEvalExtension {
             r: self.r,
             add_mle: self.add_mle.relabel(),
@@ -195,16 +193,21 @@ impl<F: PrimeField> Add for &GateEvalExtension<F> {
     type Output = Result<GateEvalExtension<F>, &'static str>;
 
     fn add(self, rhs: Self) -> Self::Output {
+        // TODO: look into this contraption
+        let mut r = self.r.clone();
         if self.r != rhs.r {
             // they are only allowed to be non equal if one of them is empty
             if !self.r.is_empty() && !rhs.r.is_empty() {
                 return Err("cannot add gate extensions with different r values");
             }
+            if self.r.is_empty() {
+                r = rhs.r.clone();
+            }
         }
 
         // addition is just the sum of the individual polynomials
         Ok(GateEvalExtension {
-            r: self.r.clone(),
+            r,
             add_mle: (&self.add_mle + &rhs.add_mle)?,
             mul_mle: (&self.mul_mle + &rhs.mul_mle)?,
             w_b_mle: (&self.w_b_mle + &rhs.w_b_mle)?,
@@ -221,6 +224,7 @@ mod test {
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+    use crate::sumcheck::{Sumcheck, SumcheckProof};
     use ark_bls12_381::Fr;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
@@ -318,5 +322,26 @@ mod test {
         assert_eq!(p4.n_vars(), 0);
 
         assert_eq!(p4.evaluate(&[]).unwrap(), Fr::from(6840));
+    }
+
+    #[test]
+    fn test_sum_check_eval() {
+        let (circuit, circuit_eval) = evaluated_circuit();
+        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
+        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(0)], add_1, mul_1, w_2).unwrap();
+
+        // sum over boolean hypercube = 14
+        assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
+
+        // generate false sumcheck proof
+        // let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));
+        // assert!(!Sumcheck::verify(false_proof));
+
+        // generate correct sumcheck proof
+        let correct_proof = Sumcheck::prove(gate_eval_ext, Fr::from(14));
+        Sumcheck::verify(correct_proof);
+
+        panic!("bam");
     }
 }
