@@ -61,12 +61,22 @@ impl<F: PrimeField> GateEvalExtension<F> {
             w_c_mle: w_mle,
         })
     }
+
+    /// Return the number of variables for b in f(b, c)
+    fn b_vars(&self) -> usize {
+        self.w_b_mle.n_vars()
+    }
+
+    /// Return the number of variables for c in f(b, c)
+    fn c_vars(&self) -> usize {
+        self.w_c_mle.n_vars()
+    }
 }
 
 impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     fn n_vars(&self) -> usize {
         // n vars = |b| + |c|
-        self.w_b_mle.n_vars() + self.w_c_mle.n_vars()
+        self.b_vars() + self.c_vars()
     }
 
     fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
@@ -87,63 +97,64 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         Ok(add_result + mul_result)
     }
 
-    // TODO: is bool the best way to represent the variables?? maybe consider usize
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
     where
         Self: Sized,
     {
-        // just b, c
-        // vec![bool; |b| + |c|]
-        // we need to partial evaluate the other polynomials
-        // add_mle, mul_mle, w_b_mle and w_c_mle
-        // maybe split assignments into b and c?
-        // e.g.
-        // |b| = 2 |c| = 2
-        // vec![f, t, f, f] = 5 -> vec![f, t] = 5
-        // vec![t, f, f, f] = 6 -> vec![t, f] = 6
-        // assign_b and assign_c
-        // r, ..b, ..c
-        // |b| = 1 |c| = 2 -> partial_eval(b1) at 2
-        // w_b_mle partial eval at all b points -> reduce it -> n_vars = 1
-        // w_c_mle partial eval at all c points -> reduce it -> n_vars = 2
+        // partial evaluate add_mle and mul_mle
+        // they expect r as first input before b and c
+        // so we have to pad all the partial evaluation assignments
+        // TODO: clean this up, might not need to clone this much
+        let rbc_partial_assignments = assignments
+            .iter()
+            .map(|(selector, coeff)| {
+                let mut new_selector = vec![false; self.r.len()];
+                new_selector.extend(selector);
+                (new_selector, *coeff)
+            })
+            .collect::<Vec<(Vec<bool>, &F)>>();
 
-        // add(r, b, c) r = 3, b = 2, c = 2 -> 7 variables
-        // w_b -> 2 variables
-        // w_c -> 2 variables
-        // f(b, c) -> 4 variables (what we get)
-        // to get 7
-        // append r number of false to the front of the 4 variables I get (in this case r = 3) 3 + 4 = 7
+        let new_add_mle = self
+            .add_mle
+            .partial_evaluate(rbc_partial_assignments.as_slice())?;
+        let new_mul_mle = self
+            .mul_mle
+            .partial_evaluate(rbc_partial_assignments.as_slice())?;
 
-        // how do we test this?
-        // full evaluation, then get the result
-        // partially evaluate one after the other
-        // check if the result is the same
-        // f(1, 2, 3) = res
-        // f(1) -> f(2) -> f(3) = res
-        // 1 -> vec![t, f, f]
-        // 2 -> vec![f, t, f]
-        // 3 -> vec![f, f, t]
-        todo!()
+        // next partial eval for w_b_mle and w_c_mle
+        // need to split assignments for b and c
+        let b_boundary = self.b_vars();
+        let mut b_partial_assignments = vec![];
+        let mut c_partial_assignments = vec![];
+
+        for (selector, coeff) in assignments {
+            let b_selector = &selector[..b_boundary];
+            let c_selector = &selector[b_boundary..];
+
+            if b_selector.iter().any(|v| *v) {
+                b_partial_assignments.push((b_selector.to_vec(), *coeff))
+            } else {
+                c_partial_assignments.push((c_selector.to_vec(), *coeff))
+            }
+        }
+
+        let new_w_b_mle = self
+            .w_b_mle
+            .partial_evaluate(b_partial_assignments.as_slice())?;
+        let new_w_c_mle = self
+            .w_c_mle
+            .partial_evaluate(c_partial_assignments.as_slice())?;
+
+        Ok(GateEvalExtension {
+            r: self.r.clone(),
+            add_mle: new_add_mle,
+            mul_mle: new_mul_mle,
+            w_b_mle: new_w_b_mle,
+            w_c_mle: new_w_c_mle,
+        })
     }
 
     fn relabel(self) -> Self {
-        // when do we every need to relabel??
-        // the only thing that can be relabelled is what?
-        //
-        // b0, b1, b2, c0, c1, c2
-        // b0, b1, b2, b3, b4, b5 -> is this what truth is??
-        // partial_eval of b0, b1 -> b2, c0, c1, c2
-        // what do we want????
-
-        // how do we test this?
-        // run partial evaluate then the number of variables should change
-        // f(1, 2, 3) = res
-        // f(1) -> f(2) -> f(3) = res
-        // partial eval then relabel, check the number of variables after
-        // 1 - vec![t, f, f]
-        // 2 - vec![t, f]
-        // 3 - vec![t]
-
         // TODO: test this
         // TODO: understand this
         GateEvalExtension {
@@ -208,6 +219,7 @@ mod test {
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
+    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
