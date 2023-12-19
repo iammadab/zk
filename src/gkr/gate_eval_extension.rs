@@ -223,8 +223,7 @@ mod test {
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
-    #[test]
-    fn test_gate_eval_extension() {
+    fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
         // construct and evaluate circuit
         let circuit = test_circuit();
         let circuit_eval = circuit
@@ -239,6 +238,12 @@ mod test {
                 Fr::from(8),
             ])
             .unwrap();
+        (circuit, circuit_eval)
+    }
+
+    #[test]
+    fn test_gate_eval_extension() {
+        let (circuit, circuit_eval) = evaluated_circuit();
 
         // construct relevant mles
         // add and mul mle from layer 1, (a, b, c) -> (len(1), len(2), len(2)) -> 5 total variables
@@ -269,5 +274,49 @@ mod test {
             Fr::from(165)
         );
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(165));
+    }
+
+    #[test]
+    fn test_partial_evaluation() {
+        let (circuit, circuit_eval) = evaluated_circuit();
+
+        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
+
+        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
+        assert_eq!(gate_eval_ext.n_vars(), 4);
+
+        // first we perform a full evaluation to get the expected result
+        assert_eq!(
+            gate_eval_ext
+                .evaluate(&[Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)])
+                .unwrap(),
+            Fr::from(6840)
+        );
+
+        // now we partially evaluate with the same values
+        let p1 = gate_eval_ext
+            .partial_evaluate(&[(vec![true, false, false, false], &Fr::from(1))])
+            .unwrap();
+        let p2 = p1
+            .partial_evaluate(&[(vec![false, true, false, false], &Fr::from(2))])
+            .unwrap();
+        assert_eq!(p2.n_vars(), 4);
+        let p2 = p2.relabel();
+        assert_eq!(p2.n_vars(), 2);
+
+        let p3 = p2
+            .partial_evaluate(&[(vec![true, false], &Fr::from(3))])
+            .unwrap();
+        assert_eq!(p3.n_vars(), 2);
+        let p3 = p3.relabel();
+        assert_eq!(p3.n_vars(), 1);
+
+        let p4 = p3.partial_evaluate(&[(vec![true], &Fr::from(4))]).unwrap();
+        assert_eq!(p4.n_vars(), 1);
+        let p4 = p4.relabel();
+        assert_eq!(p4.n_vars(), 0);
+
+        assert_eq!(p4.evaluate(&[]).unwrap(), Fr::from(6840));
     }
 }

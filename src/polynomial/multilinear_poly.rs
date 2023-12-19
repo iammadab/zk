@@ -100,6 +100,11 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
     /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
     /// we can relabel to 2a + 9b uses 2 variables
     fn relabel(self) -> Self {
+        // if the polynomial has no variable, nothing to do
+        if self.n_vars == 0 {
+            return self;
+        }
+
         let variable_presence = self.variable_presence_vector();
         let mapping_instructions = mapping_instruction_from_variable_presence(&variable_presence);
         let mut relabelled_poly = remap_coefficient_keys(self.n_vars, self, mapping_instructions);
@@ -219,6 +224,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         self.coefficients
             .keys()
             .fold(vec![false; self.n_vars as usize], |acc, key| {
+                dbg!(self.n_vars);
                 let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
                 acc.into_iter()
                     .zip(current_bool_rep.into_iter())
@@ -1150,6 +1156,12 @@ mod tests {
             q.coefficients,
             BTreeMap::from([(1, Fq::from(2)), (2, Fq::from(9)), (3, Fq::from(5)),])
         );
+
+        // constant polynomial
+        // relabel should have no effect
+        let poly = MultiLinearPolynomial::<Fq>::multiplicative_identity();
+        let poly = poly.relabel();
+        assert_eq!(poly, MultiLinearPolynomial::<Fq>::multiplicative_identity());
     }
 
     #[test]
