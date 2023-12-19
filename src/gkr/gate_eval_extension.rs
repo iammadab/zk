@@ -87,10 +87,42 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         Ok(add_result + mul_result)
     }
 
+    // TODO: is bool the best way to represent the variables?? maybe consider usize
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
     where
         Self: Sized,
     {
+        // just b, c
+        // vec![bool; |b| + |c|]
+        // we need to partial evaluate the other polynomials
+        // add_mle, mul_mle, w_b_mle and w_c_mle
+        // maybe split assignments into b and c?
+        // e.g.
+        // |b| = 2 |c| = 2
+        // vec![f, t, f, f] = 5 -> vec![f, t] = 5
+        // vec![t, f, f, f] = 6 -> vec![t, f] = 6
+        // assign_b and assign_c
+        // r, ..b, ..c
+        // |b| = 1 |c| = 2 -> partial_eval(b1) at 2
+        // w_b_mle partial eval at all b points -> reduce it -> n_vars = 1
+        // w_c_mle partial eval at all c points -> reduce it -> n_vars = 2
+
+        // add(r, b, c) r = 3, b = 2, c = 2 -> 7 variables
+        // w_b -> 2 variables
+        // w_c -> 2 variables
+        // f(b, c) -> 4 variables (what we get)
+        // to get 7
+        // append r number of false to the front of the 4 variables I get (in this case r = 3) 3 + 4 = 7
+
+        // how do we test this?
+        // full evaluation, then get the result
+        // partially evaluate one after the other
+        // check if the result is the same
+        // f(1, 2, 3) = res
+        // f(1) -> f(2) -> f(3) = res
+        // 1 -> vec![t, f, f]
+        // 2 -> vec![f, t, f]
+        // 3 -> vec![f, f, t]
         todo!()
     }
 
@@ -98,7 +130,29 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         // when do we every need to relabel??
         // the only thing that can be relabelled is what?
         //
-        todo!()
+        // b0, b1, b2, c0, c1, c2
+        // b0, b1, b2, b3, b4, b5 -> is this what truth is??
+        // partial_eval of b0, b1 -> b2, c0, c1, c2
+        // what do we want????
+
+        // how do we test this?
+        // run partial evaluate then the number of variables should change
+        // f(1, 2, 3) = res
+        // f(1) -> f(2) -> f(3) = res
+        // partial eval then relabel, check the number of variables after
+        // 1 - vec![t, f, f]
+        // 2 - vec![t, f]
+        // 3 - vec![t]
+
+        // TODO: test this
+        // TODO: understand this
+        GateEvalExtension {
+            r: self.r,
+            add_mle: self.add_mle.relabel(),
+            mul_mle: self.mul_mle.relabel(),
+            w_b_mle: self.w_b_mle.relabel(),
+            w_c_mle: self.w_c_mle.relabel(),
+        }
     }
 
     fn additive_identity() -> Self {
@@ -112,10 +166,10 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        let mut result = vec![];
-        for f in &self.r {
-            result.extend(f.into_bigint().to_bytes_be());
-        }
+        let mut result = self.r.iter().fold(vec![], |mut acc, r_v| {
+            acc.extend(r_v.into_bigint().to_bytes_be());
+            acc
+        });
         result.extend(self.add_mle.to_bytes());
         result.extend(self.mul_mle.to_bytes());
         result.extend(self.w_b_mle.to_bytes());
