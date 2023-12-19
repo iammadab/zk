@@ -57,28 +57,6 @@ pub fn partial_evaluation_points<'a, F: PrimeField>(
         .collect()
 }
 
-/// Add a multilinear polynomial to a transcript object
-pub fn add_multilinear_poly_to_transcript<F: PrimeField>(
-    poly: &MultiLinearPolynomial<F>,
-    transcript: &mut Transcript,
-) {
-    transcript.append(&poly.n_vars().to_be_bytes());
-    for (var_id, coeff) in poly.coefficients() {
-        transcript.append(&var_id.to_be_bytes());
-        transcript.append(&coeff.into_bigint().to_bytes_be().as_slice());
-    }
-}
-
-/// Add a univariate polynomial to a transcript object
-pub fn add_univariate_poly_to_transcript<F: PrimeField>(
-    poly: &UnivariatePolynomial<F>,
-    transcript: &mut Transcript,
-) {
-    for coeff in poly.coefficients() {
-        transcript.append(coeff.into_bigint().to_bytes_be().as_slice())
-    }
-}
-
 #[cfg(test)]
 mod test {
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
