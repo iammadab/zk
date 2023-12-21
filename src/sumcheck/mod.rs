@@ -52,13 +52,29 @@ impl Sumcheck {
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
+        let mut transcript = Transcript::new();
+        transcript.append(poly.to_bytes().as_slice());
+
+        Self::prove_internal(poly, sum, &mut transcript)
+    }
+
+    /// Generates a sumcheck proof that makes no statement about the initial poly
+    pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> PartialSumcheckProof<F, P>
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>
+    {
+        let mut transcript = Transcript::new();
+        Self::prove_internal(poly, sum, &mut transcript).into()
+    }
+
+    pub fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F, transcript: &mut Transcript) -> SumcheckProof<F, P>
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>
+    {
         let mut uni_polys = vec![];
         let mut challenges = vec![];
-        let mut transcript = Transcript::new();
 
-        // add the poly and sum to the transcript
         transcript.append(sum.into_bigint().to_bytes_be().as_slice());
-        transcript.append(poly.to_bytes().as_slice());
 
         for _ in 0..poly.n_vars() {
             // partially evaluate the polynomial at the generated challenge points
@@ -98,8 +114,8 @@ impl Sumcheck {
         let mut challenges = vec![];
 
         // add the poly and sum to the transcript
-        transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
         transcript.append(&proof.poly.to_bytes().as_slice());
+        transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
 
         let mut claimed_sum = proof.sum;
 
