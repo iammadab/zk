@@ -32,16 +32,24 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
 /// Same as the sumcheck proof without the initial poly
 pub struct PartialSumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
     sum: F,
-    uni_polys: Vec<P>
+    uni_polys: Vec<P>,
 }
 
-impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>> for PartialSumcheckProof<F, P> {
+impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>>
+    for PartialSumcheckProof<F, P>
+{
     fn from(value: SumcheckProof<F, P>) -> Self {
         Self {
             sum: value.sum,
-            uni_polys: value.uni_polys
+            uni_polys: value.uni_polys,
         }
     }
+}
+
+// TODO: add documentation
+pub struct SubClaim<F: PrimeField> {
+    sum: F,
+    challenges: Vec<F>,
 }
 
 pub struct Sumcheck {}
@@ -59,17 +67,24 @@ impl Sumcheck {
     }
 
     /// Generates a sumcheck proof that makes no statement about the initial poly
-    pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> PartialSumcheckProof<F, P>
+    pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(
+        poly: P,
+        sum: F,
+    ) -> PartialSumcheckProof<F, P>
     where
-        for<'a> &'a P: Add<Output = Result<P, &'static str>>
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
         let mut transcript = Transcript::new();
         Self::prove_internal(poly, sum, &mut transcript).into()
     }
 
-    pub fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F, transcript: &mut Transcript) -> SumcheckProof<F, P>
+    pub fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
+        poly: P,
+        sum: F,
+        transcript: &mut Transcript,
+    ) -> SumcheckProof<F, P>
     where
-        for<'a> &'a P: Add<Output = Result<P, &'static str>>
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
         let mut uni_polys = vec![];
         let mut challenges = vec![];
@@ -111,10 +126,42 @@ impl Sumcheck {
         }
 
         let mut transcript = Transcript::new();
+        // add poly to transcript
+        transcript.append(&proof.poly.to_bytes().as_slice());
+
+        let initial_poly = proof.poly.clone();
+
+        if let Some(subclaim) = Self::verify_internal(proof.into(), &mut transcript) {
+            // final verifier check
+            // p_v(r_v) = p(r_1, r_2, ..., r_v)
+            let initial_poly_eval = initial_poly
+                .evaluate(subclaim.challenges.as_slice())
+                .unwrap();
+            initial_poly_eval == subclaim.sum
+        } else {
+            return false;
+        }
+    }
+
+    pub fn verify_partial<F: PrimeField, P: MultiLinearExtension<F>>(
+        proof: PartialSumcheckProof<F, P>,
+    ) -> Option<SubClaim<F>>
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
+    {
+        let mut transcript = Transcript::new();
+        Self::verify_internal(proof, &mut transcript)
+    }
+
+    pub fn verify_internal<F: PrimeField, P: MultiLinearExtension<F>>(
+        proof: PartialSumcheckProof<F, P>,
+        transcript: &mut Transcript,
+    ) -> Option<SubClaim<F>>
+    where
+        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
+    {
         let mut challenges = vec![];
 
-        // add the poly and sum to the transcript
-        transcript.append(&proof.poly.to_bytes().as_slice());
         transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
 
         let mut claimed_sum = proof.sum;
@@ -127,7 +174,7 @@ impl Sumcheck {
             let p_1 = poly.evaluate(&[F::one()]).unwrap();
 
             if claimed_sum != (p_0 + p_1) {
-                return false;
+                return None;
             }
 
             // add poly to transcript
@@ -140,10 +187,10 @@ impl Sumcheck {
             challenges.push(challenge);
         }
 
-        // final verifier check
-        // p_v(r_v) = p(r_1, r_2, ..., r_v)
-        let initial_poly_eval = proof.poly.evaluate(challenges.as_slice()).unwrap();
-        initial_poly_eval == claimed_sum
+        Some(SubClaim {
+            sum: claimed_sum,
+            challenges,
+        })
     }
 }
 
