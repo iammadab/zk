@@ -78,6 +78,7 @@ impl Sumcheck {
         Self::prove_internal(poly, sum, &mut transcript).into()
     }
 
+    // TODO: add documentation
     pub fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
         poly: P,
         sum: F,
@@ -143,6 +144,7 @@ impl Sumcheck {
         }
     }
 
+    // TODO: add documentation
     pub fn verify_partial<F: PrimeField, P: MultiLinearExtension<F>>(
         proof: PartialSumcheckProof<F, P>,
     ) -> Option<SubClaim<F>>
@@ -153,6 +155,7 @@ impl Sumcheck {
         Self::verify_internal(proof, &mut transcript)
     }
 
+    // TODO: add documentation
     pub fn verify_internal<F: PrimeField, P: MultiLinearExtension<F>>(
         proof: PartialSumcheckProof<F, P>,
         transcript: &mut Transcript,
