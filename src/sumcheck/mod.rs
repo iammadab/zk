@@ -46,7 +46,8 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>>
     }
 }
 
-// TODO: add documentation
+#[derive(Debug, PartialEq)]
+/// Represents the result of a partial sumcheck proof verification
 pub struct SubClaim<F: PrimeField> {
     sum: F,
     challenges: Vec<F>,
@@ -78,8 +79,7 @@ impl Sumcheck {
         Self::prove_internal(poly, sum, &mut transcript).into()
     }
 
-    // TODO: add documentation
-    pub fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
+    fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
         poly: P,
         sum: F,
         transcript: &mut Transcript,
@@ -144,7 +144,7 @@ impl Sumcheck {
         }
     }
 
-    // TODO: add documentation
+    /// Verify partial sumcheck proof
     pub fn verify_partial<F: PrimeField, P: MultiLinearExtension<F>>(
         proof: PartialSumcheckProof<F, P>,
     ) -> Option<SubClaim<F>>
@@ -155,8 +155,7 @@ impl Sumcheck {
         Self::verify_internal(proof, &mut transcript)
     }
 
-    // TODO: add documentation
-    pub fn verify_internal<F: PrimeField, P: MultiLinearExtension<F>>(
+    fn verify_internal<F: PrimeField, P: MultiLinearExtension<F>>(
         proof: PartialSumcheckProof<F, P>,
         transcript: &mut Transcript,
     ) -> Option<SubClaim<F>>
@@ -239,5 +238,18 @@ mod tests {
         let p = p_2ab_3bc();
         let sumcheck_proof = Sumcheck::prove(p, Fq::from(200));
         assert!(!Sumcheck::verify(sumcheck_proof));
+    }
+
+    #[test]
+    fn test_partial_sumcheck() {
+        // invalid sum
+        let partial_proof = Sumcheck::prove_partial(p_2ab_3bc(), Fq::from(200));
+        let verification_result = Sumcheck::verify_partial(partial_proof);
+        assert_eq!(verification_result, None);
+
+        // valid sum
+        let partial_proof = Sumcheck::prove_partial(p_2ab_3bc(), Fq::from(10));
+        let verification_result = Sumcheck::verify_partial(partial_proof);
+        assert!(verification_result.is_some());
     }
 }
