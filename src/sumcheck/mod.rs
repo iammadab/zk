@@ -28,6 +28,22 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
     }
 }
 
+#[derive(Debug)]
+/// Same as the sumcheck proof without the initial poly
+pub struct PartialSumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
+    sum: F,
+    uni_polys: Vec<P>
+}
+
+impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>> for PartialSumcheckProof<F, P> {
+    fn from(value: SumcheckProof<F, P>) -> Self {
+        Self {
+            sum: value.sum,
+            uni_polys: value.uni_polys
+        }
+    }
+}
+
 pub struct Sumcheck {}
 
 impl Sumcheck {
