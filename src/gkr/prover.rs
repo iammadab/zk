@@ -1,8 +1,8 @@
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
+use crate::polynomial::multilinear_poly::{selector_from_usize, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
-use crate::polynomial::multilinear_poly::{MultiLinearPolynomial, selector_from_usize};
 
 /// Generate a unique line such that l(0) = b and l(1) = c
 pub fn l<F: PrimeField>(b: &[F], c: &[F]) -> Result<Vec<UnivariatePolynomial<F>>, &'static str> {
@@ -29,7 +29,10 @@ pub fn evaluate_l_function<F: PrimeField>(polys: &[UnivariatePolynomial<F>], r: 
 
 /// Restrict the domain of the w polynomial to the output of l
 /// i.e q(x) = w(l(x))
-pub fn q<F: PrimeField>(l_functions: &[UnivariatePolynomial<F>], w: MultiLinearPolynomial<F>) -> Result<UnivariatePolynomial<F>, &'static str> {
+pub fn q<F: PrimeField>(
+    l_functions: &[UnivariatePolynomial<F>],
+    w: MultiLinearPolynomial<F>,
+) -> Result<UnivariatePolynomial<F>, &'static str> {
     // there should be an l function for each variable in w
     if l_functions.len() != w.n_vars() {
         return Err("output of l should match the number of variables for w");
@@ -54,9 +57,7 @@ pub fn q<F: PrimeField>(l_functions: &[UnivariatePolynomial<F>], w: MultiLinearP
         // let new_term_poly = multiplicative_identity
         let uncompressed_variables = selector_from_usize(compressed_variables, w.n_vars());
         for (i, is_present) in uncompressed_variables.iter().enumerate() {
-            if is_present {
-
-            }
+            if *is_present {}
         }
     }
 
