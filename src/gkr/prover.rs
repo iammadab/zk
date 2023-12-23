@@ -2,8 +2,7 @@ use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
 
-// TODO: rename this function
-// TODO: add documentation
+/// Generate a unique line such that l(0) = b and l(1) = c
 pub fn l<F: PrimeField>(b: &[F], c: &[F]) -> Result<Vec<UnivariatePolynomial<F>>, &'static str> {
     if b.len() != c.len() {
         return Err("b and c should be the same length");
@@ -21,8 +20,7 @@ pub fn l<F: PrimeField>(b: &[F], c: &[F]) -> Result<Vec<UnivariatePolynomial<F>>
         .collect())
 }
 
-// TODO: add documentation
-// TODO: did you rename the other function
+/// Evaluate a list of univariate polynomial at single point r
 pub fn evaluate_l_function<F: PrimeField>(polys: &[UnivariatePolynomial<F>], r: F) -> Vec<F> {
     polys.iter().map(|poly| poly.evaluate(&r)).collect()
 }
@@ -33,7 +31,6 @@ mod test {
     use ark_bls12_381::Fr;
 
     #[test]
-    // TODO: did you rename the function eventually?
     fn test_l_function() {
         let b = vec![Fr::from(3), Fr::from(2)];
         let c = vec![Fr::from(1), Fr::from(200)];
