@@ -400,7 +400,7 @@ fn selector_to_index(selector: &[bool]) -> usize {
 }
 
 /// Convert a number to a vec of bool
-fn selector_from_usize(value: usize, min_size: usize) -> Vec<bool> {
+pub fn selector_from_usize(value: usize, exact_size: usize) -> Vec<bool> {
     let binary_value = format!("{:b}", value);
     let mut result = vec![];
     for char in binary_value.chars() {
@@ -411,7 +411,7 @@ fn selector_from_usize(value: usize, min_size: usize) -> Vec<bool> {
         }
     }
     result.reverse();
-    for _ in 0..(min_size - binary_value.len()) {
+    for _ in 0..(exact_size - binary_value.len()) {
         result.push(false);
     }
     result
