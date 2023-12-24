@@ -93,12 +93,12 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
     }
 
     /// Additive identity poly
-    fn additive_identity() -> Self {
+    pub fn additive_identity() -> Self {
         Self::new(vec![])
     }
 
     /// Multiplicative identity poly
-    fn multiplicative_identity() -> Self {
+    pub fn multiplicative_identity() -> Self {
         Self::new(vec![F::one()])
     }
 }

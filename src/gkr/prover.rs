@@ -38,30 +38,20 @@ pub fn q<F: PrimeField>(
         return Err("output of l should match the number of variables for w");
     }
 
-    // how do we determine what variable belongs to each term in the multilinear polynomial
-    // we can decompose the hashmap keys to know what variables we are dealing with
-    // then we can perform a reduction to get index based values
-    // use those index values for select from the l function
-    // then just do univariate multiplication
-    // what tools do we have at the disposal now?
-    // .coefficients() + selector_from_usize() might be able to do the job
-    // will need to test this? How?
-    // - create a multilinear polynomial with a couple terms
-    // - ensure that the variable mapping gotten back is correct
-
-    // selector_from_usize might be enough
-
     // TODO: add better comments here
-    // let q_poly = additive_identity;
+    let mut q_poly = UnivariatePolynomial::<F>::additive_identity();
     for (compressed_variables, coeff) in w.coefficients() {
-        // let new_term_poly = multiplicative_identity
+        let mut restricted_term = UnivariatePolynomial::new(vec![coeff]);
         let uncompressed_variables = selector_from_usize(compressed_variables, w.n_vars());
         for (i, is_present) in uncompressed_variables.iter().enumerate() {
-            if *is_present {}
+            if *is_present {
+                restricted_term = &restricted_term * &l_functions[i];
+            }
         }
+        q_poly = &q_poly + &restricted_term;
     }
 
-    todo!()
+    Ok(q_poly)
 }
 
 #[cfg(test)]
@@ -81,5 +71,12 @@ mod test {
 
         // l(1) = c
         assert_eq!(evaluate_l_function(&l_functions, Fr::from(1)), c);
+    }
+
+    #[test]
+    fn test_q_poly() {
+        // how to test this?
+        // 
+
     }
 }
