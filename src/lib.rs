@@ -1,3 +1,5 @@
+extern crate core;
+
 mod gkr;
 pub mod polynomial;
 mod reed_solomon_fingerprinting;

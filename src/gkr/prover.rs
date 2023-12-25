@@ -23,8 +23,8 @@ pub fn l<F: PrimeField>(b: &[F], c: &[F]) -> Result<Vec<UnivariatePolynomial<F>>
 }
 
 /// Evaluate a list of univariate polynomial at single point r
-pub fn evaluate_l_function<F: PrimeField>(polys: &[UnivariatePolynomial<F>], r: F) -> Vec<F> {
-    polys.iter().map(|poly| poly.evaluate(&r)).collect()
+pub fn evaluate_l_function<F: PrimeField>(polys: &[UnivariatePolynomial<F>], r: &F) -> Vec<F> {
+    polys.iter().map(|poly| poly.evaluate(r)).collect()
 }
 
 /// Restrict the domain of the w polynomial to the output of l
@@ -38,7 +38,13 @@ pub fn q<F: PrimeField>(
         return Err("output of l should match the number of variables for w");
     }
 
-    // TODO: add better comments here
+    // compose l functions into w
+    // for each variable in w, there is a corresponding l function
+    // the goal of this step is to replace each variable with the corresponding l function
+    // e.g. w(a, b) = 2ab
+    // la = 2x
+    // lb = 4x
+    // q(x) = 2 * la * lb = 2 * 2x * 4x = 16x^2
     let mut q_poly = UnivariatePolynomial::<F>::additive_identity();
     for (compressed_variables, coeff) in w.coefficients() {
         let mut restricted_term = UnivariatePolynomial::new(vec![coeff]);
@@ -58,6 +64,7 @@ pub fn q<F: PrimeField>(
 mod test {
     use super::*;
     use ark_bls12_381::Fr;
+    use ark_std::{test_rng, UniformRand};
 
     #[test]
     fn test_l_function() {
@@ -67,16 +74,38 @@ mod test {
         let l_functions = l(b.as_slice(), c.as_slice()).expect("should generate successfully");
 
         // l(0) = b
-        assert_eq!(evaluate_l_function(&l_functions, Fr::from(0)), b);
+        assert_eq!(evaluate_l_function(&l_functions, &Fr::from(0)), b);
 
         // l(1) = c
-        assert_eq!(evaluate_l_function(&l_functions, Fr::from(1)), c);
+        assert_eq!(evaluate_l_function(&l_functions, &Fr::from(1)), c);
     }
 
     #[test]
     fn test_q_poly() {
-        // how to test this?
-        // 
+        // p = 2ab + 3bc
+        let p = MultiLinearPolynomial::new(
+            3,
+            vec![
+                (Fr::from(2), vec![true, true, false]),
+                (Fr::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
 
+        // build l function
+        let b = vec![Fr::from(1), Fr::from(0), Fr::from(10)];
+        let c = vec![Fr::from(23), Fr::from(12), Fr::from(6)];
+        let l_functions = l(b.as_slice(), c.as_slice()).unwrap();
+
+        // build q function
+        let q = q(l_functions.as_slice(), p.clone()).unwrap();
+
+        // q(x) = w(l(x))
+        let x = Fr::rand(&mut test_rng());
+        assert_eq!(
+            q.evaluate(&x),
+            p.evaluate(evaluate_l_function(l_functions.as_slice(), &x).as_slice())
+                .unwrap()
+        );
     }
 }
