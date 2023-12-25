@@ -30,7 +30,7 @@ impl Circuit {
 
         let mut current_layer_input = input;
 
-        let mut evaluations = vec![];
+        let mut evaluations = vec![current_layer_input.clone()];
 
         for layer in self.layers.iter().rev() {
             let mut layer_evaluations = vec![F::zero(); layer.len()];
@@ -74,6 +74,7 @@ impl Circuit {
     }
 
     /// Returns the add_mle and mul_mle for the given layer
+    /// output layer index = 0
     pub fn add_mul_mle<F: PrimeField>(
         &self,
         layer_index: usize,
@@ -128,9 +129,13 @@ pub mod tests {
             .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
             .expect("should eval");
 
-        assert_eq!(circuit_eval.len(), 2);
+        assert_eq!(circuit_eval.len(), 3);
         assert_eq!(circuit_eval[0], vec![Fr::from(100)]);
         assert_eq!(circuit_eval[1], vec![Fr::from(5), Fr::from(20)]);
+        assert_eq!(
+            circuit_eval[2],
+            vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)]
+        );
 
         // Larger circuit
         let circuit = test_circuit();
@@ -146,12 +151,25 @@ pub mod tests {
                 Fr::from(8),
             ])
             .unwrap();
-        assert_eq!(circuit_eval.len(), 3);
+        assert_eq!(circuit_eval.len(), 4);
         assert_eq!(circuit_eval[0], vec![Fr::from(179)]);
         assert_eq!(circuit_eval[1], vec![Fr::from(14), Fr::from(165)]);
         assert_eq!(
             circuit_eval[2],
             vec![Fr::from(2), Fr::from(12), Fr::from(11), Fr::from(15)]
+        );
+        assert_eq!(
+            circuit_eval[3],
+            vec![
+                Fr::from(1),
+                Fr::from(2),
+                Fr::from(3),
+                Fr::from(4),
+                Fr::from(5),
+                Fr::from(6),
+                Fr::from(7),
+                Fr::from(8),
+            ]
         );
     }
 
