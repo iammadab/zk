@@ -64,26 +64,27 @@ impl Sumcheck {
         let mut transcript = Transcript::new();
         transcript.append(poly.to_bytes().as_slice());
 
-        Self::prove_internal(poly, sum, &mut transcript)
+        Self::prove_internal(poly, sum, &mut transcript).0
     }
 
     /// Generates a sumcheck proof that makes no statement about the initial poly
     pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(
         poly: P,
         sum: F,
-    ) -> PartialSumcheckProof<F, P>
+    ) -> (PartialSumcheckProof<F, P>, Vec<F>)
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
         let mut transcript = Transcript::new();
-        Self::prove_internal(poly, sum, &mut transcript).into()
+        let (proof, challenges) = Self::prove_internal(poly, sum, &mut transcript);
+        (proof.into(), challenges)
     }
 
     fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
         poly: P,
         sum: F,
         transcript: &mut Transcript,
-    ) -> SumcheckProof<F, P>
+    ) -> (SumcheckProof<F, P>, Vec<F>)
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
@@ -109,11 +110,14 @@ impl Sumcheck {
             challenges.push(transcript.sample_field_element::<F>());
         }
 
-        SumcheckProof {
-            poly,
-            sum,
-            uni_polys,
-        }
+        (
+            SumcheckProof {
+                poly,
+                sum,
+                uni_polys,
+            },
+            challenges,
+        )
     }
 
     /// Verify a sumcheck proof
@@ -244,12 +248,12 @@ mod tests {
     fn test_partial_sumcheck() {
         // invalid sum
         let partial_proof = Sumcheck::prove_partial(p_2ab_3bc(), Fq::from(200));
-        let verification_result = Sumcheck::verify_partial(partial_proof);
+        let verification_result = Sumcheck::verify_partial(partial_proof.0);
         assert_eq!(verification_result, None);
 
         // valid sum
         let partial_proof = Sumcheck::prove_partial(p_2ab_3bc(), Fq::from(10));
-        let verification_result = Sumcheck::verify_partial(partial_proof);
+        let verification_result = Sumcheck::verify_partial(partial_proof.0);
         assert!(verification_result.is_some());
     }
 }

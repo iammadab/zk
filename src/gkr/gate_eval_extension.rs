@@ -13,7 +13,7 @@ use std::ops::Add;
 /// - then return the evaluation of that gate
 /// it is also an extension structure because if a, b, c don't belong in the
 /// boolean hypercube, a field element is returned.
-struct GateEvalExtension<F: PrimeField> {
+pub struct GateEvalExtension<F: PrimeField> {
     r: Vec<F>,
     add_mle: Vec<MultiLinearPolynomial<F>>,
     mul_mle: Vec<MultiLinearPolynomial<F>>,
@@ -22,7 +22,7 @@ struct GateEvalExtension<F: PrimeField> {
 }
 
 impl<F: PrimeField> GateEvalExtension<F> {
-    fn new(
+    pub fn new(
         r: Vec<F>,
         add_mle: MultiLinearPolynomial<F>,
         mul_mle: MultiLinearPolynomial<F>,

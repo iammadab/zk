@@ -17,8 +17,6 @@ impl Circuit {
 
 impl Circuit {
     /// Evaluate the circuit on a given input
-    // TODO: this doesn't return the input back, decide if returning the input makes sense.
-    // TODO: test this with a larger depth e.g. 4 or 5
     pub fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
         if self.layers.is_empty() {
             return Err("cannot evaluate circuit is empty");

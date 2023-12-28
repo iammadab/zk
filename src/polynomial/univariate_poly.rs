@@ -1,6 +1,6 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use std::ops;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -100,6 +100,15 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
     /// Multiplicative identity poly
     pub fn multiplicative_identity() -> Self {
         Self::new(vec![F::one()])
+    }
+
+    /// Serialize the univariate polynomial
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut result = vec![];
+        for coeff in self.coefficients() {
+            result.extend(coeff.into_bigint().to_bytes_be());
+        }
+        result
     }
 }
 
