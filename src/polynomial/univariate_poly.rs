@@ -103,7 +103,7 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
     }
 
     /// Serialize the univariate polynomial
-    fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
         for coeff in self.coefficients() {
             result.extend(coeff.into_bigint().to_bytes_be());
