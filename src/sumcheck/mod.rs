@@ -31,7 +31,7 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
         let mut result = vec![];
         result.extend(self.poly.to_bytes());
         result.extend(self.sum.into_bigint().to_bytes_be());
-        for poly in self.uni_polys {
+        for poly in &self.uni_polys {
             result.extend(poly.to_bytes());
         }
         result
@@ -60,7 +60,7 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> PartialSumcheckProof<F, P> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
         result.extend(self.sum.into_bigint().to_bytes_be());
-        for poly in self.uni_polys {
+        for poly in &self.uni_polys {
             result.extend(poly.to_bytes());
         }
         result
