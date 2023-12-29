@@ -34,7 +34,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
             // only reason they should be different is if one of them has 0 variables
             // this can happen if that gate doesn't exist on the layer at all
             // otherwise then an invariant has been broken
-            if add_mle.n_vars() != 0 || mul_mle.n_vars() != 0 {
+            if add_mle.n_vars() != 0 && mul_mle.n_vars() != 0 {
                 return Err("add_mle and mul_mle must come from the same layer");
             }
         }

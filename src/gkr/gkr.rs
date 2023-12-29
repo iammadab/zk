@@ -29,6 +29,7 @@ fn prove<F: PrimeField>(
 
     // sample k random field elements to make r
     let mut r = transcript.sample_n_field_elements::<F>(w_0.n_vars());
+    dbg!(w_0.n_vars());
 
     // evaluate w_0(r) to get m
     let mut m = w_0.evaluate(r.as_slice())?;
@@ -36,7 +37,9 @@ fn prove<F: PrimeField>(
     // f(b, c) = add(r, b, c)(w_i(b) + w_i(c)) + mul(r, b, c)(w_i(b) * w_i(c))
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
-        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index)?;
+        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
+        dbg!(add_mle.n_vars());
+        dbg!(mul_mle.n_vars());
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
@@ -151,4 +154,28 @@ fn verify<F: PrimeField>(
     }
 
     Ok(true)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::gkr::circuit::tests::test_circuit;
+    use crate::gkr::gkr::prove;
+    use ark_bls12_381::Fr;
+
+    #[test]
+    fn test_gkr() {
+        let circuit = test_circuit();
+        let input = vec![
+            Fr::from(1),
+            Fr::from(2),
+            Fr::from(3),
+            Fr::from(4),
+            Fr::from(5),
+            Fr::from(6),
+            Fr::from(7),
+            Fr::from(8),
+        ];
+        let circut_eval = circuit.evaluate(input.clone()).unwrap();
+        let gkr_proof = prove(test_circuit(), circut_eval.clone()).unwrap();
+    }
 }
