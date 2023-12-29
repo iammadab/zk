@@ -11,7 +11,7 @@ use std::ops::Add;
 pub mod boolean_hypercube;
 pub mod util;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
     poly: P,
     sum: F,
@@ -38,10 +38,10 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Same as the sumcheck proof without the initial poly
 pub struct PartialSumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
-    sum: F,
+    pub(crate) sum: F,
     uni_polys: Vec<P>,
 }
 
@@ -70,8 +70,8 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> PartialSumcheckProof<F, P> {
 #[derive(Debug, PartialEq)]
 /// Represents the result of a partial sumcheck proof verification
 pub struct SubClaim<F: PrimeField> {
-    sum: F,
-    challenges: Vec<F>,
+    pub(crate) sum: F,
+    pub(crate) challenges: Vec<F>,
 }
 
 pub struct Sumcheck {}

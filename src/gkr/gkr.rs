@@ -10,18 +10,19 @@ use ark_ff::PrimeField;
 
 struct GKRProof<F: PrimeField> {
     output_mle: MultiLinearPolynomial<F>,
-    sumcheck_proof: Vec<PartialSumcheckProof<F, GateEvalExtension<F>>>,
+    sumcheck_proofs: Vec<PartialSumcheckProof<F, GateEvalExtension<F>>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
 }
 
 // TODO: add documentation
-fn prove<F: PrimeField>(circuit: Circuit, input: Vec<F>) -> Result<GKRProof<F>, &'static str> {
+// TODO: add sectioned comments
+fn prove<F: PrimeField>(
+    circuit: Circuit,
+    evaluations: Vec<Vec<F>>,
+) -> Result<GKRProof<F>, &'static str> {
     let mut transcript = Transcript::new();
     let mut sumcheck_proofs = vec![];
     let mut q_functions = vec![];
-
-    // evaluate the circuit at the given input
-    let evaluations = circuit.evaluate(input)?;
 
     // get the mle of the output evaluation layer
     let w_0 = Circuit::w(evaluations.as_slice(), 0)?;
@@ -38,9 +39,9 @@ fn prove<F: PrimeField>(circuit: Circuit, input: Vec<F>) -> Result<GKRProof<F>, 
     for layer_index in 1..evaluations.len() {
         let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index)?;
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
-        let f_a_b = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
+        let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
-        let (partial_sumcheck_proof, challenges) = Sumcheck::prove_partial(f_a_b, m);
+        let (partial_sumcheck_proof, challenges) = Sumcheck::prove_partial(f_b_c, m);
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
         sumcheck_proofs.push(partial_sumcheck_proof);
 
@@ -58,12 +59,99 @@ fn prove<F: PrimeField>(circuit: Circuit, input: Vec<F>) -> Result<GKRProof<F>, 
 
     Ok(GKRProof {
         output_mle: w_0,
-        sumcheck_proof: sumcheck_proofs,
+        sumcheck_proofs,
         q_functions,
     })
 }
 
 // TODO: add documentation
-fn verify<F: PrimeField>(proof: GKRProof<F>) -> bool {
-    todo!()
+// TODO: should I return a bool??
+// TODO: add sectioned comments
+fn verify<F: PrimeField>(
+    circuit: Circuit,
+    input: Vec<F>,
+    proof: GKRProof<F>,
+) -> Result<bool, &'static str> {
+    // add output mle to the transcript
+    // select random r
+    // evaluate w_o at r to get m
+    // assert that the sumcheck proof has the claimed sum of m
+    //  do a partial verifications
+    //  use the q function for the final check
+    // generate the next random challenge and m by using q
+
+    if proof.sumcheck_proofs.len() != proof.q_functions.len() {
+        return Err("invalid gkr proof");
+    }
+
+    let mut transcript = Transcript::new();
+    transcript.append(proof.output_mle.to_bytes().as_slice());
+
+    let mut r = transcript.sample_n_field_elements(proof.output_mle.n_vars());
+    let mut m = proof.output_mle.evaluate(r.as_slice())?;
+    let mut layer_index = 1;
+
+    // we need to verify that w(r) = m
+    // we need to verify the partial sumcheck proof
+
+    let sumcheck_and_q_functions = proof
+        .sumcheck_proofs
+        .clone()
+        .into_iter()
+        .zip(proof.q_functions.clone().into_iter());
+
+    for (partial_sumcheck_proof, q_function) in sumcheck_and_q_functions {
+        if partial_sumcheck_proof.sum != m {
+            return Err("invalid sumcheck proof");
+        }
+
+        let subclaim = Sumcheck::verify_partial(partial_sumcheck_proof)
+            .ok_or("failed to verify partial sumcheck proof")?;
+
+        // we need to perform the last check ourselves
+        // basically evaluate f(b, c) at the challenge points
+        // recall f(b, c) = add(r, b, c)(w(b) + w(c)) + mul(r, b, c)(w(b) * w(c))
+        // w(b) = q(0) and w(c) = q(1)
+        // f(b, c) = add(r, b, c)(q(0) + q(1)) + mul(r, b, c)(q(0) * q(1))
+        // verify that the above is equal to the sum in the subclaim
+
+        if subclaim.challenges.len() % 2 != 0 {
+            return Err("challenges b and c should be the same length");
+        }
+
+        let (b, c) = subclaim.challenges.split_at(subclaim.challenges.len() / 2);
+        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index)?;
+        let mut rbc = r.clone();
+        rbc.extend(&subclaim.challenges);
+
+        let w_b = q_function.evaluate(&F::zero());
+        let w_c = q_function.evaluate(&F::one());
+        let add_result = add_mle.evaluate(rbc.as_slice())? * (w_b + w_c);
+        let mul_result = mul_mle.evaluate(rbc.as_slice())? * (w_b * w_c);
+        let f_b_c_eval = add_result + mul_result;
+
+        // final sumcheck verifier check
+        if f_b_c_eval != subclaim.sum {
+            return Ok(false);
+        }
+
+        // TODO: add appropriate values to the transcript
+
+        let l_function = l(b, c)?;
+        let r_star = transcript.sample_field_element();
+
+        r = evaluate_l_function(l_function.as_slice(), &r_star);
+        m = q_function.evaluate(&r_star);
+        layer_index += 1;
+    }
+
+    // we need to ensure that m is correct
+    // so we need the input also
+    let input_mle = MultiLinearPolynomial::<F>::interpolate(input.as_slice());
+    let actual_m = input_mle.evaluate(r.as_slice())?;
+    if actual_m != m {
+        return Ok(false);
+    }
+
+    Ok(true)
 }
