@@ -36,8 +36,6 @@ impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
         let add_mle = layer.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
-                // what do we do per gate?
-                // we need to convert it to a string we know the var count for each
                 let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
                 let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
 

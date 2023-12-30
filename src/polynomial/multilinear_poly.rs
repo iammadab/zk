@@ -790,6 +790,23 @@ mod tests {
     }
 
     #[test]
+    fn test_evaluation_with_more_than_n_points() {
+        // p has 4 variables, but passing 5
+        let p = poly_5ab_7bc_8d();
+        assert_eq!(
+            p.evaluate(&[
+                Fq::from(2),
+                Fq::from(3),
+                Fq::from(4),
+                Fq::from(5),
+                Fq::from(6),
+            ])
+            .unwrap(),
+            Fq::from(11)
+        );
+    }
+
+    #[test]
     fn test_polynomial_addition() {
         // p = 5ab + 7bc + 8d
         // q = 5ab + 7bc + 8d
