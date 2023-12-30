@@ -83,6 +83,9 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
 
         let mut evaluated_polynomial = self.clone();
         for (selector, coeff) in assignments {
+            if selector.len() > self.n_vars() {
+                continue;
+            }
             let variable_indexes = Self::get_variable_indexes(self.n_vars, selector)?;
             for i in variable_indexes {
                 // update only if there is an associated coefficient for this variable index
@@ -754,7 +757,7 @@ mod tests {
         // dense form
         // [11, .....]
         let p = poly_5ab_7bc_8d();
-        let eval = poly_5ab_7bc_8d()
+        let eval = p
             .partial_evaluate(&[
                 (vec![true, false, false, false], &Fq::from(2)),
                 (vec![true, false, false, false], &Fq::from(3)),
@@ -767,6 +770,15 @@ mod tests {
             eval.coefficients,
             fq_map_from_vec(vec![11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         );
+    }
+
+    #[test]
+    fn test_partial_eval_ignore_larger_selector() {
+        let p = poly_5ab_7bc_8d();
+        let eval = p
+            .partial_evaluate(&[(vec![true, false, false, false, false], &Fq::from(3))])
+            .unwrap();
+        assert_eq!(eval.coefficients, p.coefficients);
     }
 
     #[test]
