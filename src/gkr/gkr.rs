@@ -8,6 +8,7 @@ use crate::sumcheck::{PartialSumcheckProof, Sumcheck};
 use crate::transcript::Transcript;
 use ark_ff::PrimeField;
 
+#[derive(Debug)]
 struct GKRProof<F: PrimeField> {
     output_mle: MultiLinearPolynomial<F>,
     sumcheck_proofs: Vec<PartialSumcheckProof<F, GateEvalExtension<F>>>,
@@ -71,8 +72,6 @@ fn prove<F: PrimeField>(
 }
 
 /// Verify a GKR proof
-// TODO: should I return a bool??
-// TODO: add sectioned comments
 fn verify<F: PrimeField>(
     circuit: Circuit,
     input: Vec<F>,
@@ -87,7 +86,7 @@ fn verify<F: PrimeField>(
 
     let mut r = transcript.sample_n_field_elements(proof.output_mle.n_vars());
     let mut m = proof.output_mle.evaluate(r.as_slice())?;
-    let mut layer_index = 1;
+    let mut layer_index = 0;
 
     let sumcheck_and_q_functions = proof
         .sumcheck_proofs
@@ -103,8 +102,8 @@ fn verify<F: PrimeField>(
         }
 
         // TODO: fix ordering
-        transcript.append(q_function.to_bytes().as_slice());
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
+        transcript.append(q_function.to_bytes().as_slice());
 
         let subclaim = Sumcheck::verify_partial(partial_sumcheck_proof)
             .ok_or("failed to verify partial sumcheck proof")?;
@@ -159,7 +158,7 @@ fn verify<F: PrimeField>(
 #[cfg(test)]
 mod test {
     use crate::gkr::circuit::tests::test_circuit;
-    use crate::gkr::gkr::prove;
+    use crate::gkr::gkr::{prove, verify};
     use ark_bls12_381::Fr;
 
     #[test]
@@ -176,6 +175,39 @@ mod test {
             Fr::from(8),
         ];
         let circut_eval = circuit.evaluate(input.clone()).unwrap();
-        let gkr_proof = prove(test_circuit(), circut_eval.clone()).unwrap();
+        let gkr_proof = prove(test_circuit(), circut_eval).unwrap();
+
+        let verification_result = verify(test_circuit(), input, gkr_proof).unwrap();
+        assert!(verification_result);
+    }
+
+    #[test]
+    fn test_wrong_eval_gkr() {
+        let circuit = test_circuit();
+        let wrong_input = vec![
+            Fr::from(1),
+            Fr::from(2),
+            Fr::from(3),
+            Fr::from(4),
+            Fr::from(5),
+            Fr::from(6),
+            Fr::from(7),
+            Fr::from(8),
+        ];
+        let invalid_eval = circuit.evaluate(wrong_input).unwrap();
+        let invalid_gkr_proof = prove(test_circuit(), invalid_eval).unwrap();
+
+        let actual_input = vec![
+            Fr::from(12),
+            Fr::from(2),
+            Fr::from(3),
+            Fr::from(49),
+            Fr::from(5),
+            Fr::from(6),
+            Fr::from(7),
+            Fr::from(8),
+        ];
+        let verification_result = verify(test_circuit(), actual_input, invalid_gkr_proof).unwrap();
+        assert!(!verification_result);
     }
 }
