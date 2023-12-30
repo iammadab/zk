@@ -1,6 +1,7 @@
 use crate::gkr::gate::Gate;
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Add;
 
@@ -172,6 +173,10 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
         }
 
         Ok(result)
+    }
+
+    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
+        todo!()
     }
 
     fn relabel(self) -> Self {

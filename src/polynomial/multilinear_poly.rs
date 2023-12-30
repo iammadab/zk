@@ -1,4 +1,5 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
+use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
@@ -100,6 +101,20 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
             }
         }
         Ok(evaluated_polynomial)
+    }
+
+    /// Convert a multilinear polynomial with 1 variable to a univariate poly
+    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
+        if self.n_vars > 1 {
+            return Err(
+                "cannot create univariate poly from multilinear poly with more than 1 variable",
+            );
+        }
+
+        Ok(UnivariatePolynomial::<F>::new(vec![
+            *self.coefficients.get(&0).unwrap_or(&F::zero()),
+            *self.coefficients.get(&1).unwrap_or(&F::zero()),
+        ]))
     }
 
     /// Relabelling removes variables that are no longer used (shrinking the polynomial)
@@ -1228,5 +1243,35 @@ mod tests {
     fn test_evaluate_zero_poly() {
         let zero_poly = MultiLinearPolynomial::<Fq>::additive_identity();
         assert_eq!(zero_poly.evaluate(&[]).unwrap(), Fq::from(0));
+    }
+
+    #[test]
+    fn test_to_univariate() {
+        // p = 2a
+        let p = MultiLinearPolynomial::<Fq>::new(1, vec![(Fq::from(2), vec![true])]).unwrap();
+        // p(2) = 4
+        assert_eq!(p.evaluate(&[Fq::from(2)]).unwrap(), Fq::from(4));
+        let p_univariate = p.to_univariate().unwrap();
+        assert_eq!(p_univariate.evaluate(&Fq::from(2)), Fq::from(4));
+
+        // p = 3a + 4
+        let p = MultiLinearPolynomial::<Fq>::new(
+            1,
+            vec![(Fq::from(3), vec![true]), (Fq::from(4), vec![false])],
+        )
+        .unwrap();
+        assert_eq!(p.evaluate(&[Fq::from(3)]).unwrap(), Fq::from(13));
+        let p_univariate = p.to_univariate().unwrap();
+        assert_eq!(p_univariate.evaluate(&Fq::from(3)), Fq::from(13));
+
+        // p = 0
+        let p = MultiLinearPolynomial::<Fq>::additive_identity();
+        assert_eq!(p.evaluate(&[Fq::from(3)]).unwrap(), Fq::from(0));
+        let p_univariate = p.to_univariate().unwrap();
+        assert_eq!(p_univariate.evaluate(&Fq::from(25)), Fq::from(0));
+
+        let p = poly_5ab_7bc_8d();
+        let p_univariate = p.to_univariate();
+        assert!(p_univariate.is_err());
     }
 }
