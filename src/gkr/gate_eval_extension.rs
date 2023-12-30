@@ -204,8 +204,9 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
                 .relabel()
                 .to_univariate()?;
             // TODO: do we need to relabel here
-            let w_b_uni = self.w_b_mle[i].clone().to_univariate()?;
-            let w_c_uni = self.w_c_mle[i].clone().to_univariate()?;
+            //  figure out if you need to
+            let w_b_uni = self.w_b_mle[i].to_univariate()?;
+            let w_c_uni = self.w_c_mle[i].to_univariate()?;
 
             let add_result_uni = &add_mle_uni * &(&w_b_uni + &w_c_uni);
             let mul_result_uni = &mul_mle_uni * &(&w_b_uni * &w_c_uni);
