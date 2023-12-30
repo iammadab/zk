@@ -30,7 +30,6 @@ fn prove<F: PrimeField>(
 
     // sample k random field elements to make r
     let mut r = transcript.sample_n_field_elements::<F>(w_0.n_vars());
-    dbg!(w_0.n_vars());
 
     // evaluate w_0(r) to get m
     let mut m = w_0.evaluate(r.as_slice())?;
@@ -39,8 +38,6 @@ fn prove<F: PrimeField>(
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
         let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
-        dbg!(add_mle.n_vars());
-        dbg!(mul_mle.n_vars());
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
@@ -101,7 +98,6 @@ fn verify<F: PrimeField>(
             return Err("invalid sumcheck proof");
         }
 
-        // TODO: fix ordering
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
         transcript.append(q_function.to_bytes().as_slice());
 
