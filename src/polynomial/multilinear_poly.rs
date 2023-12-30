@@ -43,9 +43,12 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
             return Ok(*self.coefficients.get(&0).unwrap_or(&F::zero()));
         }
 
-        if assignments.len() != self.n_vars as usize {
+        if assignments.len() < self.n_vars() {
             return Err("evaluate requires an assignment for every variable");
         }
+
+        // only grab the first n_var assignments
+        let assignments = &assignments[..self.n_vars()];
 
         let mut indexed_assignments = vec![];
         for (position, assignment) in assignments.into_iter().enumerate() {
@@ -793,17 +796,8 @@ mod tests {
     fn test_evaluation_with_more_than_n_points() {
         // p has 4 variables, but passing 5
         let p = poly_5ab_7bc_8d();
-        assert_eq!(
-            p.evaluate(&[
-                Fq::from(2),
-                Fq::from(3),
-                Fq::from(4),
-                Fq::from(5),
-                Fq::from(6),
-            ])
-            .unwrap(),
-            Fq::from(11)
-        );
+        let eval = p.evaluate(&fq_from_vec(vec![2, 4, 3, 5, 8])).unwrap();
+        assert_eq!(eval, Fq::from(11));
     }
 
     #[test]
