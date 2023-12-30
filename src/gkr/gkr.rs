@@ -227,7 +227,7 @@ mod test {
         );
 
         let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]);
-        let input = vec![
+        let eval_input = vec![
             Fq::from(5),
             Fq::from(2),
             Fq::from(3),
@@ -235,11 +235,19 @@ mod test {
             Fq::from(9),
             Fq::from(8),
         ];
+        let verify_input = vec![
+            Fq::from(5),
+            Fq::from(2),
+            Fq::from(3),
+            Fq::from(4),
+            Fq::from(8),
+            Fq::from(9),
+        ];
 
-        let evaluation = circuit.evaluate(input.clone()).unwrap();
+        let evaluation = circuit.evaluate(eval_input.clone()).unwrap();
         let gkr_proof = prove(circuit.clone(), evaluation.clone()).unwrap();
 
-        let verification_result = verify(circuit, input, gkr_proof).unwrap();
-        assert!(verification_result);
+        let verification_result = verify(circuit, verify_input, gkr_proof).unwrap();
+        assert!(!verification_result);
     }
 }
