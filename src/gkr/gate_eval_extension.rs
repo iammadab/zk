@@ -1,6 +1,6 @@
 use crate::gkr::gate::Gate;
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
-use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Add;
@@ -176,7 +176,45 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 
     fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
-        todo!()
+        if self.n_vars() > 1 {
+            return Err(
+                "cannot create univariate poly from gate eval extension with more than 1 variable",
+            );
+        }
+
+        // TODO: add test for n_vars = 0
+
+        let mut result = UnivariatePolynomial::<F>::additive_identity();
+
+        // create r_assignments for partial evaluation
+        let mut r_assignments = vec![];
+        for (i, r) in self.r.iter().enumerate() {
+            r_assignments.push((selector_from_position(self.r.len() + 1, i)?, r))
+        }
+
+        for i in 0..self.count() {
+            // TODO: might need to relabel before hand
+            // partially evaluate add_mle and mul_mle at r
+            let add_mle_uni = self.add_mle[i]
+                .partial_evaluate(r_assignments.as_slice())?
+                .relabel()
+                .to_univariate()?;
+            let mul_mle_uni = self.mul_mle[i]
+                .partial_evaluate(r_assignments.as_slice())?
+                .relabel()
+                .to_univariate()?;
+            // TODO: do we need to relabel here
+            let w_b_uni = self.w_b_mle[i].clone().to_univariate()?;
+            let w_c_uni = self.w_c_mle[i].clone().to_univariate()?;
+
+            let add_result_uni = &add_mle_uni * &(&w_b_uni + &w_c_uni);
+            let mul_result_uni = &mul_mle_uni * &(&w_b_uni * &w_c_uni);
+            let f_x = &add_result_uni + &mul_result_uni;
+
+            result = &result + &f_x;
+        }
+
+        Ok(result)
     }
 
     fn relabel(self) -> Self {
@@ -372,6 +410,39 @@ mod test {
         assert_eq!(p4.n_vars(), 0);
 
         assert_eq!(p4.evaluate(&[]).unwrap(), Fr::from(6840));
+    }
+
+    #[test]
+    fn test_to_univariate() {
+        let (circuit, circuit_eval) = evaluated_circuit();
+
+        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
+
+        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
+        assert_eq!(gate_eval_ext.n_vars(), 4);
+
+        // eval b1, c1, and c2
+        let p1 = gate_eval_ext
+            .partial_evaluate(&[
+                (vec![true, false, false, false], &Fr::from(1)),
+                (vec![false, false, true, false], &Fr::from(2)),
+                (vec![false, false, false, true], &Fr::from(3)),
+            ])
+            .unwrap()
+            .relabel();
+        assert_eq!(p1.n_vars(), 1);
+        assert_eq!(p1.mul_mle[0].n_vars(), p1.r.len() + 1);
+        assert_eq!(p1.add_mle[0].n_vars(), p1.r.len() + 1);
+        assert_eq!(p1.w_b_mle[0].n_vars(), 1);
+        assert_eq!(p1.w_c_mle[0].n_vars(), 0);
+
+        let evaluation = p1.evaluate(&[Fr::from(12)]).unwrap();
+
+        let p1_univariate = p1.to_univariate().unwrap();
+        let uni_evaluation = p1_univariate.evaluate(&Fr::from(12));
+
+        assert_eq!(evaluation, uni_evaluation);
     }
 
     #[test]
