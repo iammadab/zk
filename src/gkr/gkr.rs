@@ -11,7 +11,7 @@ use ark_ff::PrimeField;
 #[derive(Debug)]
 struct GKRProof<F: PrimeField> {
     output_mle: MultiLinearPolynomial<F>,
-    sumcheck_proofs: Vec<PartialSumcheckProof<F, GateEvalExtension<F>>>,
+    sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
 }
 
@@ -154,8 +154,18 @@ fn verify<F: PrimeField>(
 #[cfg(test)]
 mod test {
     use crate::gkr::circuit::tests::test_circuit;
+    use crate::gkr::circuit::Circuit;
+    use crate::gkr::gate::Gate;
     use crate::gkr::gkr::{prove, verify};
+    use crate::gkr::layer::Layer;
     use ark_bls12_381::Fr;
+    use ark_ff::{Fp64, MontBackend, MontConfig};
+
+    #[derive(MontConfig)]
+    #[modulus = "17"]
+    #[generator = "3"]
+    struct FqConfig;
+    type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
     #[test]
     fn test_gkr() {
@@ -205,5 +215,31 @@ mod test {
         ];
         let verification_result = verify(test_circuit(), actual_input, invalid_gkr_proof).unwrap();
         assert!(!verification_result);
+    }
+
+    #[test]
+    fn test_output_zero_gkr() {
+        let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 1, 2)]);
+        let layer_2 = Layer::new(
+            vec![Gate::new(0, 0, 1), Gate::new(2, 4, 5)],
+            vec![Gate::new(1, 2, 3)],
+        );
+
+        let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]);
+        let input = vec![
+            Fq::from(5),
+            Fq::from(2),
+            Fq::from(3),
+            Fq::from(4),
+            Fq::from(9),
+            Fq::from(8),
+        ];
+
+        let evaluation = circuit.evaluate(input.clone()).unwrap();
+        let gkr_proof = prove(circuit.clone(), evaluation.clone()).unwrap();
+
+        let verification_result = verify(circuit, input, gkr_proof).unwrap();
+        assert!(verification_result);
     }
 }

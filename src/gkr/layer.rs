@@ -4,6 +4,7 @@ use crate::polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolyn
 use ark_ff::PrimeField;
 
 /// Holds the add and mul gates in a given layer
+#[derive(Clone)]
 pub struct Layer {
     pub add_gates: Vec<Gate>,
     pub mul_gates: Vec<Gate>,

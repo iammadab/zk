@@ -15,7 +15,7 @@ pub mod util;
 pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
     poly: P,
     sum: F,
-    uni_polys: Vec<P>,
+    uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
 impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
@@ -40,13 +40,13 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
 
 #[derive(Debug, Clone)]
 /// Same as the sumcheck proof without the initial poly
-pub struct PartialSumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
+pub struct PartialSumcheckProof<F: PrimeField> {
     pub(crate) sum: F,
-    uni_polys: Vec<P>,
+    uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
 impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>>
-    for PartialSumcheckProof<F, P>
+    for PartialSumcheckProof<F>
 {
     fn from(value: SumcheckProof<F, P>) -> Self {
         Self {
@@ -56,7 +56,7 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>>
     }
 }
 
-impl<F: PrimeField, P: MultiLinearExtension<F>> PartialSumcheckProof<F, P> {
+impl<F: PrimeField> PartialSumcheckProof<F> {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
         result.extend(self.sum.into_bigint().to_bytes_be());
@@ -92,7 +92,7 @@ impl Sumcheck {
     pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(
         poly: P,
         sum: F,
-    ) -> (PartialSumcheckProof<F, P>, Vec<F>)
+    ) -> (PartialSumcheckProof<F>, Vec<F>)
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
@@ -123,7 +123,9 @@ impl Sumcheck {
                 .unwrap()
                 .relabel();
 
-            let uni_poly = skip_first_var_then_sum_over_boolean_hypercube(challenge_poly);
+            let uni_poly = skip_first_var_then_sum_over_boolean_hypercube(challenge_poly)
+                .to_univariate()
+                .unwrap();
             transcript.append(uni_poly.to_bytes().as_slice());
             uni_polys.push(uni_poly);
 
@@ -170,23 +172,15 @@ impl Sumcheck {
     }
 
     /// Verify partial sumcheck proof
-    pub fn verify_partial<F: PrimeField, P: MultiLinearExtension<F>>(
-        proof: PartialSumcheckProof<F, P>,
-    ) -> Option<SubClaim<F>>
-    where
-        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
-    {
+    pub fn verify_partial<F: PrimeField>(proof: PartialSumcheckProof<F>) -> Option<SubClaim<F>> {
         let mut transcript = Transcript::new();
         Self::verify_internal(proof, &mut transcript)
     }
 
-    fn verify_internal<F: PrimeField, P: MultiLinearExtension<F>>(
-        proof: PartialSumcheckProof<F, P>,
+    fn verify_internal<F: PrimeField>(
+        proof: PartialSumcheckProof<F>,
         transcript: &mut Transcript,
-    ) -> Option<SubClaim<F>>
-    where
-        for<'a> &'a P: Add<Output = Result<P, &'static str>>,
-    {
+    ) -> Option<SubClaim<F>> {
         let mut challenges = vec![];
 
         transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
@@ -194,11 +188,9 @@ impl Sumcheck {
         let mut claimed_sum = proof.sum;
 
         for poly in proof.uni_polys {
-            // TODO: this evaluations should take a single value rather than a slice
-            // TODO: also remove unwrap
             // assert that p(0) + p(1) = sum
-            let p_0 = poly.evaluate(&[F::zero()]).unwrap();
-            let p_1 = poly.evaluate(&[F::one()]).unwrap();
+            let p_0 = poly.evaluate(&F::zero());
+            let p_1 = poly.evaluate(&F::one());
 
             if claimed_sum != (p_0 + p_1) {
                 return None;
@@ -209,8 +201,7 @@ impl Sumcheck {
 
             // sample challenge and update claimed sum
             let challenge = transcript.sample_field_element::<F>();
-            // TODO: should take a single value here rather than slice
-            claimed_sum = poly.evaluate(&[challenge]).unwrap();
+            claimed_sum = poly.evaluate(&challenge);
             challenges.push(challenge);
         }
 

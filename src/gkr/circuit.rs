@@ -4,13 +4,14 @@ use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
 
 /// A circuit is just a stacked collection of layers
+#[derive(Clone)]
 pub struct Circuit {
     layers: Vec<Layer>,
 }
 
 impl Circuit {
     // TODO: implement circuit construction validation
-    fn new(layers: Vec<Layer>) -> Self {
+    pub fn new(layers: Vec<Layer>) -> Self {
         Self { layers }
     }
 }

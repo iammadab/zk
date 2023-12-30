@@ -1,6 +1,7 @@
 use crate::polynomial::multilinear_poly::binary_string;
 
 /// Represents a gate wiring (2 inputs 1 output)
+#[derive(Clone)]
 pub struct Gate {
     pub out: usize,
     pub in_a: usize,
