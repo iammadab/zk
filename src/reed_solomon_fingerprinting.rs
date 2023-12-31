@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::univariate_poly::UnivariatePolynomial;
+    use crate::polynomial::univariate_poly::UnivariatePolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig, UniformRand};
     use rand::random;

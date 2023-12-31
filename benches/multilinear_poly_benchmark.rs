@@ -1,7 +1,7 @@
 use ark_ff::{Fp64, MontBackend, MontConfig};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use thaler::multilinear_poly::MultiLinearPolynomial;
+use thaler::polynomial::multilinear_poly::MultiLinearPolynomial;
 
 #[derive(MontConfig)]
 #[modulus = "17"]

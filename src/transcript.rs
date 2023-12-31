@@ -1,6 +1,7 @@
 use ark_ff::{BigInteger, PrimeField};
 use sha3::{Digest, Keccak256};
 
+// TODO: implement better transcript
 pub struct Transcript {
     hasher: Keccak256,
 }
@@ -26,5 +27,10 @@ impl Transcript {
     pub(crate) fn sample_field_element<F: PrimeField>(&mut self) -> F {
         let challenge = self.sample_challenge();
         F::from_be_bytes_mod_order(&challenge)
+    }
+
+    pub(crate) fn sample_n_field_elements<F: PrimeField>(&mut self, n: usize) -> Vec<F> {
+        // TODO: is this secure??
+        (0..n).map(|_| self.sample_field_element()).collect()
     }
 }

@@ -1,4 +1,4 @@
-use crate::multilinear_poly::binary_string;
+use crate::polynomial::multilinear_poly::binary_string;
 use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
@@ -27,7 +27,7 @@ impl<F: PrimeField> Iterator for BooleanHyperCube<F> {
     type Item = Vec<F>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_point == self.total_points {
+        if self.current_point == self.total_points || self.bit_size == 0 {
             return None;
         }
 

@@ -1,8 +1,9 @@
-use crate::multilinear_poly::MultiLinearPolynomial;
-use ark_ff::PrimeField;
+use crate::polynomial::multilinear_extension::MultiLinearExtension;
+use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+use ark_ff::{BigInteger, PrimeField};
 use std::ops;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UnivariatePolynomial<F: PrimeField> {
     /// Dense co-efficient representation of the polynomial
     /// lower degree co-efficients to higher degree co-efficients
@@ -90,6 +91,25 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
             self.coefficients.len() - 1
         };
     }
+
+    /// Additive identity poly
+    pub fn additive_identity() -> Self {
+        Self::new(vec![])
+    }
+
+    /// Multiplicative identity poly
+    pub fn multiplicative_identity() -> Self {
+        Self::new(vec![F::one()])
+    }
+
+    /// Serialize the univariate polynomial
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = vec![];
+        for coeff in self.coefficients() {
+            result.extend(coeff.into_bigint().to_bytes_be());
+        }
+        result
+    }
 }
 
 impl<F: PrimeField> ops::Add for &UnivariatePolynomial<F> {
@@ -98,7 +118,8 @@ impl<F: PrimeField> ops::Add for &UnivariatePolynomial<F> {
     fn add(self, other: Self) -> Self::Output {
         // TODO: improve implementation
         if self.is_zero() {
-            return UnivariatePolynomial::new(other.coefficients.clone());
+            return other.clone();
+            // return UnivariatePolynomial::new(other.coefficients.clone());
         }
 
         if other.is_zero() {
@@ -166,7 +187,8 @@ impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F
 #[cfg(test)]
 mod tests {
     use super::UnivariatePolynomial;
-    use crate::multilinear_poly::MultiLinearPolynomial;
+    use crate::polynomial::multilinear_extension::MultiLinearExtension;
+    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend, PrimeField};
 
@@ -283,6 +305,22 @@ mod tests {
             fq_from_vec(vec![565, 1631, 3537, -7]),
         );
         assert_eq!(p, poly_from_vec(vec![0, -12, 0, 5]));
+    }
+
+    #[test]
+    fn test_identity_poly() {
+        // p = 2x
+        let p = poly_from_vec(vec![0, 2]);
+
+        // additive identity
+        let additive_identity = UnivariatePolynomial::<Fq>::additive_identity();
+        let p_plus_e = &p + &additive_identity;
+        assert_eq!(p_plus_e, p);
+
+        // multiplicative identity
+        let multiplicative_identity = UnivariatePolynomial::<Fq>::multiplicative_identity();
+        let p_mul_e = &p * &multiplicative_identity;
+        assert_eq!(p_mul_e, p);
     }
 
     #[test]
