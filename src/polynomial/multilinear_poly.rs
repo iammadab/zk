@@ -28,7 +28,6 @@ pub struct MultiLinearPolynomial<F: PrimeField> {
     coefficients: BTreeMap<usize, F>,
 }
 
-// TODO: cleanup
 impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
     /// Return the number of variables in the poly
     fn n_vars(&self) -> usize {
@@ -103,20 +102,6 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
         Ok(evaluated_polynomial)
     }
 
-    /// Convert a multilinear polynomial with 1 variable to a univariate poly
-    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
-        if self.n_vars > 1 {
-            return Err(
-                "cannot create univariate poly from multilinear poly with more than 1 variable",
-            );
-        }
-
-        Ok(UnivariatePolynomial::<F>::new(vec![
-            *self.coefficients.get(&0).unwrap_or(&F::zero()),
-            *self.coefficients.get(&1).unwrap_or(&F::zero()),
-        ]))
-    }
-
     /// Relabelling removes variables that are no longer used (shrinking the polynomial)
     /// e.g. 2a + 9c uses three variables [a, b, c] but b is not represented in any term
     /// we can relabel to 2a + 9b uses 2 variables
@@ -150,6 +135,20 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
             result.extend(coeff.into_bigint().to_bytes_be());
         }
         result
+    }
+
+    /// Convert a multilinear polynomial with 1 variable to a univariate poly
+    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
+        if self.n_vars > 1 {
+            return Err(
+                "cannot create univariate poly from multilinear poly with more than 1 variable",
+            );
+        }
+
+        Ok(UnivariatePolynomial::<F>::new(vec![
+            *self.coefficients.get(&0).unwrap_or(&F::zero()),
+            *self.coefficients.get(&1).unwrap_or(&F::zero()),
+        ]))
     }
 }
 

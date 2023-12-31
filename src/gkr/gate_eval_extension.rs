@@ -5,8 +5,6 @@ use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Add;
 
-// TODO: delete this file, found a better approach
-
 #[derive(Clone, Debug, PartialEq)]
 /// Multivariate Extension structure for gate evaluations in a circuit layer
 /// Given three values a, b, c the structure will:
@@ -259,8 +257,6 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
     }
 }
 
-// TODO: test gate eval addition
-// TODO: test gate eval addition with additive identity
 impl<F: PrimeField> Add for &GateEvalExtension<F> {
     type Output = Result<GateEvalExtension<F>, &'static str>;
 

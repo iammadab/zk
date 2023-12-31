@@ -34,7 +34,6 @@ where
         sum = (&sum + &partial_eval).unwrap();
     }
 
-    // TODO: do we check that this has just one variable here??
     sum.relabel()
 }
 

@@ -14,8 +14,6 @@ pub struct BooleanHyperCube<F: PrimeField> {
 
 impl<F: PrimeField> BooleanHyperCube<F> {
     pub fn new(bit_size: usize) -> Self {
-        // TODO: potential bug here, what happens if bit_size is 0
-        //  what is the expected behaviour
         Self {
             bit_size,
             total_points: 2_usize.pow(bit_size as u32),
@@ -29,7 +27,7 @@ impl<F: PrimeField> Iterator for BooleanHyperCube<F> {
     type Item = Vec<F>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_point == self.total_points {
+        if self.current_point == self.total_points || self.bit_size == 0 {
             return None;
         }
 

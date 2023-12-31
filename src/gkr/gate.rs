@@ -13,10 +13,8 @@ impl Gate {
         Self { out, in_a, in_b }
     }
 
-    // TODO: add documentation
-    // Should return the bit representation for a, b, and c as a long string
-    // will need to pass the size of the bits, making some assumption about
-    // the structure of the circuit
+    /// Return a binary string of the form out + in_a + in_b
+    /// each binary string size is specified as input to the function
     pub fn to_bit_string(&self, out_var_count: usize, in_var_count: usize) -> String {
         let out_binary_string = binary_string(self.out, out_var_count);
         let in_a_binary_string = binary_string(self.in_a, in_var_count);

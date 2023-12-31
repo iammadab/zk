@@ -1,7 +1,6 @@
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
 
-// TODO: consider calling this polynomial extension
 pub trait MultiLinearExtension<F: PrimeField>: Clone {
     /// Returns the number of variables in the extension
     fn n_vars(&self) -> usize;
@@ -30,5 +29,3 @@ pub trait MultiLinearExtension<F: PrimeField>: Clone {
     /// Convert the multilinear extension to a univariate polynomial
     fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str>;
 }
-
-// TODO: consider implementing univariate trait that allows evaluate to only take a single value
