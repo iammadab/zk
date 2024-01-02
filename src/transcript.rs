@@ -30,7 +30,6 @@ impl Transcript {
     }
 
     pub(crate) fn sample_n_field_elements<F: PrimeField>(&mut self, n: usize) -> Vec<F> {
-        // TODO: is this secure??
         (0..n).map(|_| self.sample_field_element()).collect()
     }
 }
