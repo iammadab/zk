@@ -507,6 +507,10 @@ fn remap_coefficient_keys<F: PrimeField>(
 
 /// Determines the number of bits needed to represent a number
 pub fn bit_count_for_n_elem(size: usize) -> usize {
+    // if the size of the array is 2, this will say two binary digits are needed
+    // but since array indexing starts at 0 then only 1 binary digit will be needed
+    // i.e first element = 0, second element = 1
+    // hence we need to subtract 1 from the array size inorder to account for zero indexing
     format!("{:b}", size - 1).len()
 }
 

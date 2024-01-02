@@ -20,6 +20,7 @@ fn prove<F: PrimeField>(
     circuit: Circuit,
     evaluations: Vec<Vec<F>>,
 ) -> Result<GKRProof<F>, &'static str> {
+    // TODO: do I need to add the circuit and the input to the transcript
     let mut transcript = Transcript::new();
     let mut sumcheck_proofs = vec![];
     let mut q_functions = vec![];
@@ -38,6 +39,8 @@ fn prove<F: PrimeField>(
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
         let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
+        dbg!(&add_mle.n_vars());
+        dbg!(&mul_mle.n_vars());
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
@@ -144,11 +147,7 @@ fn verify<F: PrimeField>(
     // by evaluating the input_mle at r and comparing that to the claimed m
     let input_mle = MultiLinearPolynomial::<F>::interpolate(input.as_slice());
     let actual_m = input_mle.evaluate(r.as_slice())?;
-    if actual_m != m {
-        return Ok(false);
-    }
-
-    Ok(true)
+    Ok(actual_m == m)
 }
 
 #[cfg(test)]
@@ -158,6 +157,7 @@ mod test {
     use crate::gkr::gate::Gate;
     use crate::gkr::gkr::{prove, verify};
     use crate::gkr::layer::Layer;
+    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
 
@@ -247,7 +247,9 @@ mod test {
         let evaluation = circuit.evaluate(eval_input.clone()).unwrap();
         let gkr_proof = prove(circuit.clone(), evaluation.clone()).unwrap();
 
-        let verification_result = verify(circuit, verify_input, gkr_proof).unwrap();
-        assert!(!verification_result);
+        let verification_result = verify(circuit, eval_input, gkr_proof).unwrap();
+        assert!(verification_result);
+
+        dbg!(MultiLinearPolynomial::<Fr>::interpolate(&[Fr::from(0)]));
     }
 }
