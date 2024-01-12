@@ -38,6 +38,9 @@ pub fn q<F: PrimeField>(
         return Err("output of l should match the number of variables for w");
     }
 
+    // TODO: might be able to optimize this with distributive property
+    //  look into univariate poly evaluate (this is equivalent to evaluating a poly
+    //  with another poly)
     // compose l functions into w
     // for each variable in w, there is a corresponding l function
     // the goal of this step is to replace each variable with the corresponding l function
