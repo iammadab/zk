@@ -8,7 +8,7 @@ enum Operation {
     Mul,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 /// Contains a pointer to a variable and field element to mul the
 /// variable's value with.
 /// e.g. let [s1, s2, s3] be the set of variables
@@ -62,6 +62,7 @@ impl<F: PrimeField> TryFrom<Constraint<F>> for ReducedConstraint<F> {
     }
 }
 
+#[derive(Debug, PartialEq)]
 /// Simplified constraint that contains at most 3 operations
 /// and at most 1 operation type
 struct ReducedConstraint<F: PrimeField> {
@@ -73,7 +74,7 @@ struct ReducedConstraint<F: PrimeField> {
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::{Constraint, Operation, ProductArg};
+    use crate::circom_gkr::{Constraint, Operation, ProductArg, ReducedConstraint};
     use ark_bls12_381::Fr;
 
     #[test]
@@ -113,12 +114,22 @@ mod tests {
         assert_eq!(constraint.operation, Operation::Mul);
     }
 
-    // #[test]
-    // fn test_reduced_constraint_from_constraint() {
-    //     let constraint = Constraint::new(
-    //         vec![ProductArg(0, Fr::from(1))],
-    //         vec![ProductArg(0, Fr::from(1))],
-    //         vec![ProductArg(0, Fr::from(1))],
-    //     );
-    // }
+    #[test]
+    fn test_reduced_constraint_from_constraint() {
+        let constraint = Constraint::new(
+            vec![ProductArg(0, Fr::from(1))],
+            vec![ProductArg(0, Fr::from(1))],
+            vec![],
+        );
+        let reduced_constraint: ReducedConstraint<Fr> = constraint.try_into().unwrap();
+        assert_eq!(
+            reduced_constraint,
+            ReducedConstraint {
+                a: Some(ProductArg(0, Fr::from(1))),
+                b: Some(ProductArg(0, Fr::from(1))),
+                c: None,
+                operation: Operation::Mul
+            }
+        );
+    }
 }
