@@ -1,7 +1,7 @@
 use ark_ff::PrimeField;
 use std::ffi::c_long;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 /// Represents the constraint operation
 enum Operation {
     Add,
@@ -42,13 +42,39 @@ impl<F: PrimeField> Constraint<F> {
 
         Self { a, b, c, operation }
     }
+
+    // TODO: add documentation
+    fn simplify(&self) -> Vec<ReducedConstraint<F>> {
+        // we first need to know if is simplifiable or not
+        // if it is not, we tranform this to a reduced constraint
+        if self.can_simplify() {
+            todo!()
+        } else {
+            vec![self.try_into().unwrap()]
+        }
+    }
+
+    /// Determines if a constraint needs simplification before converting to a ReducedConstraint
+    fn can_simplify(&self) -> bool {
+        let has_more_than_one_term_in_a_slot = self.a.len() > 1 || self.b.len() > 2 || self.c.len() > 3;
+        if self.terms_count() > 3 || has_more_than_one_term_in_a_slot {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Total number of terms in the constraint
+    fn terms_count(&self) -> usize {
+        self.a.len() + self.b.len() + self.c.len()
+    }
 }
 
-// TODO: do you really need this?
-impl<F: PrimeField> TryFrom<Constraint<F>> for ReducedConstraint<F> {
+// TODO: do I really need this?
+impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
     type Error = &'static str;
 
-    fn try_from(value: Constraint<F>) -> Result<Self, Self::Error> {
+    fn try_from(value: &Constraint<F>) -> Result<Self, Self::Error> {
         if value.a.len() > 1 || value.b.len() > 1 || value.c.len() > 1 {
             return Err("can only convert constraints that have at most 1 value for A, B and C");
         }
@@ -57,7 +83,7 @@ impl<F: PrimeField> TryFrom<Constraint<F>> for ReducedConstraint<F> {
             a: value.a.get(0).cloned(),
             b: value.b.get(0).cloned(),
             c: value.c.get(0).cloned(),
-            operation: value.operation,
+            operation: value.operation.clone(),
         })
     }
 }
@@ -121,7 +147,7 @@ mod tests {
             vec![ProductArg(0, Fr::from(1))],
             vec![],
         );
-        let reduced_constraint: ReducedConstraint<Fr> = constraint.try_into().unwrap();
+        let reduced_constraint: ReducedConstraint<Fr> = (&constraint).try_into().unwrap();
         assert_eq!(
             reduced_constraint,
             ReducedConstraint {
