@@ -97,17 +97,20 @@ impl<F: PrimeField> Constraint<F> {
             // let empty_slot = self.get_empty_slot();
             // let double_slot = self.get
 
-            // need a way to know when to change the sign
-            // we have a product term, we are moving it from a place to another place
-            // depending on if that is a cross over or not, we need a way to change the sign
+            // now that I have a way to get empty slots and a way to get movable terms
+            // can we ever have a none?
+            // empty slot is none if there is no empty slot, the rearrange check already handles that
+            // get_movable_term can only be none if all terms are less than 1, should rearrange also checks for that
+            // TODO: you should add this constraints to the tests
 
-            // now that we have term negation, we need to know when we are crossing over
-            // maybe a new type that is basically a vector
+            // next up will be to implement the ability to move
+            // should be an external function, that handles the negation
         }
 
         todo!()
     }
 
+    // TODO: consider giving this type Slot
     /// Returns a mutable reference to the empty slot in the constraint equation
     /// e.g. if A = [s1] B = [] and C = [s3] returns a mutable reference to B
     /// also returns the size of the equation the slot belongs
@@ -164,6 +167,23 @@ impl<F: PrimeField> Constraint<F> {
     }
 }
 
+/// Move a term to a given slot
+/// if the slot is not in the same side of the equation as the term
+/// then negate the term (this simulates moving a term over the equal (=) sign)
+fn move_term_to_slot<F: PrimeField>(
+    mut term: Term<F>,
+    slot: &mut Vec<Term<F>>,
+    same_direction: bool,
+) {
+    // if the equation direction changes, then we are moving over the equal sign
+    // hence we need to negate the term
+    if !same_direction {
+        term = term.negate();
+    }
+
+    slot.push(term);
+}
+
 // TODO: do I really need this?
 impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
     type Error = &'static str;
@@ -194,7 +214,9 @@ struct ReducedConstraint<F: PrimeField> {
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::{Constraint, EquationDirection, Operation, ReducedConstraint, Term};
+    use crate::circom_gkr::{
+        move_term_to_slot, Constraint, EquationDirection, Operation, ReducedConstraint, Term,
+    };
     use ark_bls12_381::Fr;
 
     #[test]
@@ -372,5 +394,20 @@ mod tests {
 
         let (movable_item, slot_location) = constraint.get_movable_term();
         assert_eq!(movable_item.is_some(), false);
+    }
+
+    #[test]
+    fn test_move_to_slot() {
+        let mut slot = vec![];
+        let term = Term(0, Fr::from(1));
+        move_term_to_slot(term, &mut slot, true);
+        assert_eq!(slot.len(), 1);
+        assert_eq!(slot[0], Term(0, Fr::from(1)));
+
+        let mut slot = vec![];
+        let term = Term(0, Fr::from(2));
+        move_term_to_slot(term, &mut slot, false);
+        assert_eq!(slot.len(), 1);
+        assert_eq!(slot[0], Term(0, Fr::from(-2)));
     }
 }
