@@ -34,6 +34,7 @@ impl<F: PrimeField> Term<F> {
     }
 }
 
+#[derive(Debug, PartialEq)]
 /// Represents a single R1CS constraint
 /// As . Bs = Cs
 /// where s contains the witness and constants
@@ -45,6 +46,9 @@ struct Constraint<F: PrimeField> {
 }
 
 impl<F: PrimeField> Constraint<F> {
+    /// Create a new constraint, does automatic operation detection
+    /// if both a and b are present then operation = mul, else operation = add
+    /// see: new_with_operation to remove automatic operation detection
     fn new(a: Vec<Term<F>>, b: Vec<Term<F>>, c: Vec<Term<F>>) -> Self {
         // R1CS is of the form <As> . <Bs> = <Cs>
         // where As, Bs and Cs are inner products
@@ -59,14 +63,27 @@ impl<F: PrimeField> Constraint<F> {
         Self { a, b, c, operation }
     }
 
+    /// Create new constraint with automatic operation detection
+    fn new_with_operation(
+        a: Vec<Term<F>>,
+        b: Vec<Term<F>>,
+        c: Vec<Term<F>>,
+        operation: Operation,
+    ) -> Self {
+        Self { a, b, c, operation }
+    }
+
+    // TODO: should this be mut
     // TODO: add documentation
-    fn simplify(&self) -> Vec<ReducedConstraint<F>> {
+    fn simplify(&mut self) -> Vec<ReducedConstraint<F>> {
         // we first need to know if is simplifiable or not
         // if it is not, we tranform this to a reduced constraint
         if self.can_simplify() {
+            self.rearrange_terms();
             todo!()
         } else {
-            vec![self.try_into().unwrap()]
+            // vec![*self.try_into().unwrap()]
+            todo!()
         }
     }
 
@@ -81,33 +98,20 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
-    // TODO: add documentation
-    fn rearrange_terms(&self) -> Constraint<F> {
-        // TODO: how should this work???
-
-        // need to get a slot that has more than one element
-        // and need to get a slot that is emtpy
-        // if we can't find any then we are done?
-
-        // we loop until there is no need anymore
-        // how do we know the slot that is empty
-
+    /// Simplifies constraint by moving extra terms to empty slots (as many as possible)
+    fn rearrange_terms(&mut self) {
         while self.should_rearrange_terms() {
-            todo!()
-            // let empty_slot = self.get_empty_slot();
-            // let double_slot = self.get
+            let (term, term_location) = self.get_movable_term();
+            let (empty_slot, slot_location) = self.get_empty_slot();
 
-            // now that I have a way to get empty slots and a way to get movable terms
-            // can we ever have a none?
-            // empty slot is none if there is no empty slot, the rearrange check already handles that
-            // get_movable_term can only be none if all terms are less than 1, should rearrange also checks for that
-            // TODO: you should add this constraints to the tests
-
-            // next up will be to implement the ability to move
-            // should be an external function, that handles the negation
+            // we can safely unwrap
+            // the should_rearrange_terms check already verifies they exist
+            move_term_to_slot(
+                term.unwrap(),
+                empty_slot.unwrap(),
+                slot_location == term_location,
+            );
         }
-
-        todo!()
     }
 
     // TODO: consider giving this type Slot
@@ -151,6 +155,8 @@ impl<F: PrimeField> Constraint<F> {
         if self.operation == Operation::Mul {
             return false;
         }
+
+        // TODO: write tests to solidify this constraints
 
         // no need to rearrange if all slots already have a maximum of one term
         if self.a.len() <= 1 && self.b.len() <= 1 && self.c.len() <= 1 {
@@ -409,5 +415,31 @@ mod tests {
         move_term_to_slot(term, &mut slot, false);
         assert_eq!(slot.len(), 1);
         assert_eq!(slot[0], Term(0, Fr::from(-2)));
+    }
+
+    #[test]
+    fn test_rearrange_constraint() {
+        let mut constraint = Constraint::new(
+            vec![
+                Term(0, Fr::from(1)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(-5)),
+                Term(3, Fr::from(1)),
+            ],
+            vec![],
+            vec![],
+        );
+
+        constraint.rearrange_terms();
+
+        assert_eq!(
+            constraint,
+            Constraint::new_with_operation(
+                vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
+                vec![Term(3, Fr::from(1))],
+                vec![Term(2, Fr::from(5))],
+                Operation::Add
+            )
+        )
     }
 }
