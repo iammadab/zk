@@ -12,24 +12,33 @@ enum Operation {
 /// Contains a pointer to a variable and field element to mul the
 /// variable's value with.
 /// e.g. let [s1, s2, s3] be the set of variables
-/// ProductArg(1, -1)
+/// Term(1, -1)
 ///     will get the value stored in s2 (e.g. 5) and mul that by -1
 ///     = -5
 /// This is the building block for representing R1Cs constraints
-struct ProductArg<F: PrimeField>(usize, F);
+struct Term<F: PrimeField>(usize, F);
+
+impl<F: PrimeField> Term<F> {
+    /// Create a new term with negative value
+    /// this is useful for when we rearrange terms in an equation
+    /// and terms have to move over the equal (=) sign
+    fn negate(&self) -> Self {
+        Term(self.0, self.1 * F::one().neg())
+    }
+}
 
 /// Represents a single R1CS constraint
 /// As . Bs = Cs
 /// where s contains the witness and constants
 struct Constraint<F: PrimeField> {
-    a: Vec<ProductArg<F>>,
-    b: Vec<ProductArg<F>>,
-    c: Vec<ProductArg<F>>,
+    a: Vec<Term<F>>,
+    b: Vec<Term<F>>,
+    c: Vec<Term<F>>,
     operation: Operation,
 }
 
 impl<F: PrimeField> Constraint<F> {
-    fn new(a: Vec<ProductArg<F>>, b: Vec<ProductArg<F>>, c: Vec<ProductArg<F>>) -> Self {
+    fn new(a: Vec<Term<F>>, b: Vec<Term<F>>, c: Vec<Term<F>>) -> Self {
         // R1CS is of the form <As> . <Bs> = <Cs>
         // where As, Bs and Cs are inner products
         // if either As or Bs is not present then the multiplication
@@ -65,14 +74,43 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
+    // TODO: add documentation
+    fn rearrange_terms(&self) -> Constraint<F> {
+        // TODO: how should this work???
+
+        // need to get a slot that has more than one element
+        // and need to get a slot that is emtpy
+        // if we can't find any then we are done?
+
+        // we loop until there is no need anymore
+        // how do we know the slot that is empty
+
+        while self.should_rearrange_terms() {
+            todo!()
+            // let empty_slot = self.get_empty_slot();
+            // let double_slot = self.get
+
+            // need a way to know when to change the sign
+            // we have a product term, we are moving it from a place to another place
+            // depending on if that is a cross over or not, we need a way to change the sign
+        }
+
+        todo!()
+    }
+
     /// Determines if there is an empty slot to move double terms to
     /// e.g. A = [s1. s2], B = [s3], C = [] and operation = Add
     /// above is s1 + s2 + s3 = 0
     /// rearrangement will move either s1 or s2 to c
     /// A = [s1], B = [s3], C = [-s2] resulting in s1 + s3 = -s2
-    fn can_rearrange_terms(&self) -> bool {
+    fn should_rearrange_terms(&self) -> bool {
         // when the operation is multiplication, terms cannot be rearranged
         if self.operation == Operation::Mul {
+            return false;
+        }
+
+        // no need to rearrange if all slots already have a maximum of one term
+        if self.a.len() <= 1 && self.b.len() <= 1 && self.c.len() <= 1 {
             return false;
         }
 
@@ -108,49 +146,58 @@ impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
 /// Simplified constraint that contains at most 3 operations
 /// and at most 1 operation type
 struct ReducedConstraint<F: PrimeField> {
-    a: Option<ProductArg<F>>,
-    b: Option<ProductArg<F>>,
-    c: Option<ProductArg<F>>,
+    a: Option<Term<F>>,
+    b: Option<Term<F>>,
+    c: Option<Term<F>>,
     operation: Operation,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::{Constraint, Operation, ProductArg, ReducedConstraint};
+    use crate::circom_gkr::{Constraint, Operation, Term, ReducedConstraint};
     use ark_bls12_381::Fr;
+
+    #[test]
+    fn test_term_negation() {
+        let p1 = Term(0, Fr::from(2));
+        assert_eq!(p1.negate(), Term(0, Fr::from(-2)));
+
+        let p2 = Term(0, Fr::from(-2));
+        assert_eq!(p2.negate(), Term(0, Fr::from(2)));
+    }
 
     #[test]
     fn test_constraint_correct_operation_type() {
         // s1 * s2 = s3
         // expected operation type = mul
         let constraint = Constraint::new(
-            vec![ProductArg(0, Fr::from(1))],
-            vec![ProductArg(1, Fr::from(1))],
-            vec![ProductArg(2, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
+            vec![Term(1, Fr::from(1))],
+            vec![Term(2, Fr::from(1))],
         );
         assert_eq!(constraint.operation, Operation::Mul);
 
         // s1 + s2 = s3
         // expected operation type = add
         let constraint = Constraint::new(
-            vec![ProductArg(0, Fr::from(1)), ProductArg(1, Fr::from(1))],
+            vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
             vec![],
-            vec![ProductArg(2, Fr::from(1))],
+            vec![Term(2, Fr::from(1))],
         );
         assert_eq!(constraint.operation, Operation::Add);
 
         // s1 = -s2
         let constraint = Constraint::new(
             vec![],
-            vec![ProductArg(0, Fr::from(1))],
-            vec![ProductArg(1, Fr::from(-1))],
+            vec![Term(0, Fr::from(1))],
+            vec![Term(1, Fr::from(-1))],
         );
         assert_eq!(constraint.operation, Operation::Add);
 
         // s1 * s2 = 0
         let constraint = Constraint::new(
-            vec![ProductArg(0, Fr::from(1))],
-            vec![ProductArg(1, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
+            vec![Term(1, Fr::from(1))],
             vec![],
         );
         assert_eq!(constraint.operation, Operation::Mul);
@@ -159,8 +206,8 @@ mod tests {
     #[test]
     fn test_reduced_constraint_from_constraint() {
         let constraint = Constraint::new(
-            vec![ProductArg(0, Fr::from(1))],
-            vec![ProductArg(0, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
             vec![],
         );
         assert_eq!(constraint.can_simplify(), false);
@@ -168,8 +215,8 @@ mod tests {
         assert_eq!(
             reduced_constraint,
             ReducedConstraint {
-                a: Some(ProductArg(0, Fr::from(1))),
-                b: Some(ProductArg(0, Fr::from(1))),
+                a: Some(Term(0, Fr::from(1))),
+                b: Some(Term(0, Fr::from(1))),
                 c: None,
                 operation: Operation::Mul
             }
@@ -179,45 +226,45 @@ mod tests {
     #[test]
     fn test_can_rearrange() {
         // already simplified, but can be rearranged
-        let constraint = Constraint::new(vec![ProductArg(0, Fr::from(1))], vec![], vec![]);
+        let constraint = Constraint::new(vec![Term(0, Fr::from(1))], vec![], vec![]);
         assert_eq!(constraint.can_simplify(), false);
-        assert_eq!(constraint.can_rearrange_terms(), true);
+        assert_eq!(constraint.should_rearrange_terms(), false);
 
         // can simplify and can be rearranged
         let constraint = Constraint::new(
             vec![
-                ProductArg(0, Fr::from(1)),
-                ProductArg(1, Fr::from(1)),
-                ProductArg(2, Fr::from(1)),
-                ProductArg(3, Fr::from(1)),
+                Term(0, Fr::from(1)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(1)),
+                Term(3, Fr::from(1)),
             ],
             vec![],
             vec![],
         );
         assert_eq!(constraint.can_simplify(), true);
-        assert_eq!(constraint.can_rearrange_terms(), true);
+        assert_eq!(constraint.should_rearrange_terms(), true);
 
         // can simply but cannot rearrange
         let constraint = Constraint::new(
-            vec![ProductArg(0, Fr::from(1)), ProductArg(2, Fr::from(1))],
-            vec![ProductArg(1, Fr::from(1))],
-            vec![ProductArg(3, Fr::from(1))],
+            vec![Term(0, Fr::from(1)), Term(2, Fr::from(1))],
+            vec![Term(1, Fr::from(1))],
+            vec![Term(3, Fr::from(1))],
         );
         assert_eq!(constraint.can_simplify(), true);
-        assert_eq!(constraint.can_rearrange_terms(), false);
+        assert_eq!(constraint.should_rearrange_terms(), false);
 
         // cannot rearrange multiplication constraints
         let constraint = Constraint::new(
             vec![
-                ProductArg(0, Fr::from(1)),
-                ProductArg(1, Fr::from(1)),
-                ProductArg(2, Fr::from(1)),
-                ProductArg(3, Fr::from(1)),
+                Term(0, Fr::from(1)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(1)),
+                Term(3, Fr::from(1)),
             ],
-            vec![ProductArg(0, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
             vec![],
         );
         assert_eq!(constraint.can_simplify(), true);
-        assert_eq!(constraint.can_rearrange_terms(), false);
+        assert_eq!(constraint.should_rearrange_terms(), false);
     }
 }
