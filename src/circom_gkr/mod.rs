@@ -1,5 +1,12 @@
 use ark_ff::PrimeField;
 use std::ffi::c_long;
+use std::ops::Deref;
+
+#[derive(Debug, PartialEq)]
+enum EquationDirection {
+    Left,
+    Right,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 /// Represents the constraint operation
@@ -93,9 +100,42 @@ impl<F: PrimeField> Constraint<F> {
             // need a way to know when to change the sign
             // we have a product term, we are moving it from a place to another place
             // depending on if that is a cross over or not, we need a way to change the sign
+
+            // now that we have term negation, we need to know when we are crossing over
+            // maybe a new type that is basically a vector
         }
 
         todo!()
+    }
+
+    /// Returns a mutable reference to the empty slot in the constraint equation
+    /// e.g. if A = [s1] B = [] and C = [s3] returns a mutable reference to B
+    /// also returns the size of the equation the slot belongs
+    /// returns None if no empty slot
+    fn get_empty_slot(&mut self) -> (Option<&mut Vec<Term<F>>>, EquationDirection) {
+        if self.a.is_empty() {
+            (Some(&mut self.a), EquationDirection::Left)
+        } else if self.b.is_empty() {
+            (Some(&mut self.b), EquationDirection::Left)
+        } else if self.c.is_empty() {
+            (Some(&mut self.c), EquationDirection::Right)
+        } else {
+            (None, EquationDirection::Right)
+        }
+    }
+
+    /// Searches for slots that have more than 1 term, removes a term from there and returns it
+    /// also returns the equation side the term was taken from
+    fn get_movable_term(&mut self) -> (Option<Term<F>>, EquationDirection) {
+        if self.a.len() > 1 {
+            (self.a.pop(), EquationDirection::Left)
+        } else if self.b.len() > 1 {
+            (self.b.pop(), EquationDirection::Left)
+        } else if self.c.len() > 1 {
+            (self.c.pop(), EquationDirection::Right)
+        } else {
+            (None, EquationDirection::Right)
+        }
     }
 
     /// Determines if there is an empty slot to move double terms to
@@ -154,7 +194,7 @@ struct ReducedConstraint<F: PrimeField> {
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::{Constraint, Operation, Term, ReducedConstraint};
+    use crate::circom_gkr::{Constraint, EquationDirection, Operation, ReducedConstraint, Term};
     use ark_bls12_381::Fr;
 
     #[test]
@@ -266,5 +306,71 @@ mod tests {
         );
         assert_eq!(constraint.can_simplify(), true);
         assert_eq!(constraint.should_rearrange_terms(), false);
+    }
+
+    #[test]
+    fn test_get_empty_slot() {
+        let mut constraint = Constraint::new(vec![Term(0, Fr::from(1))], vec![], vec![]);
+        let (empty_slot, slot_location) = constraint.get_empty_slot();
+        assert_eq!(empty_slot.is_some(), true);
+        assert_eq!(empty_slot.unwrap().len(), 0);
+        assert_eq!(slot_location, EquationDirection::Left);
+
+        let mut constraint = Constraint::new(
+            vec![Term(0, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
+            vec![],
+        );
+        let (empty_slot, slot_location) = constraint.get_empty_slot();
+        assert_eq!(empty_slot.is_some(), true);
+        assert_eq!(empty_slot.unwrap().len(), 0);
+        assert_eq!(slot_location, EquationDirection::Right);
+
+        let mut constraint = Constraint::new(
+            vec![Term(0, Fr::from(1))],
+            vec![Term(0, Fr::from(1))],
+            vec![Term(0, Fr::from(2))],
+        );
+        let (empty_slot, slot_location) = constraint.get_empty_slot();
+        assert_eq!(empty_slot.is_none(), true);
+    }
+
+    #[test]
+    fn test_get_movable_term() {
+        // should be able to move 4 terms from this (without replacement)
+        // 3 from A and 1 from C
+        let mut constraint = Constraint::new(
+            vec![
+                Term(0, Fr::from(1)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(1)),
+                Term(3, Fr::from(1)),
+            ],
+            vec![],
+            vec![Term(2, Fr::from(1)), Term(3, Fr::from(1))],
+        );
+
+        let (movable_item, slot_location) = constraint.get_movable_term();
+        assert_eq!(movable_item.is_some(), true);
+        assert_eq!(movable_item.unwrap(), Term(3, Fr::from(1)));
+        assert_eq!(slot_location, EquationDirection::Left);
+
+        let (movable_item, slot_location) = constraint.get_movable_term();
+        assert_eq!(movable_item.is_some(), true);
+        assert_eq!(movable_item.unwrap(), Term(2, Fr::from(1)));
+        assert_eq!(slot_location, EquationDirection::Left);
+
+        let (movable_item, slot_location) = constraint.get_movable_term();
+        assert_eq!(movable_item.is_some(), true);
+        assert_eq!(movable_item.unwrap(), Term(1, Fr::from(1)));
+        assert_eq!(slot_location, EquationDirection::Left);
+
+        let (movable_item, slot_location) = constraint.get_movable_term();
+        assert_eq!(movable_item.is_some(), true);
+        assert_eq!(movable_item.unwrap(), Term(3, Fr::from(1)));
+        assert_eq!(slot_location, EquationDirection::Right);
+
+        let (movable_item, slot_location) = constraint.get_movable_term();
+        assert_eq!(movable_item.is_some(), false);
     }
 }
