@@ -56,12 +56,28 @@ impl<F: PrimeField> Constraint<F> {
 
     /// Determines if a constraint needs simplification before converting to a ReducedConstraint
     fn can_simplify(&self) -> bool {
-        let has_more_than_one_term_in_a_slot = self.a.len() > 1 || self.b.len() > 2 || self.c.len() > 3;
+        let has_more_than_one_term_in_a_slot =
+            self.a.len() > 1 || self.b.len() > 2 || self.c.len() > 3;
         if self.terms_count() > 3 || has_more_than_one_term_in_a_slot {
             true
         } else {
             false
         }
+    }
+
+    /// Determines if there is an empty slot to move double terms to
+    /// e.g. A = [s1. s2], B = [s3], C = [] and operation = Add
+    /// above is s1 + s2 + s3 = 0
+    /// rearrangement will move either s1 or s2 to c
+    /// A = [s1], B = [s3], C = [-s2] resulting in s1 + s3 = -s2
+    fn can_rearrange_terms(&self) -> bool {
+        // when the operation is multiplication, terms cannot be rearranged
+        if self.operation == Operation::Mul {
+            return false;
+        }
+
+        // otherwise, we need to ensure there is an empty slot for a term to move to
+        self.a.is_empty() || self.b.is_empty() || self.c.is_empty()
     }
 
     /// Total number of terms in the constraint
@@ -147,6 +163,7 @@ mod tests {
             vec![ProductArg(0, Fr::from(1))],
             vec![],
         );
+        assert_eq!(constraint.can_simplify(), false);
         let reduced_constraint: ReducedConstraint<Fr> = (&constraint).try_into().unwrap();
         assert_eq!(
             reduced_constraint,
@@ -157,5 +174,50 @@ mod tests {
                 operation: Operation::Mul
             }
         );
+    }
+
+    #[test]
+    fn test_can_rearrange() {
+        // already simplified, but can be rearranged
+        let constraint = Constraint::new(vec![ProductArg(0, Fr::from(1))], vec![], vec![]);
+        assert_eq!(constraint.can_simplify(), false);
+        assert_eq!(constraint.can_rearrange_terms(), true);
+
+        // can simplify and can be rearranged
+        let constraint = Constraint::new(
+            vec![
+                ProductArg(0, Fr::from(1)),
+                ProductArg(1, Fr::from(1)),
+                ProductArg(2, Fr::from(1)),
+                ProductArg(3, Fr::from(1)),
+            ],
+            vec![],
+            vec![],
+        );
+        assert_eq!(constraint.can_simplify(), true);
+        assert_eq!(constraint.can_rearrange_terms(), true);
+
+        // can simply but cannot rearrange
+        let constraint = Constraint::new(
+            vec![ProductArg(0, Fr::from(1)), ProductArg(2, Fr::from(1))],
+            vec![ProductArg(1, Fr::from(1))],
+            vec![ProductArg(3, Fr::from(1))],
+        );
+        assert_eq!(constraint.can_simplify(), true);
+        assert_eq!(constraint.can_rearrange_terms(), false);
+
+        // cannot rearrange multiplication constraints
+        let constraint = Constraint::new(
+            vec![
+                ProductArg(0, Fr::from(1)),
+                ProductArg(1, Fr::from(1)),
+                ProductArg(2, Fr::from(1)),
+                ProductArg(3, Fr::from(1)),
+            ],
+            vec![ProductArg(0, Fr::from(1))],
+            vec![],
+        );
+        assert_eq!(constraint.can_simplify(), true);
+        assert_eq!(constraint.can_rearrange_terms(), false);
     }
 }
