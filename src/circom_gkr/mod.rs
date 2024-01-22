@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use std::env::var;
 use std::ffi::c_long;
 use std::ops::Deref;
 
@@ -20,7 +21,7 @@ enum Operation {
     Mul,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 /// Contains a pointer to a variable and field element to mul the
 /// variable's value with.
 /// e.g. let [s1, s2, s3] be the set of variables
@@ -86,25 +87,43 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
-    // TODO: add documentation
-    // TODO: maybe variable count should be part of self
+    // TODO: consider returning the last variable index
+    /// Converts a constraint into one or more reduced constraint, such that all constraints have at
+    /// most 3 terms and one operation.
+    /// See in code comment for more details.
     fn reduce_into_multiple_constraints(
         mut self,
-        mut variable_count: usize,
+        mut last_variable_index: usize,
     ) -> Vec<ReducedConstraint<F>> {
-        // while we can simplify, we need to continue this process
-        // first we two values from slots that have more than 2 or more terms
-        // we create a new term for their combination and replace them with that (also create a new constraint for them)
-        // the new constraint is added to the output
-        // and finally we add the conversion of the current constraint
         let mut reduced_constraints = vec![];
         while self.can_simplify() {
-            // grab 2 terms that can be merged
-            // create a new constrain for that
-            // put back the output in the original slot
-            // TODO: implement get_mergeable_terms
-            // TODO: implement
-            todo!()
+            // get the index of the next variable
+            // TODO: augment this with hash based retrieval so we re-use variables
+            let next_variable_index = last_variable_index + 1;
+
+            // for simplification, we get two terms that can be merged
+            // create a new variable to represent their output
+            // replace them in the original constraint with the output term
+            // and create a new reduced constraint for them
+            // e.g. s1 + s2 + s3 = s4
+            // we can merge s1 and s2 to become s5
+            // s5 = s1 + s2 <--- new reduced constraint
+            // s5 + s3 = s4 <--- updated original constraint
+            let (mergeable_terms, slot) = self
+                .get_mergeable_terms()
+                .expect("can_simplify check makes it safe to unwrap");
+            let output_term = Term(next_variable_index, F::one());
+
+            reduced_constraints.push(ReducedConstraint {
+                a: Some(mergeable_terms[1]),
+                b: Some(mergeable_terms[0]),
+                c: Some(output_term),
+                operation: Operation::Add,
+            });
+
+            slot.push(output_term);
+
+            last_variable_index = next_variable_index;
         }
         reduced_constraints.push((&self).try_into().unwrap());
         reduced_constraints
@@ -113,7 +132,7 @@ impl<F: PrimeField> Constraint<F> {
     /// Determines if a constraint needs simplification before converting to a ReducedConstraint
     fn can_simplify(&self) -> bool {
         let has_more_than_one_term_in_a_slot =
-            self.a.len() > 1 || self.b.len() > 2 || self.c.len() > 3;
+            self.a.len() > 1 || self.b.len() > 1 || self.c.len() > 1;
         if self.terms_count() > 3 || has_more_than_one_term_in_a_slot {
             true
         } else {
@@ -169,7 +188,7 @@ impl<F: PrimeField> Constraint<F> {
 
     /// Searches for slots that have more than 1 term, removes two terms from that slot.
     /// returns them with a reference to the slot
-    fn get_extra_terms(&mut self) -> Option<([Term<F>; 2], &mut Slot<F>)> {
+    fn get_mergeable_terms(&mut self) -> Option<([Term<F>; 2], &mut Slot<F>)> {
         // safe to unwrap when popping, confirmed more than 1 item exists
         if self.a.len() > 1 {
             Some(([self.a.pop().unwrap(), self.a.pop().unwrap()], &mut self.a))
@@ -438,8 +457,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_extra_items() {
-        // should be able to extra 2 items from the first slot twice
+    fn test_get_mergeable_items() {
+        // should be able to extract mergeable items from the first slot twice (without replacement)
         // then once from the last slot
         // expecting 3 extractions before None
         let mut constraint = Constraint::new(
@@ -453,22 +472,22 @@ mod tests {
             vec![Term(2, Fr::from(1)), Term(3, Fr::from(1))],
         );
 
-        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        let (extra_terms, slot) = constraint.get_mergeable_terms().unwrap();
         assert_eq!(extra_terms[0], Term(3, Fr::from(1)));
         assert_eq!(extra_terms[1], Term(2, Fr::from(1)));
         assert_eq!(slot.len(), 2);
 
-        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        let (extra_terms, slot) = constraint.get_mergeable_terms().unwrap();
         assert_eq!(extra_terms[0], Term(1, Fr::from(1)));
         assert_eq!(extra_terms[1], Term(0, Fr::from(2)));
         assert_eq!(slot.len(), 0);
 
-        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        let (extra_terms, slot) = constraint.get_mergeable_terms().unwrap();
         assert_eq!(extra_terms[0], Term(3, Fr::from(1)));
         assert_eq!(extra_terms[1], Term(2, Fr::from(1)));
         assert_eq!(slot.len(), 0);
 
-        assert_eq!(constraint.get_extra_terms().is_none(), true);
+        assert_eq!(constraint.get_mergeable_terms().is_none(), true);
     }
 
     #[test]
@@ -510,5 +529,119 @@ mod tests {
                 Operation::Add
             )
         )
+    }
+
+    #[test]
+    fn test_reduce_to_multiple_constraint() {
+        // Equation
+        // -s3 * (s1 + s2) = 5 - out + s1 + s2
+        // Reduction -> s4 = s1 + s2
+        // -s3 * s4 = 5 - out + s1 + s2
+        // Reduction -> s5 = s1 + s2 (same as previous constraint, but new variable TODO: make this smarter)
+        // -s3 * s4 = 5 - out + s5
+        // Reduction -> s6 = -out + s5
+        // -s3 * s4 = 5 + s6
+        // Reduction -> s7 = 5 + s6
+        // -s3 * s4 = s7
+
+        // Variables
+        // constant - 0
+        // s1 = 1
+        // s2 = 2
+        // s3 = 3
+        // out = 4
+        // s4 = 5
+        // s5 = 6
+        // s6 = 7
+        // s7 = 8
+
+        let mut constraint = Constraint::new(
+            // -s3
+            vec![Term(3, Fr::from(-1))],
+            // (s1 + s2)
+            vec![Term(1, Fr::from(1)), Term(2, Fr::from(1))],
+            // 5 - out + s1 + s2
+            vec![
+                Term(0, Fr::from(5)),
+                Term(4, Fr::from(-1)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(1)),
+            ],
+        );
+
+        // last known variable before reduction is out
+        let last_variable_index = 4;
+        let reduced_constraints = constraint.reduce_into_multiple_constraints(last_variable_index);
+
+        // we should have 5 reduced constraints
+        // 4 new constraints + the original constraint
+        assert_eq!(reduced_constraints.len(), 5);
+
+        // assert constraints
+        // first reduction s4 = s1 + s2
+        assert_eq!(
+            reduced_constraints[0],
+            ReducedConstraint {
+                // s1
+                a: Some(Term(1, Fr::from(1))),
+                // s2
+                b: Some(Term(2, Fr::from(1))),
+                // s4
+                c: Some(Term(5, Fr::from(1))),
+                operation: Operation::Add
+            }
+        );
+        // next reduction s5 = s1 + s2
+        assert_eq!(
+            reduced_constraints[1],
+            ReducedConstraint {
+                // s1
+                a: Some(Term(1, Fr::from(1))),
+                // s2
+                b: Some(Term(2, Fr::from(1))),
+                // s4
+                c: Some(Term(6, Fr::from(1))),
+                operation: Operation::Add
+            }
+        );
+        // next reduction s6 = -out + s5
+        assert_eq!(
+            reduced_constraints[2],
+            ReducedConstraint {
+                // -out
+                a: Some(Term(4, Fr::from(-1))),
+                // s5
+                b: Some(Term(6, Fr::from(1))),
+                // s6
+                c: Some(Term(7, Fr::from(1))),
+                operation: Operation::Add
+            }
+        );
+        // next reduction s7 = 5 - s6
+        assert_eq!(
+            reduced_constraints[3],
+            ReducedConstraint {
+                // 5
+                a: Some(Term(0, Fr::from(5))),
+                // -s6
+                b: Some(Term(7, Fr::from(1))),
+                // s7
+                c: Some(Term(8, Fr::from(1))),
+                operation: Operation::Add
+            }
+        );
+        // original statement reduced -s3 * s4 = s7
+        assert_eq!(
+            reduced_constraints[4],
+            ReducedConstraint {
+                // -s3
+                a: Some(Term(3, Fr::from(-1))),
+                // s4
+                b: Some(Term(5, Fr::from(1))),
+                // s7
+                c: Some(Term(8, Fr::from(1))),
+                operation: Operation::Mul
+            }
+        );
     }
 }
