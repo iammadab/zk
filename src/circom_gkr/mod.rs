@@ -2,6 +2,11 @@ use ark_ff::PrimeField;
 use std::ffi::c_long;
 use std::ops::Deref;
 
+// TODO: move components of this into a compiler
+
+// TODO: add documentation, consider renaming
+type Slot<F> = Vec<Term<F>>;
+
 #[derive(Debug, PartialEq)]
 enum EquationDirection {
     Left,
@@ -39,9 +44,9 @@ impl<F: PrimeField> Term<F> {
 /// As . Bs = Cs
 /// where s contains the witness and constants
 struct Constraint<F: PrimeField> {
-    a: Vec<Term<F>>,
-    b: Vec<Term<F>>,
-    c: Vec<Term<F>>,
+    a: Slot<F>,
+    b: Slot<F>,
+    c: Slot<F>,
     operation: Operation,
 }
 
@@ -65,9 +70,9 @@ impl<F: PrimeField> Constraint<F> {
 
     /// Create new constraint with automatic operation detection
     fn new_with_operation(
-        a: Vec<Term<F>>,
-        b: Vec<Term<F>>,
-        c: Vec<Term<F>>,
+        a: Slot<F>,
+        b: Slot<F>,
+        c: Slot<F>,
         operation: Operation,
     ) -> Self {
         Self { a, b, c, operation }
@@ -75,16 +80,39 @@ impl<F: PrimeField> Constraint<F> {
 
     // TODO: should this be mut
     // TODO: add documentation
-    fn simplify(&mut self) -> Vec<ReducedConstraint<F>> {
+    fn simplify(mut self) -> Vec<ReducedConstraint<F>> {
         // we first need to know if is simplifiable or not
         // if it is not, we tranform this to a reduced constraint
         if self.can_simplify() {
             self.rearrange_terms();
-            todo!()
+            self.reduce_into_multiple_constraints(0)
         } else {
-            // vec![*self.try_into().unwrap()]
+            vec![(&self).try_into().unwrap()]
+        }
+    }
+
+    // TODO: add documentation
+    // TODO: maybe variable count should be part of self
+    fn reduce_into_multiple_constraints(
+        mut self,
+        mut variable_count: usize,
+    ) -> Vec<ReducedConstraint<F>> {
+        // while we can simplify, we need to continue this process
+        // first we two values from slots that have more than 2 or more terms
+        // we create a new term for their combination and replace them with that (also create a new constraint for them)
+        // the new constraint is added to the output
+        // and finally we add the conversion of the current constraint
+        let mut reduced_constraints = vec![];
+        while self.can_simplify() {
+            // grab 2 terms that can be merged
+            // create a new constrain for that
+            // put back the output in the original slot
+            // TODO: implement get_mergeable_terms
+            // TODO: implement
             todo!()
         }
+        reduced_constraints.push((&self).try_into().unwrap());
+        reduced_constraints
     }
 
     /// Determines if a constraint needs simplification before converting to a ReducedConstraint
@@ -119,7 +147,7 @@ impl<F: PrimeField> Constraint<F> {
     /// e.g. if A = [s1] B = [] and C = [s3] returns a mutable reference to B
     /// also returns the size of the equation the slot belongs
     /// returns None if no empty slot
-    fn get_empty_slot(&mut self) -> (Option<&mut Vec<Term<F>>>, EquationDirection) {
+    fn get_empty_slot(&mut self) -> (Option<&mut Slot<F>>, EquationDirection) {
         if self.a.is_empty() {
             (Some(&mut self.a), EquationDirection::Left)
         } else if self.b.is_empty() {
@@ -145,6 +173,13 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
+    // TODO: add documentation
+    fn get_extra_terms(&mut self) -> Option<([Term<F>; 2], &mut Slot<F>)> {
+        // TODO: do I need the equation direction?
+        //  i actually don't need the equation direction, what I need is the given slot
+        todo!()
+    }
+
     /// Determines if there is an empty slot to move double terms to
     /// e.g. A = [s1. s2], B = [s3], C = [] and operation = Add
     /// above is s1 + s2 + s3 = 0
@@ -155,8 +190,6 @@ impl<F: PrimeField> Constraint<F> {
         if self.operation == Operation::Mul {
             return false;
         }
-
-        // TODO: write tests to solidify this constraints
 
         // no need to rearrange if all slots already have a maximum of one term
         if self.a.len() <= 1 && self.b.len() <= 1 && self.c.len() <= 1 {
