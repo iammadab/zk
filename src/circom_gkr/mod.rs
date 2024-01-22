@@ -69,12 +69,7 @@ impl<F: PrimeField> Constraint<F> {
     }
 
     /// Create new constraint with automatic operation detection
-    fn new_with_operation(
-        a: Slot<F>,
-        b: Slot<F>,
-        c: Slot<F>,
-        operation: Operation,
-    ) -> Self {
+    fn new_with_operation(a: Slot<F>, b: Slot<F>, c: Slot<F>, operation: Operation) -> Self {
         Self { a, b, c, operation }
     }
 
@@ -142,7 +137,6 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
-    // TODO: consider giving this type Slot
     /// Returns a mutable reference to the empty slot in the constraint equation
     /// e.g. if A = [s1] B = [] and C = [s3] returns a mutable reference to B
     /// also returns the size of the equation the slot belongs
@@ -173,11 +167,19 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
-    // TODO: add documentation
+    /// Searches for slots that have more than 1 term, removes two terms from that slot.
+    /// returns them with a reference to the slot
     fn get_extra_terms(&mut self) -> Option<([Term<F>; 2], &mut Slot<F>)> {
-        // TODO: do I need the equation direction?
-        //  i actually don't need the equation direction, what I need is the given slot
-        todo!()
+        // safe to unwrap when popping, confirmed more than 1 item exists
+        if self.a.len() > 1 {
+            Some(([self.a.pop().unwrap(), self.a.pop().unwrap()], &mut self.a))
+        } else if self.b.len() > 1 {
+            Some(([self.b.pop().unwrap(), self.b.pop().unwrap()], &mut self.b))
+        } else if self.c.len() > 1 {
+            Some(([self.c.pop().unwrap(), self.c.pop().unwrap()], &mut self.c))
+        } else {
+            None
+        }
     }
 
     /// Determines if there is an empty slot to move double terms to
@@ -433,6 +435,40 @@ mod tests {
 
         let (movable_item, slot_location) = constraint.get_movable_term();
         assert_eq!(movable_item.is_some(), false);
+    }
+
+    #[test]
+    fn test_get_extra_items() {
+        // should be able to extra 2 items from the first slot twice
+        // then once from the last slot
+        // expecting 3 extractions before None
+        let mut constraint = Constraint::new(
+            vec![
+                Term(0, Fr::from(2)),
+                Term(1, Fr::from(1)),
+                Term(2, Fr::from(1)),
+                Term(3, Fr::from(1)),
+            ],
+            vec![],
+            vec![Term(2, Fr::from(1)), Term(3, Fr::from(1))],
+        );
+
+        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        assert_eq!(extra_terms[0], Term(3, Fr::from(1)));
+        assert_eq!(extra_terms[1], Term(2, Fr::from(1)));
+        assert_eq!(slot.len(), 2);
+
+        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        assert_eq!(extra_terms[0], Term(1, Fr::from(1)));
+        assert_eq!(extra_terms[1], Term(0, Fr::from(2)));
+        assert_eq!(slot.len(), 0);
+
+        let (extra_terms, slot) = constraint.get_extra_terms().unwrap();
+        assert_eq!(extra_terms[0], Term(3, Fr::from(1)));
+        assert_eq!(extra_terms[1], Term(2, Fr::from(1)));
+        assert_eq!(slot.len(), 0);
+
+        assert_eq!(constraint.get_extra_terms().is_none(), true);
     }
 
     #[test]
