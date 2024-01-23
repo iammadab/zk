@@ -1,10 +1,11 @@
 use ark_ff::PrimeField;
+use std::cmp::max;
 
 #[derive(Debug, PartialEq)]
 /// Simplified constraint that contains at most 3 operations
 /// and at most 1 operation type
 /// Constraints are compiled into a set of ReducedConstraints.
-struct ReducedConstraint<F: PrimeField> {
+pub struct ReducedConstraint<F: PrimeField> {
     a: Option<Term<F>>,
     b: Option<Term<F>>,
     c: Option<Term<F>>,
@@ -15,10 +16,10 @@ struct ReducedConstraint<F: PrimeField> {
 /// Represents a single R1CS constraint
 /// As . Bs = Cs
 /// where s contains the witness and constants
-struct Constraint<F: PrimeField> {
-    a: Slot<F>,
-    b: Slot<F>,
-    c: Slot<F>,
+pub struct Constraint<F: PrimeField> {
+    pub a: Slot<F>,
+    pub b: Slot<F>,
+    pub c: Slot<F>,
     operation: Operation,
 }
 
@@ -26,7 +27,7 @@ impl<F: PrimeField> Constraint<F> {
     /// Create a new constraint, does automatic operation detection
     /// if both a and b are present then operation = mul, else operation = add
     /// see: new_with_operation to remove automatic operation detection
-    fn new(a: Vec<Term<F>>, b: Vec<Term<F>>, c: Vec<Term<F>>) -> Self {
+    pub fn new(a: Vec<Term<F>>, b: Vec<Term<F>>, c: Vec<Term<F>>) -> Self {
         // R1CS is of the form <As> . <Bs> = <Cs>
         // where As, Bs and Cs are inner products
         // if either As or Bs is not present then the multiplication
@@ -46,7 +47,9 @@ impl<F: PrimeField> Constraint<F> {
     }
 
     // TODO: pass symbol table
-    // TODO: add documentation
+    /// Reduce a constraint into one or more reduced constraints.
+    /// First it tries to move extra terms to empty slots, then it attempts merging terms into
+    /// new constraints
     fn reduce(mut self, last_variable_index: usize) -> Vec<ReducedConstraint<F>> {
         if self.can_simplify() {
             self.rearrange_terms();
@@ -194,6 +197,14 @@ impl<F: PrimeField> Constraint<F> {
     fn terms_count(&self) -> usize {
         self.a.len() + self.b.len() + self.c.len()
     }
+
+    /// Returns the maximum index assigned to a variable
+    pub fn max_index(&self) -> usize {
+        let max_index_a = self.a.iter().map(|term| term.0).max().unwrap_or(0);
+        let max_index_b = self.b.iter().map(|term| term.0).max().unwrap_or(0);
+        let max_index_c = self.c.iter().map(|term| term.0).max().unwrap_or(0);
+        max_index_a.max(max_index_b).max(max_index_c)
+    }
 }
 
 /// Move a term to a given slot
@@ -230,9 +241,8 @@ impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
     }
 }
 
-
 /// Represents either As, Bs or Cs in the constraint
-type Slot<F> = Vec<Term<F>>;
+pub type Slot<F> = Vec<Term<F>>;
 
 /// Signifies if a value is to the left or right of the equal sign
 /// As . Bs (left) = Cs (right)
@@ -257,7 +267,7 @@ enum Operation {
 ///     will get the value stored in s2 (e.g. 5) and mul that by -1
 ///     = -5
 /// This is the building block for representing R1Cs constraints
-struct Term<F: PrimeField>(usize, F);
+pub struct Term<F: PrimeField>(pub usize, pub F);
 
 impl<F: PrimeField> Term<F> {
     /// Create a new term with negative value
@@ -270,8 +280,10 @@ impl<F: PrimeField> Term<F> {
 
 #[cfg(test)]
 mod tests {
+    use crate::circom_gkr::constraint::{
+        move_term_to_slot, Constraint, EquationDirection, Operation, ReducedConstraint, Term,
+    };
     use ark_bls12_381::Fr;
-    use crate::circom_gkr::constraint::{Constraint, EquationDirection, move_term_to_slot, Operation, ReducedConstraint, Term};
 
     #[test]
     fn test_term_negation() {
@@ -562,6 +574,7 @@ mod tests {
                 Term(2, Fr::from(1)),
             ],
         );
+        assert_eq!(constraint.max_index(), 4);
 
         // last known variable before reduction is out
         let last_variable_index = 4;
