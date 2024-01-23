@@ -12,7 +12,7 @@ impl<F: PrimeField> R1CSProgram<F> {
         Self { constraints }
     }
 
-    // TODO: add documentation
+    /// Get the highest index assigned to a variable
     fn get_last_variable_index(&self) -> usize {
         self.constraints
             .iter()
@@ -98,24 +98,18 @@ mod test {
                 vec![
                     Term(5, Fr::from(1)),
                     Term(10, Fr::from(1)),
-                    Term(12, Fr::from(-1))
-                ]
+                    Term(12, Fr::from(-1)),
+                ],
             ),
             Constraint::new(
                 vec![],
                 vec![],
-                vec![
-                    Term(6, Fr::from(1)),
-                    Term(13, Fr::from(-1))
-                ]
+                vec![Term(6, Fr::from(1)), Term(13, Fr::from(-1))],
             ),
             Constraint::new(
                 vec![],
                 vec![],
-                vec![
-                    Term(1, Fr::from(-1)),
-                    Term(11, Fr::from(1))
-                ]
+                vec![Term(1, Fr::from(-1)), Term(11, Fr::from(1))],
             ),
             Constraint::new(
                 vec![],
@@ -123,27 +117,24 @@ mod test {
                 vec![
                     Term(12, Fr::from(-1)),
                     Term(13, Fr::from(1)),
-                    Term(15, Fr::from(-1))
-                ]
+                    Term(15, Fr::from(-1)),
+                ],
             ),
             Constraint::new(
                 vec![],
                 vec![],
-                vec![
-                    Term(11, Fr::from(-1)),
-                    Term(14, Fr::from(1))
-                ]
+                vec![Term(11, Fr::from(-1)), Term(14, Fr::from(1))],
             ),
             Constraint::new(
                 vec![Term(15, Fr::from(1))],
                 vec![Term(16, Fr::from(1))],
-                vec![Term(0, Fr::from(1)), Term(14, Fr::from(-1))]
+                vec![Term(0, Fr::from(1)), Term(14, Fr::from(-1))],
             ),
             Constraint::new(
                 vec![Term(15, Fr::from(1))],
                 vec![Term(14, Fr::from(1))],
-                vec![]
-            )
+                vec![],
+            ),
         ];
 
         R1CSProgram::new(constraints)
@@ -156,6 +147,5 @@ mod test {
     }
 
     #[test]
-    fn test_compile_program() {
-    }
+    fn test_compile_program() {}
 }
