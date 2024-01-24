@@ -7,9 +7,9 @@ use std::cmp::max;
 /// and at most 1 operation type
 /// Constraints are compiled into a set of ReducedConstraints.
 pub struct ReducedConstraint<F: PrimeField> {
-    a: Option<Term<F>>,
-    b: Option<Term<F>>,
-    c: Option<Term<F>>,
+    pub(crate) a: Option<Term<F>>,
+    pub(crate) b: Option<Term<F>>,
+    pub(crate) c: Option<Term<F>>,
     operation: Operation,
 }
 

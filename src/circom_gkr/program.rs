@@ -2,6 +2,41 @@ use crate::circom_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
+/// Represents an R1CSProgram as a collection of constraints
+pub struct R1CSProgram<F: PrimeField> {
+    constraints: Vec<Constraint<F>>,
+}
+
+impl<F: PrimeField> R1CSProgram<F> {
+    /// Create a new R1CS Program from constraint set
+    pub fn new(constraints: Vec<Constraint<F>>) -> Self {
+        Self { constraints }
+    }
+
+    /// Get the highest index assigned to a variable
+    fn get_last_variable_index(&self) -> usize {
+        self.constraints
+            .iter()
+            .map(|constraint| constraint.max_index())
+            .max()
+            .unwrap_or(0)
+    }
+
+    // TODO: you might need to return more than this
+    //  potentially will need to return the symbol table also
+    /// Compiles a list of Constraint into a list of ReducedConstraint
+    pub fn compile(mut self) -> (Vec<ReducedConstraint<F>>, SymbolTable<F>) {
+        let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());
+        let mut reduced_constraints = vec![];
+
+        for constraint in self.constraints {
+            reduced_constraints.extend(constraint.reduce(&mut symbol_table))
+        }
+
+        (reduced_constraints, symbol_table)
+    }
+}
+
 /// Keeps track of variable data
 pub struct SymbolTable<F: PrimeField> {
     pub variable_map: HashMap<(Term<F>, Term<F>), usize>,
@@ -32,41 +67,6 @@ impl<F: PrimeField> SymbolTable<F> {
             self.last_variable_index = index;
             index
         }
-    }
-}
-
-/// Represents an R1CSProgram as a collection of constraints
-struct R1CSProgram<F: PrimeField> {
-    constraints: Vec<Constraint<F>>,
-}
-
-impl<F: PrimeField> R1CSProgram<F> {
-    /// Create a new R1CS Program from constraint set
-    fn new(constraints: Vec<Constraint<F>>) -> Self {
-        Self { constraints }
-    }
-
-    /// Get the highest index assigned to a variable
-    fn get_last_variable_index(&self) -> usize {
-        self.constraints
-            .iter()
-            .map(|constraint| constraint.max_index())
-            .max()
-            .unwrap_or(0)
-    }
-
-    // TODO: you might need to return more than this
-    //  potentially will need to return the symbol table also
-    /// Compiles a list of Constraint into a list of ReducedConstraint
-    fn compile(mut self) -> Vec<ReducedConstraint<F>> {
-        let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());
-        let mut reduced_constraints = vec![];
-
-        for constraint in self.constraints {
-            reduced_constraints.extend(constraint.reduce(&mut symbol_table))
-        }
-
-        reduced_constraints
     }
 }
 
@@ -190,7 +190,7 @@ mod test {
     #[test]
     fn test_compile_program() {
         let quadratic_program = quadratic_checker_circuit();
-        let compiled_program = quadratic_program.compile();
+        let (compiled_program, _) = quadratic_program.compile();
 
         // most constraints in the quadratic program only required moving data around
         // expect 1, which will require a reduction into a new constraint
