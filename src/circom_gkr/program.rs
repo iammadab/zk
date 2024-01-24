@@ -1,5 +1,39 @@
-use crate::circom_gkr::constraint::{Constraint, ReducedConstraint};
+use crate::circom_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
+use std::collections::HashMap;
+
+// TODO: add documentation
+pub struct SymbolTable<F: PrimeField> {
+    pub variable_map: HashMap<(Term<F>, Term<F>), usize>,
+    pub last_variable_index: usize,
+}
+
+// TODO: add documentation
+impl<F: PrimeField> SymbolTable<F> {
+    pub fn new(last_variable_index: usize) -> Self {
+        Self {
+            variable_map: HashMap::new(),
+            last_variable_index,
+        }
+    }
+
+    // TODO: add documentation
+    // TODO: test
+    pub fn get_variable_index(&mut self, a: Term<F>, b: Term<F>) -> usize {
+        if let Some(index) = self.variable_map.get(&(a, b)) {
+            *index
+        } else if let Some(index) = self.variable_map.get(&(b, a)) {
+            *index
+        } else {
+            // no previous occurence of the variable pair
+            // add them to the map and return that index
+            let index = self.last_variable_index + 1;
+            self.variable_map.insert((a, b), index);
+            self.last_variable_index = index;
+            index
+        }
+    }
+}
 
 /// Represents an R1CSProgram as a collection of constraints
 struct R1CSProgram<F: PrimeField> {
@@ -23,9 +57,14 @@ impl<F: PrimeField> R1CSProgram<F> {
 
     // TODO: you might need to return more than this
     fn compile(mut self) -> Vec<ReducedConstraint<F>> {
-        // do I need to return the symbol table or is that only useful for
-        // co-ordinating the other compilation steps?
-        todo!()
+        let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());
+        let mut reduced_constraints = vec![];
+
+        for constraint in self.constraints {
+            reduced_constraints.extend(constraint.reduce(&mut symbol_table))
+        }
+
+        reduced_constraints
     }
 }
 

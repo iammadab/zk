@@ -1,3 +1,4 @@
+use crate::circom_gkr::program::SymbolTable;
 use ark_ff::PrimeField;
 use std::cmp::max;
 
@@ -47,13 +48,14 @@ impl<F: PrimeField> Constraint<F> {
     }
 
     // TODO: pass symbol table
+    // TODO: return the updated symbol table
     /// Reduce a constraint into one or more reduced constraints.
     /// First it tries to move extra terms to empty slots, then it attempts merging terms into
     /// new constraints
-    fn reduce(mut self, last_variable_index: usize) -> Vec<ReducedConstraint<F>> {
+    pub fn reduce(mut self, symbol_table: &mut SymbolTable<F>) -> Vec<ReducedConstraint<F>> {
         if self.can_simplify() {
             self.rearrange_terms();
-            self.reduce_into_multiple_constraints(last_variable_index)
+            self.reduce_into_multiple_constraints(symbol_table)
         } else {
             vec![(&self).try_into().unwrap()]
         }
@@ -65,14 +67,10 @@ impl<F: PrimeField> Constraint<F> {
     /// See in code comment for more details.
     fn reduce_into_multiple_constraints(
         mut self,
-        mut last_variable_index: usize,
+        symbol_table: &mut SymbolTable<F>,
     ) -> Vec<ReducedConstraint<F>> {
         let mut reduced_constraints = vec![];
         while self.can_simplify() {
-            // get the index of the next variable
-            // TODO: augment this with hash based retrieval so we re-use variables
-            let next_variable_index = last_variable_index + 1;
-
             // for simplification, we get two terms that can be merged
             // create a new variable to represent their output
             // replace them in the original constraint with the output term
@@ -84,7 +82,11 @@ impl<F: PrimeField> Constraint<F> {
             let (mergeable_terms, slot) = self
                 .get_mergeable_terms()
                 .expect("can_simplify check makes it safe to unwrap");
-            let output_term = Term(next_variable_index, F::one());
+
+            let variable_index =
+                symbol_table.get_variable_index(mergeable_terms[1], mergeable_terms[0]);
+
+            let output_term = Term(variable_index, F::one());
 
             reduced_constraints.push(ReducedConstraint {
                 a: Some(mergeable_terms[1]),
@@ -94,8 +96,6 @@ impl<F: PrimeField> Constraint<F> {
             });
 
             slot.push(output_term);
-
-            last_variable_index = next_variable_index;
         }
         reduced_constraints.push((&self).try_into().unwrap());
         reduced_constraints
@@ -259,7 +259,7 @@ enum Operation {
     Mul,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 /// Contains a pointer to a variable and field element to mul the
 /// variable's value with.
 /// e.g. let [s1, s2, s3] be the set of variables
@@ -283,6 +283,7 @@ mod tests {
     use crate::circom_gkr::constraint::{
         move_term_to_slot, Constraint, EquationDirection, Operation, ReducedConstraint, Term,
     };
+    use crate::circom_gkr::program::SymbolTable;
     use ark_bls12_381::Fr;
 
     #[test]
@@ -543,12 +544,12 @@ mod tests {
         // -s3 * (s1 + s2) = 5 - out + s1 + s2
         // Reduction -> s4 = s1 + s2
         // -s3 * s4 = 5 - out + s1 + s2
-        // Reduction -> s5 = s1 + s2 (same as previous constraint, but new variable TODO: make this smarter)
-        // -s3 * s4 = 5 - out + s5
-        // Reduction -> s6 = -out + s5
-        // -s3 * s4 = 5 + s6
-        // Reduction -> s7 = 5 + s6
-        // -s3 * s4 = s7
+        // Reduction -> s4 = s1 + s2 (same as previous constraint TODO: duplicated constraint)
+        // -s3 * s4 = 5 - out + s4
+        // Reduction -> s5 = -out + s4
+        // -s3 * s4 = 5 + s5
+        // Reduction -> s6 = 5 + s5
+        // -s3 * s4 = s6
 
         // Variables
         // constant - 0
@@ -559,7 +560,6 @@ mod tests {
         // s4 = 5
         // s5 = 6
         // s6 = 7
-        // s7 = 8
 
         let mut constraint = Constraint::new(
             // -s3
@@ -577,8 +577,8 @@ mod tests {
         assert_eq!(constraint.max_index(), 4);
 
         // last known variable before reduction is out
-        let last_variable_index = 4;
-        let reduced_constraints = constraint.reduce(last_variable_index);
+        let mut symbol_table = SymbolTable::<Fr>::new(4);
+        let reduced_constraints = constraint.reduce(&mut symbol_table);
 
         // we should have 5 reduced constraints
         // 4 new constraints + the original constraint
@@ -598,7 +598,7 @@ mod tests {
                 operation: Operation::Add
             }
         );
-        // next reduction s5 = s1 + s2
+        // next reduction s4 = s1 + s2
         assert_eq!(
             reduced_constraints[1],
             ReducedConstraint {
@@ -607,16 +607,29 @@ mod tests {
                 // s2
                 b: Some(Term(2, Fr::from(1))),
                 // s4
-                c: Some(Term(6, Fr::from(1))),
+                c: Some(Term(5, Fr::from(1))),
                 operation: Operation::Add
             }
         );
-        // next reduction s6 = -out + s5
+        // next reduction s5 = -out + s4
         assert_eq!(
             reduced_constraints[2],
             ReducedConstraint {
                 // -out
                 a: Some(Term(4, Fr::from(-1))),
+                // s4
+                b: Some(Term(5, Fr::from(1))),
+                // s5
+                c: Some(Term(6, Fr::from(1))),
+                operation: Operation::Add
+            }
+        );
+        // next reduction s6 = 5 + s5
+        assert_eq!(
+            reduced_constraints[3],
+            ReducedConstraint {
+                // 5
+                a: Some(Term(0, Fr::from(5))),
                 // s5
                 b: Some(Term(6, Fr::from(1))),
                 // s6
@@ -624,20 +637,7 @@ mod tests {
                 operation: Operation::Add
             }
         );
-        // next reduction s7 = 5 - s6
-        assert_eq!(
-            reduced_constraints[3],
-            ReducedConstraint {
-                // 5
-                a: Some(Term(0, Fr::from(5))),
-                // -s6
-                b: Some(Term(7, Fr::from(1))),
-                // s7
-                c: Some(Term(8, Fr::from(1))),
-                operation: Operation::Add
-            }
-        );
-        // original statement reduced -s3 * s4 = s7
+        // original statement reduced -s3 * s4 = s6
         assert_eq!(
             reduced_constraints[4],
             ReducedConstraint {
@@ -646,7 +646,7 @@ mod tests {
                 // s4
                 b: Some(Term(5, Fr::from(1))),
                 // s7
-                c: Some(Term(8, Fr::from(1))),
+                c: Some(Term(7, Fr::from(1))),
                 operation: Operation::Mul
             }
         );
