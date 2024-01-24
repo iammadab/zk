@@ -2,13 +2,12 @@ use crate::circom_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
-// TODO: add documentation
+/// Keeps track of variable data
 pub struct SymbolTable<F: PrimeField> {
     pub variable_map: HashMap<(Term<F>, Term<F>), usize>,
     pub last_variable_index: usize,
 }
 
-// TODO: add documentation
 impl<F: PrimeField> SymbolTable<F> {
     pub fn new(last_variable_index: usize) -> Self {
         Self {
@@ -17,8 +16,9 @@ impl<F: PrimeField> SymbolTable<F> {
         }
     }
 
-    // TODO: add documentation
-    // TODO: test
+    /// Check if we have merge (a, b) or (b, a) before,
+    /// if we have, it returns the previously assigned variable
+    /// if not, it assigns a new variable, stores that and returns it
     pub fn get_variable_index(&mut self, a: Term<F>, b: Term<F>) -> usize {
         if let Some(index) = self.variable_map.get(&(a, b)) {
             *index
@@ -56,6 +56,8 @@ impl<F: PrimeField> R1CSProgram<F> {
     }
 
     // TODO: you might need to return more than this
+    //  potentially will need to return the symbol table also
+    /// Compiles a list of Constraint into a list of ReducedConstraint
     fn compile(mut self) -> Vec<ReducedConstraint<F>> {
         let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());
         let mut reduced_constraints = vec![];
@@ -186,5 +188,14 @@ mod test {
     }
 
     #[test]
-    fn test_compile_program() {}
+    fn test_compile_program() {
+        let quadratic_program = quadratic_checker_circuit();
+        let compiled_program = quadratic_program.compile();
+
+        // most constraints in the quadratic program only required moving data around
+        // expect 1, which will require a reduction into a new constraint
+        // therefore we are expecting only 1 constraint
+        // 11 + 1 = 12
+        assert_eq!(compiled_program.len(), 12);
+    }
 }
