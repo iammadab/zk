@@ -9,14 +9,14 @@ use crate::transcript::Transcript;
 use ark_ff::PrimeField;
 
 #[derive(Debug)]
-struct GKRProof<F: PrimeField> {
+pub struct GKRProof<F: PrimeField> {
     output_mle: MultiLinearPolynomial<F>,
     sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
 }
 
 /// Prove correct circuit evaluation using the GKR protocol
-fn prove<F: PrimeField>(
+pub fn GKRProve<F: PrimeField>(
     circuit: Circuit,
     evaluations: Vec<Vec<F>>,
 ) -> Result<GKRProof<F>, &'static str> {
@@ -39,8 +39,6 @@ fn prove<F: PrimeField>(
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
         let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
-        dbg!(&add_mle.n_vars());
-        dbg!(&mul_mle.n_vars());
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
@@ -72,7 +70,7 @@ fn prove<F: PrimeField>(
 }
 
 /// Verify a GKR proof
-fn verify<F: PrimeField>(
+pub fn GKRVerify<F: PrimeField>(
     circuit: Circuit,
     input: Vec<F>,
     proof: GKRProof<F>,
@@ -155,7 +153,7 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate::Gate;
-    use crate::gkr::gkr::{prove, verify};
+    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use crate::gkr::layer::Layer;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
@@ -181,9 +179,9 @@ mod test {
             Fr::from(8),
         ];
         let circut_eval = circuit.evaluate(input.clone()).unwrap();
-        let gkr_proof = prove(test_circuit(), circut_eval).unwrap();
+        let gkr_proof = GKRProve(test_circuit(), circut_eval).unwrap();
 
-        let verification_result = verify(test_circuit(), input, gkr_proof).unwrap();
+        let verification_result = GKRVerify(test_circuit(), input, gkr_proof).unwrap();
         assert!(verification_result);
     }
 
@@ -201,7 +199,7 @@ mod test {
             Fr::from(8),
         ];
         let invalid_eval = circuit.evaluate(wrong_input).unwrap();
-        let invalid_gkr_proof = prove(test_circuit(), invalid_eval).unwrap();
+        let invalid_gkr_proof = GKRProve(test_circuit(), invalid_eval).unwrap();
 
         let actual_input = vec![
             Fr::from(12),
@@ -213,7 +211,8 @@ mod test {
             Fr::from(7),
             Fr::from(8),
         ];
-        let verification_result = verify(test_circuit(), actual_input, invalid_gkr_proof).unwrap();
+        let verification_result =
+            GKRVerify(test_circuit(), actual_input, invalid_gkr_proof).unwrap();
         assert!(!verification_result);
     }
 
@@ -245,11 +244,9 @@ mod test {
         ];
 
         let evaluation = circuit.evaluate(eval_input.clone()).unwrap();
-        let gkr_proof = prove(circuit.clone(), evaluation.clone()).unwrap();
+        let gkr_proof = GKRProve(circuit.clone(), evaluation.clone()).unwrap();
 
-        let verification_result = verify(circuit, eval_input, gkr_proof).unwrap();
+        let verification_result = GKRVerify(circuit, eval_input, gkr_proof).unwrap();
         assert!(verification_result);
-
-        dbg!(MultiLinearPolynomial::<Fr>::interpolate(&[Fr::from(0)]));
     }
 }

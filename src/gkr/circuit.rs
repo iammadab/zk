@@ -4,7 +4,7 @@ use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
 
 /// A circuit is just a stacked collection of layers
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Circuit {
     layers: Vec<Layer>,
 }
@@ -23,9 +23,11 @@ impl Circuit {
             return Err("cannot evaluate circuit is empty");
         }
 
-        if (self.layers.last().unwrap().len() * 2) != input.len() {
-            return Err("not enough values for input layer");
-        }
+        // TODO: deal with this, it's not necessarily a uniform circuit
+        //  figure out how you can still ensure the input is valid
+        // if (self.layers.last().unwrap().len() * 2) != input.len() {
+        //     return Err("not enough values for input layer");
+        // }
 
         let mut current_layer_input = input;
 

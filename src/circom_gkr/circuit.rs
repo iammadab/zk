@@ -1,14 +1,16 @@
-// TODO: implement reduced constraint to circuit
-//  this will make use of the constant map
-
+// TODO: implement circuit index
 // TODO: implement multi constraint circuit construction
 
-use crate::circom_gkr::constraint::{Operation, ReducedConstraint};
+use crate::circom_gkr::constraint::{Operation, ReducedConstraint, Term};
 use crate::gkr::circuit::Circuit as GKRCircuit;
+use crate::gkr::gate::Gate;
+use crate::gkr::layer::Layer;
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
-// TODO: add documentation
+/// Build a gkr circuit that checks the relation:
+/// A op B = C, where op is either add or mul
+/// i.e A + B = c or A * B = C
 fn constraint_circuit<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
     constant_map: HashMap<F, usize>,
@@ -20,7 +22,41 @@ fn constraint_circuit<F: PrimeField>(
     //    x            x              x             x
     //  /   \       /     \        /     \       /     \
     // A   a_val   B    b_val     C    c_val    1      -1
-    todo!()
+
+    // how will this work?
+    // want to take into account the circuit index here
+    // the top circuits are kinda fixed already
+
+    let circuit_input = reduced_constraint_to_circuit_input(constraint, &constant_map);
+    let one_index = constant_map.get(&F::one()).unwrap();
+    let minus_one_index = constant_map.get(&F::one().neg()).unwrap();
+
+    // TODO: add better documentation and come up with better names
+    // sign layer
+    let a_mul_gate = Gate::new(0, circuit_input[0].0, circuit_input[0].1);
+    let b_mul_gate = Gate::new(1, circuit_input[1].0, circuit_input[1].1);
+    let c_mul_gate = Gate::new(2, circuit_input[2].0, circuit_input[2].1);
+    let minus_1_gate = Gate::new(3, *one_index, *minus_one_index);
+    let sign_layer = Layer::new(
+        vec![],
+        vec![a_mul_gate, b_mul_gate, c_mul_gate, minus_1_gate],
+    );
+
+    // compute layer
+    // computes A op B where op is either + or *
+    // and computes -c
+    let a_op_b_gate = Gate::new(0, 0, 1);
+    let c_mul_minus_1 = Gate::new(1, 2, 3);
+    let compute_layer = match constraint.operation {
+        Operation::Add => Layer::new(vec![a_op_b_gate], vec![c_mul_minus_1]),
+        Operation::Mul => Layer::new(vec![], vec![a_op_b_gate, c_mul_minus_1]),
+    };
+
+    // output layer
+    let output_gate = Gate::new(0, 0, 1);
+    let output_layer = Layer::new(vec![output_gate], vec![]);
+
+    GKRCircuit::new(vec![output_layer, compute_layer, sign_layer])
 }
 
 /// Replace the optional values in the reduced constraint with concrete values
@@ -28,7 +64,7 @@ fn constraint_circuit<F: PrimeField>(
 fn reduced_constraint_to_circuit_input<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
     constant_map: &HashMap<F, usize>,
-) -> [(usize, F); 3] {
+) -> [(usize, usize); 3] {
     // Reduced constraints have optional values for a and b
     // our gkr circuit for single constraint satisfaction doesn't account for optional values
     // hence we need to convert those optional values to concrete values while preserving equation meaning
@@ -41,17 +77,24 @@ fn reduced_constraint_to_circuit_input<F: PrimeField>(
     // 2 + ? = 2 -> replace ? with 0 -> 2 + 0 = 2
     // 4 * ? = 4 -> replace ? with 1 -> 4 * 1 = 4
 
-    let zero_value = (*constant_map.get(&F::zero()).unwrap(), F::zero());
-    let one_value = (*constant_map.get(&F::one()).unwrap(), F::one());
+    // TODO: add documentation
+    let term_to_index = |t: Term<F>| -> (usize, usize) { (t.0, *constant_map.get(&t.1).unwrap()) };
+
+    let zero_index = *constant_map.get(&F::zero()).unwrap();
+    let zero_value = (zero_index, zero_index);
+
+    let one_index = *constant_map.get(&F::one()).unwrap();
+    let one_value = (one_index, one_index);
+
     let default_value = match constraint.operation {
         // for addition gates, terms that are empty can be zero
         Operation::Add => zero_value,
         Operation::Mul => one_value,
     };
 
-    let a_value = constraint.a.map(|t| t.into()).unwrap_or(default_value);
-    let b_value = constraint.b.map(|t| t.into()).unwrap_or(default_value);
-    let c_value = constraint.c.map(|t| t.into()).unwrap_or(zero_value);
+    let a_value = constraint.a.map(term_to_index).unwrap_or(default_value);
+    let b_value = constraint.b.map(term_to_index).unwrap_or(default_value);
+    let c_value = constraint.c.map(term_to_index).unwrap_or(zero_value);
 
     [a_value, b_value, c_value]
 }
@@ -99,10 +142,14 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::circuit::{generate_constant_map, reduced_constraint_to_circuit_input};
+    use crate::circom_gkr::circuit::{
+        constraint_circuit, generate_constant_map, reduced_constraint_to_circuit_input,
+    };
     use crate::circom_gkr::constraint::{Constraint, Operation, ReducedConstraint, Term};
     use crate::circom_gkr::program::R1CSProgram;
+    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use ark_bls12_381::Fr;
+    use ark_ff::{One, Zero};
     use std::collections::HashMap;
 
     #[test]
@@ -143,7 +190,8 @@ mod tests {
 
     #[test]
     fn test_reduced_constraint_to_circuit_input() {
-        let constant_map: HashMap<Fr, usize> = [(Fr::from(0), 0), (Fr::from(1), 1)].into();
+        let constant_map: HashMap<Fr, usize> =
+            [(Fr::from(0), 0), (Fr::from(1), 1), (Fr::from(2), 2)].into();
 
         // ? + b = c
         // expected 0 + b = c
@@ -155,7 +203,7 @@ mod tests {
         };
         assert_eq!(
             reduced_constraint_to_circuit_input(&r1, &constant_map),
-            [(0, Fr::from(0)), (2, Fr::from(1)), (3, Fr::from(2))]
+            [(0, 0), (2, 1), (3, 2)]
         );
 
         // ? * b = c
@@ -167,7 +215,7 @@ mod tests {
         };
         assert_eq!(
             reduced_constraint_to_circuit_input(&r2, &constant_map),
-            [(1, Fr::from(1)), (2, Fr::from(1)), (3, Fr::from(2))]
+            [(1, 1), (2, 1), (3, 2)]
         );
 
         // a * b = ?
@@ -179,7 +227,7 @@ mod tests {
         };
         assert_eq!(
             reduced_constraint_to_circuit_input(&r3, &constant_map),
-            [(2, Fr::from(1)), (3, Fr::from(2)), (0, Fr::from(0))]
+            [(2, 1), (3, 2), (0, 0)]
         );
 
         // a + b = ?
@@ -191,7 +239,78 @@ mod tests {
         };
         assert_eq!(
             reduced_constraint_to_circuit_input(&r4, &constant_map),
-            [(2, Fr::from(1)), (3, Fr::from(2)), (0, Fr::from(0))]
+            [(2, 1), (3, 2), (0, 0)]
         );
+    }
+
+    #[test]
+    fn test_constraint_circuit_evaluation() {
+        // a * b = c
+        // 3 variables
+        // input = [1, a, b, c, 0, -1]
+
+        let constant_map = [(Fr::one(), 0), (Fr::from(0), 4), (Fr::from(-1), 5)].into();
+        let constraint = ReducedConstraint {
+            a: Some(Term(1, Fr::one())),
+            b: Some(Term(2, Fr::one())),
+            c: Some(Term(3, Fr::one())),
+            operation: Operation::Mul,
+        };
+
+        let circuit = constraint_circuit(&constraint, constant_map);
+
+        // example
+        // 2 * 3 = 6
+        // correct input = [1, 2, 3, 6, 0, -1]
+        // bad input = [1, 3, 3, 6, 0, -1]
+
+        // evaluate with bad input
+        // output should not be 0
+        let bad_evaluation_result = circuit
+            .evaluate(vec![
+                Fr::one(),
+                Fr::from(3),
+                Fr::from(3),
+                Fr::from(6),
+                Fr::zero(),
+                Fr::from(-1),
+            ])
+            .unwrap();
+        let mut result_iter = bad_evaluation_result.iter().rev();
+        // skip input layer
+        result_iter.next();
+        assert_eq!(
+            result_iter.next().unwrap(),
+            &vec![Fr::from(3), Fr::from(3), Fr::from(6), Fr::from(-1)]
+        );
+        assert_eq!(
+            result_iter.next().unwrap(),
+            &vec![Fr::from(9), Fr::from(-6)]
+        );
+        assert_eq!(result_iter.next().unwrap(), &vec![Fr::from(3)]);
+
+        // evaluate with valid input
+        let correct_evaluation_result = circuit
+            .evaluate(vec![
+                Fr::one(),
+                Fr::from(2),
+                Fr::from(3),
+                Fr::from(6),
+                Fr::zero(),
+                Fr::from(-1),
+            ])
+            .unwrap();
+        let mut result_iter = correct_evaluation_result.iter().rev();
+        // skip input layer
+        result_iter.next();
+        assert_eq!(
+            result_iter.next().unwrap(),
+            &vec![Fr::from(2), Fr::from(3), Fr::from(6), Fr::from(-1)]
+        );
+        assert_eq!(
+            result_iter.next().unwrap(),
+            &vec![Fr::from(6), Fr::from(-6)]
+        );
+        assert_eq!(result_iter.next().unwrap(), &vec![Fr::from(0)]);
     }
 }
