@@ -4,8 +4,24 @@
 // TODO: implement multi constraint circuit construction
 
 use crate::circom_gkr::constraint::ReducedConstraint;
+use crate::gkr::circuit::Circuit as GKRCircuit;
 use ark_ff::PrimeField;
 use std::collections::HashMap;
+
+// TODO: add documentation
+fn constraint_circuit<F: PrimeField>(
+    constraint: &ReducedConstraint<F>,
+    constant_map: HashMap<F, usize>,
+) -> GKRCircuit {
+    //                        +
+    //              /                    \
+    //          OP                          x
+    //       /      \                   /        \
+    //    x            x              x             x
+    //  /   \       /     \        /     \       /     \
+    // A   a_val   B    b_val     C    c_val    1      -1
+    todo!()
+}
 
 /// Generate a mapping from a constant value to variable index
 /// witness array is of the form
