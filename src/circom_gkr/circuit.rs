@@ -23,17 +23,30 @@ fn constraint_circuit<F: PrimeField>(
     todo!()
 }
 
-// TODO: add documentation
+/// Replace the optional values in the reduced constraint with concrete values
+/// to feed into the gkr circuit builder
 fn reduced_constraint_to_circuit_input<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
     constant_map: &HashMap<F, usize>,
 ) -> [(usize, F); 3] {
+    // Reduced constraints have optional values for a and b
+    // our gkr circuit for single constraint satisfaction doesn't account for optional values
+    // hence we need to convert those optional values to concrete values while preserving equation meaning
+    // equations are either:
+    // a * b = c (mul gate)
+    // a + b = c (add gate)
+    // in both cases, if c is empty it can be converted to 0, without losing meaning
+    // if a or b is empty then we return the gate identity i.e mul -> 1 and add -> 0
+    // examples
+    // 2 + ? = 2 -> replace ? with 0 -> 2 + 0 = 2
+    // 4 * ? = 4 -> replace ? with 1 -> 4 * 1 = 4
+
     let zero_value = (*constant_map.get(&F::zero()).unwrap(), F::zero());
     let one_value = (*constant_map.get(&F::one()).unwrap(), F::one());
     let default_value = match constraint.operation {
         // for addition gates, terms that are empty can be zero
         Operation::Add => zero_value,
-        Operation::Mul => one_value
+        Operation::Mul => one_value,
     };
 
     let a_value = constraint.a.map(|t| t.into()).unwrap_or(default_value);
@@ -86,10 +99,11 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::circuit::generate_constant_map;
-    use crate::circom_gkr::constraint::{Constraint, Term};
+    use crate::circom_gkr::circuit::{generate_constant_map, reduced_constraint_to_circuit_input};
+    use crate::circom_gkr::constraint::{Constraint, Operation, ReducedConstraint, Term};
     use crate::circom_gkr::program::R1CSProgram;
     use ark_bls12_381::Fr;
+    use std::collections::HashMap;
 
     #[test]
     fn test_generate_constant_map() {
@@ -129,12 +143,55 @@ mod tests {
 
     #[test]
     fn test_reduced_constraint_to_circuit_input() {
-        // how do I properly test this?
-        // the basic idea is to correctly know what to do when different values in the reduced constraint are empty
-        // is there a general rule for this?
-        // A, B or C can be empty with any combination
-        // we also need to make use of the constant map
-        // the constant map should have a slot for 0
-        todo!()
+        let constant_map: HashMap<Fr, usize> = [(Fr::from(0), 0), (Fr::from(1), 1)].into();
+
+        // ? + b = c
+        // expected 0 + b = c
+        let r1 = ReducedConstraint {
+            a: None,
+            b: Some(Term(2, Fr::from(1))),
+            c: Some(Term(3, Fr::from(2))),
+            operation: Operation::Add,
+        };
+        assert_eq!(
+            reduced_constraint_to_circuit_input(&r1, &constant_map),
+            [(0, Fr::from(0)), (2, Fr::from(1)), (3, Fr::from(2))]
+        );
+
+        // ? * b = c
+        let r2 = ReducedConstraint {
+            a: None,
+            b: Some(Term(2, Fr::from(1))),
+            c: Some(Term(3, Fr::from(2))),
+            operation: Operation::Mul,
+        };
+        assert_eq!(
+            reduced_constraint_to_circuit_input(&r2, &constant_map),
+            [(1, Fr::from(1)), (2, Fr::from(1)), (3, Fr::from(2))]
+        );
+
+        // a * b = ?
+        let r3 = ReducedConstraint {
+            a: Some(Term(2, Fr::from(1))),
+            b: Some(Term(3, Fr::from(2))),
+            c: None,
+            operation: Operation::Mul,
+        };
+        assert_eq!(
+            reduced_constraint_to_circuit_input(&r3, &constant_map),
+            [(2, Fr::from(1)), (3, Fr::from(2)), (0, Fr::from(0))]
+        );
+
+        // a + b = ?
+        let r4 = ReducedConstraint {
+            a: Some(Term(2, Fr::from(1))),
+            b: Some(Term(3, Fr::from(2))),
+            c: None,
+            operation: Operation::Add,
+        };
+        assert_eq!(
+            reduced_constraint_to_circuit_input(&r4, &constant_map),
+            [(2, Fr::from(1)), (3, Fr::from(2)), (0, Fr::from(0))]
+        );
     }
 }
