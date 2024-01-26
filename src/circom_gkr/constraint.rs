@@ -10,7 +10,7 @@ pub struct ReducedConstraint<F: PrimeField> {
     pub(crate) a: Option<Term<F>>,
     pub(crate) b: Option<Term<F>>,
     pub(crate) c: Option<Term<F>>,
-    operation: Operation,
+    pub(crate) operation: Operation,
 }
 
 #[derive(Debug, PartialEq)]
@@ -254,7 +254,7 @@ enum EquationDirection {
 
 #[derive(Clone, Debug, PartialEq)]
 /// Represents the constraint operation
-enum Operation {
+pub enum Operation {
     Add,
     Mul,
 }
@@ -275,6 +275,12 @@ impl<F: PrimeField> Term<F> {
     /// and terms have to move over the equal (=) sign
     fn negate(&self) -> Self {
         Term(self.0, self.1 * F::one().neg())
+    }
+}
+
+impl<F: PrimeField> From<Term<F>> for (usize, F) {
+    fn from(value: Term<F>) -> Self {
+        (value.0, value.1)
     }
 }
 
