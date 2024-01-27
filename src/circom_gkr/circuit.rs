@@ -14,18 +14,19 @@ use std::collections::HashMap;
 fn constraint_circuit<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
     constant_map: HashMap<F, usize>,
+    constraint_index: usize,
 ) -> GKRCircuit {
-    //                        +
+    //                        +                           // output layer
     //              /                    \
-    //          OP                          x
+    //          OP                          x             // compute layer
     //       /      \                   /        \
-    //    x            x              x             x
+    //    x            x              x             x     // sign layer
     //  /   \       /     \        /     \       /     \
     // A   a_val   B    b_val     C    c_val    1      -1
 
-    // how will this work?
-    // want to take into account the circuit index here
-    // the top circuits are kinda fixed already
+    let output_layer_offset = constraint_index;
+    let compute_layer_offset = output_layer_offset * 2;
+    let sign_layer_offset = compute_layer_offset * 2;
 
     let circuit_input = reduced_constraint_to_circuit_input(constraint, &constant_map);
     let one_index = constant_map.get(&F::one()).unwrap();
@@ -33,10 +34,22 @@ fn constraint_circuit<F: PrimeField>(
 
     // TODO: add better documentation and come up with better names
     // sign layer
-    let a_mul_gate = Gate::new(0, circuit_input[0].0, circuit_input[0].1);
-    let b_mul_gate = Gate::new(1, circuit_input[1].0, circuit_input[1].1);
-    let c_mul_gate = Gate::new(2, circuit_input[2].0, circuit_input[2].1);
-    let minus_1_gate = Gate::new(3, *one_index, *minus_one_index);
+    let a_mul_gate = Gate::new(
+        0 + sign_layer_offset,
+        circuit_input[0].0,
+        circuit_input[0].1,
+    );
+    let b_mul_gate = Gate::new(
+        1 + sign_layer_offset,
+        circuit_input[1].0,
+        circuit_input[1].1,
+    );
+    let c_mul_gate = Gate::new(
+        2 + sign_layer_offset,
+        circuit_input[2].0,
+        circuit_input[2].1,
+    );
+    let minus_1_gate = Gate::new(3 + sign_layer_offset, *one_index, *minus_one_index);
     let sign_layer = Layer::new(
         vec![],
         vec![a_mul_gate, b_mul_gate, c_mul_gate, minus_1_gate],
@@ -45,15 +58,27 @@ fn constraint_circuit<F: PrimeField>(
     // compute layer
     // computes A op B where op is either + or *
     // and computes -c
-    let a_op_b_gate = Gate::new(0, 0, 1);
-    let c_mul_minus_1 = Gate::new(1, 2, 3);
+    let a_op_b_gate = Gate::new(
+        0 + compute_layer_offset,
+        0 + sign_layer_offset,
+        1 + sign_layer_offset,
+    );
+    let c_mul_minus_1 = Gate::new(
+        1 + compute_layer_offset,
+        2 + sign_layer_offset,
+        3 + sign_layer_offset,
+    );
     let compute_layer = match constraint.operation {
         Operation::Add => Layer::new(vec![a_op_b_gate], vec![c_mul_minus_1]),
         Operation::Mul => Layer::new(vec![], vec![a_op_b_gate, c_mul_minus_1]),
     };
 
     // output layer
-    let output_gate = Gate::new(0, 0, 1);
+    let output_gate = Gate::new(
+        output_layer_offset,
+        0 + compute_layer_offset,
+        1 + compute_layer_offset,
+    );
     let output_layer = Layer::new(vec![output_gate], vec![]);
 
     GKRCircuit::new(vec![output_layer, compute_layer, sign_layer])
@@ -77,7 +102,6 @@ fn reduced_constraint_to_circuit_input<F: PrimeField>(
     // 2 + ? = 2 -> replace ? with 0 -> 2 + 0 = 2
     // 4 * ? = 4 -> replace ? with 1 -> 4 * 1 = 4
 
-    // TODO: add documentation
     let term_to_index = |t: Term<F>| -> (usize, usize) { (t.0, *constant_map.get(&t.1).unwrap()) };
 
     let zero_index = *constant_map.get(&F::zero()).unwrap();
@@ -257,7 +281,7 @@ mod tests {
             operation: Operation::Mul,
         };
 
-        let circuit = constraint_circuit(&constraint, constant_map);
+        let circuit = constraint_circuit(&constraint, constant_map, 0);
 
         // example
         // 2 * 3 = 6
