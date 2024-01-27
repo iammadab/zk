@@ -2,6 +2,7 @@ use crate::gkr::layer::Layer;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
+use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers
 #[derive(Clone, Debug)]
@@ -85,6 +86,31 @@ impl Circuit {
         }
 
         Ok((&self.layers[layer_index]).into())
+    }
+}
+
+/// Addition of two circuits is just the concatenation of the layer
+/// this can be visualized as putting the two circuits side by side
+impl Add for Circuit {
+    type Output = Result<Self, &'static str>;
+    fn add(self, rhs: Self) -> Self::Output {
+        // the circuits must have the same depth
+        if self.layers.len() != rhs.layers.len() {
+            return Err("can only add circuits that have the same depth");
+        }
+
+        let combined_layers = self
+            .layers
+            .into_iter()
+            .zip(rhs.layers.into_iter())
+            .map(|(mut l1, l2)| {
+                l1.add_gates.extend(l2.add_gates);
+                l1.mul_gates.extend(l2.mul_gates);
+                Layer::new(l1.add_gates, l1.mul_gates)
+            })
+            .collect();
+
+        Ok(Circuit::new(combined_layers))
     }
 }
 
@@ -335,5 +361,33 @@ pub mod tests {
             Circuit::w(evaluations.as_slice(), 0).unwrap(),
             MultiLinearPolynomial::<Fr>::interpolate(evaluations[0].as_slice())
         );
+    }
+
+    #[test]
+    fn test_circuit_addition() {
+        // Circuit A
+        //    x
+        //  /   \
+        // a     b
+        // Circuit B
+        //    +
+        //  /   \
+        // c     d
+        // Expected Combination
+        //    x        +
+        //  /   \    /   \
+        // a     b  c     d
+
+        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]);
+        let circuit_b = Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![])]);
+
+        // c = a + b
+        let circuit_c = (circuit_a + circuit_b).unwrap();
+
+        let evaluation_result = circuit_c
+            .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
+            .unwrap();
+        assert_eq!(evaluation_result.len(), 2);
+        assert_eq!(evaluation_result[0], vec![Fr::from(6), Fr::from(9)]);
     }
 }
