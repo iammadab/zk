@@ -2,11 +2,30 @@
 // TODO: implement multi constraint circuit construction
 
 use crate::circom_gkr::constraint::{Operation, ReducedConstraint, Term};
+use crate::circom_gkr::program::R1CSProgram;
 use crate::gkr::circuit::Circuit as GKRCircuit;
 use crate::gkr::gate::Gate;
 use crate::gkr::layer::Layer;
 use ark_ff::PrimeField;
 use std::collections::HashMap;
+
+// TODO: add documentation
+fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
+    // compile the program
+    // generate the constant map
+    // for each reduced constraint, generate a circuit and add them together
+    // return the final circuit
+
+    let (compiled_program, symbol_table) = program.compile();
+    let constant_map = generate_constant_map(
+        compiled_program.as_slice(),
+        symbol_table.last_variable_index,
+    );
+
+    let mut program_circuit = GKRCircuit::additive_identity(3);
+    // TODO: need an additive identity circuit
+    todo!()
+}
 
 /// Build a gkr circuit that checks the relation:
 /// A op B = C, where op is either add or mul

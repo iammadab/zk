@@ -5,7 +5,7 @@ use ark_std::iterable::Iterable;
 use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
     layers: Vec<Layer>,
 }
@@ -15,9 +15,7 @@ impl Circuit {
     pub fn new(layers: Vec<Layer>) -> Self {
         Self { layers }
     }
-}
 
-impl Circuit {
     /// Evaluate the circuit on a given input
     pub fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
         if self.layers.is_empty() {
@@ -86,6 +84,15 @@ impl Circuit {
         }
 
         Ok((&self.layers[layer_index]).into())
+    }
+
+    /// Return the additive identity of a circuit
+    pub fn additive_identity(no_of_layers: usize) -> Self {
+        Self::new(
+            (0..no_of_layers)
+                .map(|_| Layer::new(vec![], vec![]))
+                .collect(),
+        )
     }
 }
 
@@ -389,5 +396,13 @@ pub mod tests {
             .unwrap();
         assert_eq!(evaluation_result.len(), 2);
         assert_eq!(evaluation_result[0], vec![Fr::from(6), Fr::from(9)]);
+    }
+
+    #[test]
+    fn test_circuit_additive_identity() {
+        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]);
+        let circuit_b = Circuit::additive_identity(1);
+        let circuit_c = (circuit_a.clone() + circuit_b).unwrap();
+        assert_eq!(circuit_c, circuit_a);
     }
 }
