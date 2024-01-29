@@ -1,4 +1,3 @@
-// TODO: implement circuit index
 // TODO: implement multi constraint circuit construction
 
 use crate::circom_gkr::constraint::{Operation, ReducedConstraint, Term};
@@ -9,22 +8,25 @@ use crate::gkr::layer::Layer;
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
+const CIRCUIT_DEPTH: usize = 3;
+
 // TODO: add documentation
 fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
-    // compile the program
-    // generate the constant map
-    // for each reduced constraint, generate a circuit and add them together
-    // return the final circuit
-
     let (compiled_program, symbol_table) = program.compile();
     let constant_map = generate_constant_map(
         compiled_program.as_slice(),
         symbol_table.last_variable_index,
     );
 
-    let mut program_circuit = GKRCircuit::additive_identity(3);
-    // TODO: need an additive identity circuit
-    todo!()
+    let mut program_circuit = GKRCircuit::additive_identity(CIRCUIT_DEPTH);
+
+    for (circuit_index, constraint) in compiled_program.iter().enumerate() {
+        program_circuit = (program_circuit
+            + constraint_circuit(&constraint, &constant_map, circuit_index))
+        .unwrap();
+    }
+
+    program_circuit
 }
 
 /// Build a gkr circuit that checks the relation:
@@ -32,7 +34,7 @@ fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
 /// i.e A + B = c or A * B = C
 fn constraint_circuit<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
-    constant_map: HashMap<F, usize>,
+    constant_map: &HashMap<F, usize>,
     constraint_index: usize,
 ) -> GKRCircuit {
     //                        +                           // output layer
@@ -156,6 +158,9 @@ fn generate_constant_map<F: PrimeField>(
     // insert the constant 0
     last_variable_index += 1;
     constant_map.insert(F::zero(), last_variable_index);
+    // insert -1 constant
+    last_variable_index += 1;
+    constant_map.insert(F::one().neg(), last_variable_index);
 
     for constraint in reduced_constraints {
         constraint.a.map(|term| {
@@ -186,7 +191,8 @@ fn generate_constant_map<F: PrimeField>(
 #[cfg(test)]
 mod tests {
     use crate::circom_gkr::circuit::{
-        constraint_circuit, generate_constant_map, reduced_constraint_to_circuit_input,
+        constraint_circuit, generate_constant_map, program_circuit,
+        reduced_constraint_to_circuit_input,
     };
     use crate::circom_gkr::constraint::{Constraint, Operation, ReducedConstraint, Term};
     use crate::circom_gkr::program::R1CSProgram;
@@ -300,7 +306,7 @@ mod tests {
             operation: Operation::Mul,
         };
 
-        let circuit = constraint_circuit(&constraint, constant_map, 0);
+        let circuit = constraint_circuit(&constraint, &constant_map, 0);
 
         // example
         // 2 * 3 = 6
@@ -355,5 +361,44 @@ mod tests {
             &vec![Fr::from(6), Fr::from(-6)]
         );
         assert_eq!(result_iter.next().unwrap(), &vec![Fr::from(0)]);
+    }
+
+    #[test]
+    fn test_program_circuit() {
+        // program
+        // x * x = a
+        // a * x = first_trem
+        // index_map x = 1, a = 2, first_term = 3
+        let program = R1CSProgram::new(vec![
+            Constraint::new(
+                vec![Term(1, Fr::from(1))],
+                vec![Term(1, Fr::from(1))],
+                vec![Term(2, Fr::from(1))],
+            ),
+            Constraint::new(
+                vec![Term(2, Fr::from(1))],
+                vec![Term(1, Fr::from(1))],
+                vec![Term(3, Fr::from(1))],
+            ),
+        ]);
+
+        let circuit = program_circuit(program);
+
+        // wrong evaluation
+        // x = 2
+        // a = 4
+        // first_term = 8
+        let evaluation = circuit
+            .evaluate(vec![
+                Fr::from(1),
+                Fr::from(2),
+                Fr::from(4),
+                Fr::from(8),
+                Fr::from(0),
+                Fr::from(-1),
+            ])
+            .unwrap();
+
+        assert_eq!(evaluation[0], vec![Fr::from(0), Fr::from(0)]);
     }
 }
