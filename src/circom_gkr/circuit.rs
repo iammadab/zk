@@ -11,7 +11,7 @@ use std::collections::HashMap;
 const CIRCUIT_DEPTH: usize = 3;
 
 // TODO: add documentation
-fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
+pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
     let (compiled_program, symbol_table) = program.compile();
     let constant_map = generate_constant_map(
         compiled_program.as_slice(),
@@ -189,7 +189,7 @@ fn generate_constant_map<F: PrimeField>(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::circom_gkr::circuit::{
         constraint_circuit, generate_constant_map, program_circuit,
         reduced_constraint_to_circuit_input,
@@ -200,6 +200,25 @@ mod tests {
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
     use std::collections::HashMap;
+
+    pub fn x_cube() -> R1CSProgram<Fr> {
+        // program
+        // x * x = a
+        // a * x = b
+        // index_map x = 1, a = 2, first_term = 3
+        R1CSProgram::new(vec![
+            Constraint::new(
+                vec![Term(1, Fr::from(1))],
+                vec![Term(1, Fr::from(1))],
+                vec![Term(2, Fr::from(1))],
+            ),
+            Constraint::new(
+                vec![Term(2, Fr::from(1))],
+                vec![Term(1, Fr::from(1))],
+                vec![Term(3, Fr::from(1))],
+            ),
+        ])
+    }
 
     #[test]
     fn test_generate_constant_map() {
@@ -367,22 +386,8 @@ mod tests {
     fn test_program_circuit() {
         // program
         // x * x = a
-        // a * x = first_trem
-        // index_map x = 1, a = 2, first_term = 3
-        let program = R1CSProgram::new(vec![
-            Constraint::new(
-                vec![Term(1, Fr::from(1))],
-                vec![Term(1, Fr::from(1))],
-                vec![Term(2, Fr::from(1))],
-            ),
-            Constraint::new(
-                vec![Term(2, Fr::from(1))],
-                vec![Term(1, Fr::from(1))],
-                vec![Term(3, Fr::from(1))],
-            ),
-        ]);
-
-        let circuit = program_circuit(program);
+        // a * x = b
+        let circuit = program_circuit(x_cube());
 
         // wrong evaluation
         // x = 2
