@@ -227,7 +227,7 @@ mod test {
             vec![Gate::new(1, 2, 3)],
         );
 
-        let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]);
+        let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap();
         let eval_input = vec![
             Fq::from(5),
             Fq::from(2),

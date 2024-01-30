@@ -102,7 +102,7 @@ fn constraint_circuit<F: PrimeField>(
     );
     let output_layer = Layer::new(vec![output_gate], vec![]);
 
-    GKRCircuit::new(vec![output_layer, compute_layer, sign_layer])
+    GKRCircuit::new(vec![output_layer, compute_layer, sign_layer]).expect("should generate circuit")
 }
 
 /// Replace the optional values in the reduced constraint with concrete values
