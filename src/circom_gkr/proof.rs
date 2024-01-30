@@ -25,7 +25,7 @@ fn verify<F: PrimeField>(
     let circuit = program_circuit(program);
     // TODO: is this a sufficient check
     if proof.sumcheck_proofs[0].sum != F::zero() {
-        panic!("output mle must eval to 0");
+        return Ok(false);
     }
     GKRVerify(circuit, witness, proof)
 }
@@ -62,10 +62,7 @@ mod tests {
 
     #[test]
     fn test_prove_verify_single_constraint() {
-        // program
-        // x * x = a
-        let p = x_square();
-
+        // program: x * x = a
         // valid witness
         // x = 2
         // a = 4
@@ -73,11 +70,24 @@ mod tests {
         // TODO: enforce witness constants
         let witness = vec![Fr::one(), Fr::from(2), Fr::from(4), Fr::zero(), Fr::one().neg()];
         let proof = prove(
-            p.clone(),
+            x_square(),
             witness.clone()
         )
         .unwrap();
 
-        assert_eq!(verify(p, witness, proof).unwrap(), true);
+        assert_eq!(verify(x_square(), witness, proof).unwrap(), true);
+    }
+
+    #[test]
+    fn test_prove_verify_single_constraint_invalid_witness() {
+        // program: x * x = a
+        // invalid witness
+        // x = 3
+        // a = 4
+        // input structure [1, x, a, 0, -1]
+
+        let witness = vec![Fr::one(), Fr::from(3), Fr::from(4), Fr::zero(), Fr::one().neg()];
+        let proof = prove(x_square(), witness.clone()).unwrap();
+        assert_eq!(verify(x_square(), witness, proof).unwrap(), false);
     }
 }
