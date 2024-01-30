@@ -85,9 +85,24 @@ mod tests {
         // x = 3
         // a = 4
         // input structure [1, x, a, 0, -1]
-
         let witness = vec![Fr::one(), Fr::from(3), Fr::from(4), Fr::zero(), Fr::one().neg()];
         let proof = prove(x_square(), witness.clone()).unwrap();
         assert_eq!(verify(x_square(), witness, proof).unwrap(), false);
     }
+
+    #[test]
+    fn test_prove_verify_x_cube() {
+        // program:
+        //  x * x = a
+        //  a * x = b
+        // valid witness
+        //  x = 3
+        //  a = 9
+        //  b = 27
+        // input structure [1, x, a, b, 0, -1]
+        let witness = vec![Fr::one(), Fr::from(3), Fr::from(9), Fr::from(27), Fr::zero(), Fr::one().neg()];
+        let proof = prove(x_cube(), witness.clone()).unwrap();
+        assert_eq!(verify(x_cube(), witness, proof).unwrap(), true);
+    }
+
 }
