@@ -31,7 +31,10 @@ impl Layer {
 impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
     fn from(layer: &Layer) -> Self {
         let layer_var_count = bit_count_for_n_elem(layer.len);
+        // TODO: this is wrong
         // we assume input fan in of 2
+        // TODO: it is not necessarily * 2
+        //  seems we need access to the next layer
         let input_var_count = bit_count_for_n_elem(layer.len * 2);
 
         let add_mle = layer.add_gates.iter().fold(

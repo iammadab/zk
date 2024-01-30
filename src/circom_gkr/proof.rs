@@ -40,24 +40,22 @@ fn verify<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Neg;
     use crate::circom_gkr::circuit::program_circuit;
     use crate::circom_gkr::circuit::tests::x_cube;
+    use crate::circom_gkr::constraint::{Constraint, Term};
+    use crate::circom_gkr::program::R1CSProgram;
     use crate::circom_gkr::proof::{prove, verify};
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
-    use crate::circom_gkr::constraint::{Constraint, Term};
-    use crate::circom_gkr::program::R1CSProgram;
+    use std::ops::Neg;
 
-    fn x_square() -> R1CSProgram<Fr>{
+    fn x_square() -> R1CSProgram<Fr> {
         // x * x = a
-        R1CSProgram::new(vec![
-            Constraint::new(
-                vec![Term(1, Fr::from(1))],
-                vec![Term(1, Fr::from(1))],
-                vec![Term(2, Fr::from(1))],
-            ),
-        ])
+        R1CSProgram::new(vec![Constraint::new(
+            vec![Term(1, Fr::from(1))],
+            vec![Term(1, Fr::from(1))],
+            vec![Term(2, Fr::from(1))],
+        )])
     }
 
     #[test]
@@ -68,12 +66,14 @@ mod tests {
         // a = 4
         // input structure [1, x, a, 0, -1]
         // TODO: enforce witness constants
-        let witness = vec![Fr::one(), Fr::from(2), Fr::from(4), Fr::zero(), Fr::one().neg()];
-        let proof = prove(
-            x_square(),
-            witness.clone()
-        )
-        .unwrap();
+        let witness = vec![
+            Fr::one(),
+            Fr::from(2),
+            Fr::from(4),
+            Fr::zero(),
+            Fr::one().neg(),
+        ];
+        let proof = prove(x_square(), witness.clone()).unwrap();
 
         assert_eq!(verify(x_square(), witness, proof).unwrap(), true);
     }
@@ -85,7 +85,13 @@ mod tests {
         // x = 3
         // a = 4
         // input structure [1, x, a, 0, -1]
-        let witness = vec![Fr::one(), Fr::from(3), Fr::from(4), Fr::zero(), Fr::one().neg()];
+        let witness = vec![
+            Fr::one(),
+            Fr::from(3),
+            Fr::from(4),
+            Fr::zero(),
+            Fr::one().neg(),
+        ];
         let proof = prove(x_square(), witness.clone()).unwrap();
         assert_eq!(verify(x_square(), witness, proof).unwrap(), false);
     }
@@ -100,9 +106,15 @@ mod tests {
         //  a = 9
         //  b = 27
         // input structure [1, x, a, b, 0, -1]
-        let witness = vec![Fr::one(), Fr::from(3), Fr::from(9), Fr::from(27), Fr::zero(), Fr::one().neg()];
+        let witness = vec![
+            Fr::one(),
+            Fr::from(3),
+            Fr::from(9),
+            Fr::from(27),
+            Fr::zero(),
+            Fr::one().neg(),
+        ];
         let proof = prove(x_cube(), witness.clone()).unwrap();
         assert_eq!(verify(x_cube(), witness, proof).unwrap(), true);
     }
-
 }

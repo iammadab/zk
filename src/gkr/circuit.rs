@@ -143,6 +143,33 @@ pub mod tests {
         Circuit::new(vec![layer_0, layer_1, layer_2])
     }
 
+    pub fn non_uniform_circuit() -> Circuit {
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)]);
+        let layer_1 = Layer::new(
+            vec![],
+            vec![
+                Gate::new(0, 0, 1),
+                Gate::new(1, 2, 3),
+                Gate::new(2, 4, 5),
+                Gate::new(3, 6, 7),
+            ],
+        );
+        let layer_2 = Layer::new(
+            vec![],
+            vec![
+                Gate::new(0, 1, 0),
+                Gate::new(1, 1, 0),
+                Gate::new(2, 2, 0),
+                Gate::new(3, 0, 5),
+                Gate::new(4, 2, 0),
+                Gate::new(5, 1, 0),
+                Gate::new(6, 3, 0),
+                Gate::new(7, 0, 5),
+            ],
+        );
+        Circuit::new(vec![layer_0, layer_1, layer_2])
+    }
+
     #[test]
     fn test_circuit_evaluation() {
         // sample circuit evaluation
@@ -359,6 +386,11 @@ pub mod tests {
                 .unwrap(),
             Fr::from(1)
         );
+    }
+
+    #[test]
+    fn test_add_mle_and_mul_mle_generation_for_non_uniform_circuit() {
+        todo!()
     }
 
     #[test]
