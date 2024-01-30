@@ -144,7 +144,7 @@ pub mod tests {
     }
 
     pub fn non_uniform_circuit() -> Circuit {
-        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)]);
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)], vec![]);
         let layer_1 = Layer::new(
             vec![],
             vec![
@@ -390,7 +390,20 @@ pub mod tests {
 
     #[test]
     fn test_add_mle_and_mul_mle_generation_for_non_uniform_circuit() {
-        todo!()
+        let circuit = non_uniform_circuit();
+
+        // the non-uniform circuit requires input of length 5
+        // normally it's assumed that the next layer is 2 * previous layer length
+        // layer just above input is of length 8
+        // so input would be of length 16 in a uniform circuit
+        let [add_last, mul_last]: [MultiLinearPolynomial<Fr>; 2] = (circuit.layers.last().unwrap()).into();
+        // number of variables for add_i and mul_i is given by the following equation
+        // no_of_vars_for_i + (2 * no_of_vars_for_i+1)
+        // no_of_vars_for_i = log_2(8) = 3
+        // no_of_vars_for_i+1 = log_2(5) = 3
+        // total = 3 + 6 = 9
+        assert_eq!(add_last.n_vars(), 0);
+        assert_eq!(mul_last.n_vars(), 9);
     }
 
     #[test]
