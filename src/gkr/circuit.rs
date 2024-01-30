@@ -24,6 +24,8 @@ impl Circuit {
 
         // TODO: deal with this, it's not necessarily a uniform circuit
         //  figure out how you can still ensure the input is valid
+        //  can replace this with the check for minimum length, can get the min length from the max
+        //  index in the layer above
         // if (self.layers.last().unwrap().len() * 2) != input.len() {
         //     return Err("not enough values for input layer");
         // }

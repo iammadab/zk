@@ -13,7 +13,7 @@ pub struct ReducedConstraint<F: PrimeField> {
     pub(crate) operation: Operation,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 /// Represents a single R1CS constraint
 /// As . Bs = Cs
 /// where s contains the witness and constants

@@ -2,6 +2,7 @@ use crate::circom_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 /// Represents an R1CSProgram as a collection of constraints
 pub struct R1CSProgram<F: PrimeField> {
     constraints: Vec<Constraint<F>>,

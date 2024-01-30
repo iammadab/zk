@@ -24,9 +24,9 @@ fn verify<F: PrimeField>(
 ) -> Result<bool, &'static str> {
     let circuit = program_circuit(program);
     // TODO: is this a sufficient check
-    // if proof.sumcheck_proofs[0].sum != 0 {
-    //     panic!("output mle must eval to 0");
-    // }
+    if proof.sumcheck_proofs[0].sum != F::zero() {
+        panic!("output mle must eval to 0");
+    }
     GKRVerify(circuit, witness, proof)
 }
 
@@ -40,35 +40,44 @@ fn verify<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Neg;
     use crate::circom_gkr::circuit::program_circuit;
     use crate::circom_gkr::circuit::tests::x_cube;
-    use crate::circom_gkr::proof::prove;
+    use crate::circom_gkr::proof::{prove, verify};
     use ark_bls12_381::Fr;
+    use ark_ff::{One, Zero};
+    use crate::circom_gkr::constraint::{Constraint, Term};
+    use crate::circom_gkr::program::R1CSProgram;
+
+    fn x_square() -> R1CSProgram<Fr>{
+        // x * x = a
+        R1CSProgram::new(vec![
+            Constraint::new(
+                vec![Term(1, Fr::from(1))],
+                vec![Term(1, Fr::from(1))],
+                vec![Term(2, Fr::from(1))],
+            ),
+        ])
+    }
 
     #[test]
-    fn test_prove_verify_does_not_satisfy_constraint() {
+    fn test_prove_verify_single_constraint() {
         // program
         // x * x = a
-        // a * x = b
+        let p = x_square();
 
-        // invalid witness
-        // x = 3
-        // a = 10
-        // b = 30
-        // input structure [1, x, a, b, 0, -1]
+        // valid witness
+        // x = 2
+        // a = 4
+        // input structure [1, x, a, 0, -1]
         // TODO: enforce witness constants
+        let witness = vec![Fr::one(), Fr::from(2), Fr::from(4), Fr::zero(), Fr::one().neg()];
         let proof = prove(
-            x_cube(),
-            vec![
-                Fr::from(1),
-                Fr::from(3),
-                Fr::from(10),
-                Fr::from(30),
-                Fr::from(0),
-                Fr::from(-1),
-            ],
+            p.clone(),
+            witness.clone()
         )
         .unwrap();
-        todo!()
+
+        assert_eq!(verify(p, witness, proof).unwrap(), true);
     }
 }
