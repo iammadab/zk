@@ -40,8 +40,6 @@ pub fn GKRProve<F: PrimeField>(
     for layer_index in 1..evaluations.len() {
         let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
-        dbg!("creating gate eval");
-        dbg!(r.len());
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
         let (partial_sumcheck_proof, challenges) = Sumcheck::prove_partial(f_b_c, m);

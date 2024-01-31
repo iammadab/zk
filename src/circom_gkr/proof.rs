@@ -11,7 +11,7 @@ fn prove<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
 ) -> Result<GKRProof<F>, &'static str> {
-    let circuit = program_circuit(program);
+    let circuit = program_circuit(program).0;
     let evaluations = circuit.evaluate(witness).unwrap();
     GKRProve(circuit, evaluations)
 }
@@ -22,19 +22,20 @@ fn verify<F: PrimeField>(
     witness: Vec<F>,
     proof: GKRProof<F>,
 ) -> Result<bool, &'static str> {
-    let circuit = program_circuit(program);
+    // TODO
+    //  can I know what the length of the input should be
+    //  and what percentage of that should be constants?
+    //  when I compile the program I need to know the input length and
+    //  I could return the constant map and create a function called generate_circuit_input
+    //  takes the provided witness and the constant map, generates a new input structure
+    //  hot swap will be nice
+    let circuit = program_circuit(program).0;
     // TODO: is this a sufficient check
     if proof.sumcheck_proofs[0].sum != F::zero() {
         return Ok(false);
     }
     GKRVerify(circuit, witness, proof)
 }
-
-// TODO: write test that has correct witness structure but doesn't satisfy all constraints
-//   should be able to generate proof but fail to verify because of the sum section
-
-// TODO: write test that has correct witness structure + satisfies all constraints
-//   all checks should pass
 
 // TODO: figure out how to force the witness values for the constants
 
@@ -119,14 +120,25 @@ mod tests {
 
     #[test]
     fn test_prove_verify_x_cube_bad_constant_values() {
-        // TODO: add program comment
         // TODO: fix this test
+        // program:
+        //  x * x = a
+        //  a * x = b
+        // valid witness
+        // x = 2
+        // a = 4
+        // b = 8
+        // input structure [1, x, a, b, 0 -1]
+        // but this test doesn't adhere to the input structure
+        // instead
+        // input structure [0, 2, 4, 8, 10, 0]
+        // even tho the witness is valid, the verifier should constrain the constants
         let witness = vec![
             Fr::from(0),
             Fr::from(2),
             Fr::from(4),
             Fr::from(8),
-            Fr::from(0),
+            Fr::from(10),
             Fr::from(0)
         ];
         let proof = prove(x_cube(), witness.clone()).unwrap();

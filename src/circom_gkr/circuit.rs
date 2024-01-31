@@ -1,5 +1,3 @@
-// TODO: implement multi constraint circuit construction
-
 use crate::circom_gkr::constraint::{Operation, ReducedConstraint, Term};
 use crate::circom_gkr::program::R1CSProgram;
 use crate::gkr::circuit::Circuit as GKRCircuit;
@@ -11,7 +9,8 @@ use std::collections::HashMap;
 const CIRCUIT_DEPTH: usize = 3;
 
 // TODO: add documentation
-pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
+// TODO: create better return type
+pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> (GKRCircuit, HashMap<F, usize>, usize) {
     let (compiled_program, symbol_table) = program.compile();
     let constant_map = generate_constant_map(
         compiled_program.as_slice(),
@@ -26,7 +25,7 @@ pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> GKRCircuit {
         .unwrap();
     }
 
-    program_circuit
+    (program_circuit, constant_map, symbol_table.last_variable_index)
 }
 
 /// Build a gkr circuit that checks the relation:
@@ -387,7 +386,7 @@ pub mod tests {
         // program
         // x * x = a
         // a * x = b
-        let circuit = program_circuit(x_cube());
+        let circuit = program_circuit(x_cube()).0;
 
         // wrong evaluation
         // x = 2
