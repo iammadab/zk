@@ -65,7 +65,6 @@ mod tests {
         // x = 2
         // a = 4
         // input structure [1, x, a, 0, -1]
-        // TODO: enforce witness constants
         let witness = vec![
             Fr::one(),
             Fr::from(2),
@@ -116,5 +115,21 @@ mod tests {
         ];
         let proof = prove(x_cube(), witness.clone()).unwrap();
         assert_eq!(verify(x_cube(), witness, proof).unwrap(), true);
+    }
+
+    #[test]
+    fn test_prove_verify_x_cube_bad_constant_values() {
+        // TODO: add program comment
+        // TODO: fix this test
+        let witness = vec![
+            Fr::from(0),
+            Fr::from(2),
+            Fr::from(4),
+            Fr::from(8),
+            Fr::from(0),
+            Fr::from(0)
+        ];
+        let proof = prove(x_cube(), witness.clone()).unwrap();
+        assert_eq!(verify(x_cube(), witness, proof).unwrap(), false);
     }
 }
