@@ -1,7 +1,8 @@
 use crate::gkr::circuit::Circuit;
 use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
 use crate::r1cs_gkr::circuit::program_circuit;
-use crate::r1cs_gkr::program::R1CSProgram;
+use crate::r1cs_gkr::constraint::Term;
+use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
@@ -35,23 +36,62 @@ fn compile_program_and_constrain_witness<F: PrimeField>(
     witness: Vec<F>,
 ) -> Result<(Circuit, Vec<F>), &'static str> {
     let (circuit, constant_map, symbol_table) = program_circuit(program);
-    let expected_witness_len = symbol_table.last_variable_index;
-    let constrained_witness = constrain_witness(witness, constant_map, expected_witness_len)?;
-    Ok((circuit, constrained_witness))
-}
 
-/// Add the circuit specific constant values to the witness array
-/// structure: [1, ...witness..., ...remaining_constants...]
-fn constrain_witness<F: PrimeField>(
-    witness: Vec<F>,
-    constant_map: HashMap<F, usize>,
-    expected_witness_len: usize,
-) -> Result<Vec<F>, &'static str> {
+    let expected_witness_len = symbol_table.last_variable_index - symbol_table.variable_map.len();
     if witness.len() != expected_witness_len {
         return Err("invalid witness length");
     }
 
-    let mut witness_with_constants = vec![F::one()];
+    let witness = generate_intermediate_witness_values(witness, symbol_table);
+
+    let constrained_witness = constrain_witness(witness, constant_map)?;
+    Ok((circuit, constrained_witness))
+}
+
+/// Generate the actual witness values for intermediate variables created
+/// during the simplification step i.e Constraints -> Reduced Constraints
+fn generate_intermediate_witness_values<F: PrimeField>(
+    mut witness: Vec<F>,
+    symbol_table: SymbolTable<F>,
+) -> Vec<F> {
+    // sort the variable mapping by index
+    // this basically sorts them by order of creation
+    // and since each variable must use two variable that already exists
+    // this order allows for all needed values to be present every time we want to perform
+    // a variable value computation
+    let mut variable_map_tuples: Vec<((Term<F>, Term<F>), usize)> =
+        symbol_table.variable_map.into_iter().collect();
+    variable_map_tuples.sort_by(|a, b| a.1.cmp(&b.1));
+
+    // insert a 1 at index 0 of the witness
+    // some of the intermediate variables might reference index 0
+    witness.insert(0, F::one());
+
+    // compute c which is equal to a op b
+    for ((term_a, term_b), result_index) in variable_map_tuples {
+        let term_a_value = witness[term_a.0] * term_a.1;
+        let term_b_value = witness[term_b.0] * term_b.1;
+        let c = term_a_value + term_b_value;
+
+        if result_index != witness.len() {
+            panic!("expect the witness len to grow with the variable map index");
+        }
+
+        witness.push(c)
+    }
+
+    witness
+}
+
+/// Add the circuit specific constant values to the witness array
+/// structure: [1, ...witness..., ...remaining_constants...]
+/// expected input structure is [1, ...witness...]
+/// hence we just need to add ...remaining_constants...
+fn constrain_witness<F: PrimeField>(
+    witness: Vec<F>,
+    constant_map: HashMap<F, usize>,
+) -> Result<Vec<F>, &'static str> {
+    let mut witness_with_constants = vec![];
     witness_with_constants.extend(witness);
 
     let mut hash_map_tuples: Vec<(F, usize)> = constant_map.into_iter().collect();
@@ -136,17 +176,17 @@ mod tests {
         // -fiveb - threeb = s1
 
         // witness structure
-        // [c, a, b, threea, fiveb]
+        // [a, b, c, threea, fiveb]
         // valid witness
         // a = 2
         // b = 3
         // threea = 6
         // fiveb = 15
-        // c = 21
+        // c = 31
         let witness = vec![
-            Fr::from(21),
             Fr::from(2),
             Fr::from(3),
+            Fr::from(31),
             Fr::from(6),
             Fr::from(15),
         ];
