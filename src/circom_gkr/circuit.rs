@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 const CIRCUIT_DEPTH: usize = 3;
 
-// TODO: add documentation
 // TODO: create better return type
+/// Convert an R1CSProgram to an equivalent GKRCircuit
 pub fn program_circuit<F: PrimeField>(
     program: R1CSProgram<F>,
 ) -> (GKRCircuit, HashMap<F, usize>, usize) {
@@ -46,36 +46,35 @@ fn constraint_circuit<F: PrimeField>(
     //              /                    \
     //          OP                          x             // compute layer
     //       /      \                   /        \
-    //    x            x              x             x     // sign layer
+    //    x            x              x             x     // product layer
     //  /   \       /     \        /     \       /     \
     // A   a_val   B    b_val     C    c_val    1      -1
 
     let output_layer_offset = constraint_index;
     let compute_layer_offset = output_layer_offset * 2;
-    let sign_layer_offset = compute_layer_offset * 2;
+    let product_layer_offset = compute_layer_offset * 2;
 
     let circuit_input = reduced_constraint_to_circuit_input(constraint, &constant_map);
     let one_index = constant_map.get(&F::one()).unwrap();
     let minus_one_index = constant_map.get(&F::one().neg()).unwrap();
 
-    // TODO: add better documentation and come up with better names
-    // sign layer
+    // product layer
     let a_mul_gate = Gate::new(
-        0 + sign_layer_offset,
+        0 + product_layer_offset,
         circuit_input[0].0,
         circuit_input[0].1,
     );
     let b_mul_gate = Gate::new(
-        1 + sign_layer_offset,
+        1 + product_layer_offset,
         circuit_input[1].0,
         circuit_input[1].1,
     );
     let c_mul_gate = Gate::new(
-        2 + sign_layer_offset,
+        2 + product_layer_offset,
         circuit_input[2].0,
         circuit_input[2].1,
     );
-    let minus_1_gate = Gate::new(3 + sign_layer_offset, *one_index, *minus_one_index);
+    let minus_1_gate = Gate::new(3 + product_layer_offset, *one_index, *minus_one_index);
     let sign_layer = Layer::new(
         vec![],
         vec![a_mul_gate, b_mul_gate, c_mul_gate, minus_1_gate],
@@ -86,13 +85,13 @@ fn constraint_circuit<F: PrimeField>(
     // and computes -c
     let a_op_b_gate = Gate::new(
         0 + compute_layer_offset,
-        0 + sign_layer_offset,
-        1 + sign_layer_offset,
+        0 + product_layer_offset,
+        1 + product_layer_offset,
     );
     let c_mul_minus_1 = Gate::new(
         1 + compute_layer_offset,
-        2 + sign_layer_offset,
-        3 + sign_layer_offset,
+        2 + product_layer_offset,
+        3 + product_layer_offset,
     );
     let compute_layer = match constraint.operation {
         Operation::Add => Layer::new(vec![a_op_b_gate], vec![c_mul_minus_1]),

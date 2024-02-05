@@ -23,8 +23,6 @@ impl<F: PrimeField> R1CSProgram<F> {
             .unwrap_or(0)
     }
 
-    // TODO: you might need to return more than this
-    //  potentially will need to return the symbol table also
     /// Compiles a list of Constraint into a list of ReducedConstraint
     pub fn compile(mut self) -> (Vec<ReducedConstraint<F>>, SymbolTable<F>) {
         let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());

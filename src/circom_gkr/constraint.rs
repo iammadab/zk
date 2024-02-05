@@ -47,8 +47,6 @@ impl<F: PrimeField> Constraint<F> {
         Self { a, b, c, operation }
     }
 
-    // TODO: pass symbol table
-    // TODO: return the updated symbol table
     /// Reduce a constraint into one or more reduced constraints.
     /// First it tries to move extra terms to empty slots, then it attempts merging terms into
     /// new constraints
@@ -61,7 +59,6 @@ impl<F: PrimeField> Constraint<F> {
         }
     }
 
-    // TODO: consider returning the last variable index
     /// Converts a constraint into one or more reduced constraint, such that all constraints have at
     /// most 3 terms and one operation.
     /// See in code comment for more details.
