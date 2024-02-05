@@ -10,7 +10,9 @@ const CIRCUIT_DEPTH: usize = 3;
 
 // TODO: add documentation
 // TODO: create better return type
-pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> (GKRCircuit, HashMap<F, usize>, usize) {
+pub fn program_circuit<F: PrimeField>(
+    program: R1CSProgram<F>,
+) -> (GKRCircuit, HashMap<F, usize>, usize) {
     let (compiled_program, symbol_table) = program.compile();
     let constant_map = generate_constant_map(
         compiled_program.as_slice(),
@@ -25,7 +27,11 @@ pub fn program_circuit<F: PrimeField>(program: R1CSProgram<F>) -> (GKRCircuit, H
         .unwrap();
     }
 
-    (program_circuit, constant_map, symbol_table.last_variable_index)
+    (
+        program_circuit,
+        constant_map,
+        symbol_table.last_variable_index,
+    )
 }
 
 /// Build a gkr circuit that checks the relation:
@@ -110,7 +116,7 @@ fn reduced_constraint_to_circuit_input<F: PrimeField>(
     constraint: &ReducedConstraint<F>,
     constant_map: &HashMap<F, usize>,
 ) -> [(usize, usize); 3] {
-    // Reduced constraints have optional values for a and b
+    // Reduced constraints can have optional values for a, b or c
     // our gkr circuit for single constraint satisfaction doesn't account for optional values
     // hence we need to convert those optional values to concrete values while preserving equation meaning
     // equations are either:

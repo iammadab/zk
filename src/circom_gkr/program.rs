@@ -72,7 +72,7 @@ impl<F: PrimeField> SymbolTable<F> {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use crate::circom_gkr::constraint::{Constraint, Term};
     use crate::circom_gkr::program::R1CSProgram;
     use ark_bls12_381::Fr;
@@ -182,6 +182,44 @@ mod test {
         R1CSProgram::new(constraints)
     }
 
+    pub fn eq_3a_plus_5b() -> R1CSProgram<Fr> {
+        // constraints
+        // 0 = 3a - threea
+        // 0 = 5b - fiveb
+        // 0 = -c + threea + fiveb
+
+        // symbol index values
+        // c = 1
+        // a = 2
+        // b = 3
+        // threea = 4
+        // fiveb = 5
+
+        let constraints = vec![
+            Constraint::new(
+                vec![],
+                vec![],
+                vec![Term(2, Fr::from(3)), Term(4, Fr::from(-1))],
+            ),
+            Constraint::new(
+                vec![],
+                vec![],
+                vec![Term(3, Fr::from(5)), Term(5, Fr::from(-1))],
+            ),
+            Constraint::new(
+                vec![],
+                vec![],
+                vec![
+                    Term(1, Fr::from(-1)),
+                    Term(4, Fr::from(1)),
+                    Term(5, Fr::from(1)),
+                ],
+            ),
+        ];
+
+        R1CSProgram::new(constraints)
+    }
+
     #[test]
     fn test_get_last_variable_index() {
         let quadratic_program = quadratic_checker_circuit();
@@ -198,5 +236,9 @@ mod test {
         // therefore we are expecting only 1 constraint
         // 11 + 1 = 12
         assert_eq!(compiled_program.len(), 12);
+
+        let eq_3a_plus_5b = eq_3a_plus_5b();
+        let (compiled_program, _) = eq_3a_plus_5b.compile();
+        assert_eq!(compiled_program.len(), 3);
     }
 }
