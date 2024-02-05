@@ -1,8 +1,8 @@
-use crate::r1cs_gkr::constraint::{Operation, ReducedConstraint, Term};
-use crate::r1cs_gkr::program::R1CSProgram;
 use crate::gkr::circuit::Circuit as GKRCircuit;
 use crate::gkr::gate::Gate;
 use crate::gkr::layer::Layer;
+use crate::r1cs_gkr::constraint::{Operation, ReducedConstraint, Term};
+use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
@@ -12,7 +12,7 @@ const CIRCUIT_DEPTH: usize = 3;
 /// Convert an R1CSProgram to an equivalent GKRCircuit
 pub fn program_circuit<F: PrimeField>(
     program: R1CSProgram<F>,
-) -> (GKRCircuit, HashMap<F, usize>, usize) {
+) -> (GKRCircuit, HashMap<F, usize>, SymbolTable<F>) {
     let (compiled_program, symbol_table) = program.compile();
     let constant_map = generate_constant_map(
         compiled_program.as_slice(),
@@ -27,11 +27,7 @@ pub fn program_circuit<F: PrimeField>(
         .unwrap();
     }
 
-    (
-        program_circuit,
-        constant_map,
-        symbol_table.last_variable_index,
-    )
+    (program_circuit, constant_map, symbol_table)
 }
 
 /// Build a gkr circuit that checks the relation:
@@ -194,13 +190,13 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 pub mod tests {
+    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use crate::r1cs_gkr::circuit::{
         constraint_circuit, generate_constant_map, program_circuit,
         reduced_constraint_to_circuit_input,
     };
     use crate::r1cs_gkr::constraint::{Constraint, Operation, ReducedConstraint, Term};
     use crate::r1cs_gkr::program::R1CSProgram;
-    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
     use std::collections::HashMap;

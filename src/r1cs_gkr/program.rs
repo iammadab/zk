@@ -184,12 +184,12 @@ pub mod test {
         // constraints
         // 0 = 3a - threea
         // 0 = 5b - fiveb
-        // 0 = -c + threea + fiveb
+        // 0 = -c + threea + fiveb + 10
 
         // symbol index values
-        // c = 1
-        // a = 2
-        // b = 3
+        // a = 1
+        // b = 2
+        // c = 3
         // threea = 4
         // fiveb = 5
 
@@ -197,18 +197,19 @@ pub mod test {
             Constraint::new(
                 vec![],
                 vec![],
-                vec![Term(2, Fr::from(3)), Term(4, Fr::from(-1))],
+                vec![Term(1, Fr::from(3)), Term(4, Fr::from(-1))],
             ),
             Constraint::new(
                 vec![],
                 vec![],
-                vec![Term(3, Fr::from(5)), Term(5, Fr::from(-1))],
+                vec![Term(2, Fr::from(5)), Term(5, Fr::from(-1))],
             ),
             Constraint::new(
                 vec![],
                 vec![],
                 vec![
-                    Term(1, Fr::from(-1)),
+                    Term(0, Fr::from(10)),
+                    Term(3, Fr::from(-1)),
                     Term(4, Fr::from(1)),
                     Term(5, Fr::from(1)),
                 ],
@@ -237,6 +238,7 @@ pub mod test {
 
         let eq_3a_plus_5b = eq_3a_plus_5b();
         let (compiled_program, _) = eq_3a_plus_5b.compile();
-        assert_eq!(compiled_program.len(), 3);
+        dbg!(&compiled_program);
+        assert_eq!(compiled_program.len(), 4);
     }
 }

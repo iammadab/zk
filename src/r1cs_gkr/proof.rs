@@ -1,6 +1,7 @@
+use crate::gkr::circuit::Circuit;
+use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
 use crate::r1cs_gkr::circuit::program_circuit;
 use crate::r1cs_gkr::program::R1CSProgram;
-use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
@@ -9,8 +10,7 @@ fn prove<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
 ) -> Result<GKRProof<F>, &'static str> {
-    let (circuit, constant_map, expected_witness_len) = program_circuit(program);
-    let constrained_witness = constrain_witness(witness, constant_map, expected_witness_len)?;
+    let (circuit, constrained_witness) = compile_program_and_constrain_witness(program, witness)?;
     let evaluations = circuit.evaluate(constrained_witness).unwrap();
     GKRProve(circuit, evaluations)
 }
@@ -21,12 +21,23 @@ fn verify<F: PrimeField>(
     witness: Vec<F>,
     proof: GKRProof<F>,
 ) -> Result<bool, &'static str> {
-    let (circuit, constant_map, expected_witness_len) = program_circuit(program);
-    let constrained_witness = constrain_witness(witness, constant_map, expected_witness_len)?;
+    let (circuit, constrained_witness) = compile_program_and_constrain_witness(program, witness)?;
     if proof.sumcheck_proofs[0].sum != F::zero() {
         return Ok(false);
     }
     GKRVerify(circuit, constrained_witness, proof)
+}
+
+/// Compile the R1CSProgram into a circuit and add circuit dependent constants / intermediate values
+/// to the witness vector
+fn compile_program_and_constrain_witness<F: PrimeField>(
+    program: R1CSProgram<F>,
+    witness: Vec<F>,
+) -> Result<(Circuit, Vec<F>), &'static str> {
+    let (circuit, constant_map, symbol_table) = program_circuit(program);
+    let expected_witness_len = symbol_table.last_variable_index;
+    let constrained_witness = constrain_witness(witness, constant_map, expected_witness_len)?;
+    Ok((circuit, constrained_witness))
 }
 
 /// Add the circuit specific constant values to the witness array
@@ -117,11 +128,13 @@ mod tests {
     }
 
     #[test]
-    fn test_prove_verify_3a_plus_5b() {
+    fn test_prove_verify_3a_plus_5b_plus_10() {
         // program
         // 3a = threea
         // 5b = fiveb
-        // c = threea + fiveb
+        // 10 - c = s1
+        // -fiveb - threeb = s1
+
         // witness structure
         // [c, a, b, threea, fiveb]
         // valid witness
