@@ -2,30 +2,31 @@ use crate::gkr::layer::Layer;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 use ark_std::iterable::Iterable;
+use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Circuit {
     layers: Vec<Layer>,
 }
 
 impl Circuit {
     // TODO: implement circuit construction validation
-    pub fn new(layers: Vec<Layer>) -> Self {
-        Self { layers }
-    }
-}
+    pub fn new(layers: Vec<Layer>) -> Result<Self, &'static str> {
+        if layers.is_empty() {
+            return Err("cannot create circuit with no layers");
+        }
 
-impl Circuit {
+        Ok(Self { layers })
+    }
+
     /// Evaluate the circuit on a given input
     pub fn evaluate<F: PrimeField>(&self, input: Vec<F>) -> Result<Vec<Vec<F>>, &'static str> {
         if self.layers.is_empty() {
             return Err("cannot evaluate circuit is empty");
         }
 
-        if (self.layers.last().unwrap().len() * 2) != input.len() {
-            return Err("not enough values for input layer");
-        }
+        // TODO: constrain the input length
 
         let mut current_layer_input = input;
 
@@ -82,13 +83,58 @@ impl Circuit {
             return Err("invalid layer index");
         }
 
-        Ok((&self.layers[layer_index]).into())
+        let next_layer_len = if layer_index == self.layers.len() - 1 {
+            // next layer is the input layer
+            (self.layers[layer_index].max_input_index() + 1)
+                .try_into()
+                .unwrap()
+        } else {
+            self.layers[layer_index + 1].len()
+        };
+
+        Ok(self.layers[layer_index].add_mul_mle(next_layer_len))
+    }
+
+    /// Return the additive identity of a circuit
+    pub fn additive_identity(no_of_layers: usize) -> Self {
+        Self::new(
+            (0..no_of_layers)
+                .map(|_| Layer::new(vec![], vec![]))
+                .collect(),
+        )
+        .unwrap()
+    }
+}
+
+/// Addition of two circuits is just the concatenation of the layer
+/// this can be visualized as putting the two circuits side by side
+impl Add for Circuit {
+    type Output = Result<Self, &'static str>;
+    fn add(self, rhs: Self) -> Self::Output {
+        // the circuits must have the same depth
+        if self.layers.len() != rhs.layers.len() {
+            return Err("can only add circuits that have the same depth");
+        }
+
+        let combined_layers = self
+            .layers
+            .into_iter()
+            .zip(rhs.layers.into_iter())
+            .map(|(mut l1, l2)| {
+                l1.add_gates.extend(l2.add_gates);
+                l1.mul_gates.extend(l2.mul_gates);
+                Layer::new(l1.add_gates, l1.mul_gates)
+            })
+            .collect();
+
+        Ok(Circuit::new(combined_layers)?)
     }
 }
 
 #[cfg(test)]
 pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
+    use std::ops::Add;
 
     use crate::gkr::gate::Gate;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
@@ -103,7 +149,34 @@ pub mod tests {
             vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
             vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
         );
-        Circuit::new(vec![layer_0, layer_1, layer_2])
+        Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
+    }
+
+    pub fn non_uniform_circuit() -> Circuit {
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)], vec![]);
+        let layer_1 = Layer::new(
+            vec![],
+            vec![
+                Gate::new(0, 0, 1),
+                Gate::new(1, 2, 3),
+                Gate::new(2, 4, 5),
+                Gate::new(3, 6, 7),
+            ],
+        );
+        let layer_2 = Layer::new(
+            vec![],
+            vec![
+                Gate::new(0, 1, 0),
+                Gate::new(1, 1, 0),
+                Gate::new(2, 2, 0),
+                Gate::new(3, 0, 5),
+                Gate::new(4, 2, 0),
+                Gate::new(5, 1, 0),
+                Gate::new(6, 3, 0),
+                Gate::new(7, 0, 5),
+            ],
+        );
+        Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
     }
 
     #[test]
@@ -122,7 +195,7 @@ pub mod tests {
         let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
         assert_eq!(layer_1.len(), 2);
 
-        let circuit = Circuit::new(vec![layer_0, layer_1]);
+        let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
 
         let circuit_eval = circuit
             .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
@@ -191,7 +264,7 @@ pub mod tests {
         // circuit has 3 layers
 
         // layer 0 - output layer
-        let [add_0, mult_0]: [MultiLinearPolynomial<Fr>; 2] = (&circuit.layers[0]).into();
+        let [add_0, mult_0]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(0).unwrap();
         // the number of variables for the add function should be 3
         assert_eq!(add_0.n_vars(), 3);
         // the number of variables for the mul function should be 0
@@ -210,7 +283,7 @@ pub mod tests {
         assert_eq!(sum_over_boolean_hyper_cube(&mult_0), Fr::from(0));
 
         // layer 1
-        let [add_1, mult_1]: [MultiLinearPolynomial<Fr>; 2] = (&circuit.layers[1]).into();
+        let [add_1, mult_1]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(1).unwrap();
         // number of variables for add should be 5 (1 for current layer, then 2 each for next layer)
         assert_eq!(add_1.n_vars(), 5);
         // number of variables for mul should also be 5
@@ -247,7 +320,7 @@ pub mod tests {
         );
 
         // layer 2
-        let [add_2, mult_2]: [MultiLinearPolynomial<Fr>; 2] = (&circuit.layers[2]).into();
+        let [add_2, mult_2]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(2).unwrap();
         // number of variables for add should be 8 (2 for current layer, then 3 each for next layer)
         assert_eq!(add_2.n_vars(), 8);
         // number of variables for mul should also be 8
@@ -325,6 +398,25 @@ pub mod tests {
     }
 
     #[test]
+    fn test_add_mle_and_mul_mle_generation_for_non_uniform_circuit() {
+        let circuit = non_uniform_circuit();
+
+        // the non-uniform circuit requires input of length 5
+        // normally it's assumed that the next layer is 2 * previous layer length
+        // layer just above input is of length 8
+        // so input would be of length 16 in a uniform circuit
+        let [add_last, mul_last]: [MultiLinearPolynomial<Fr>; 2] =
+            circuit.add_mul_mle(circuit.layers.len() - 1).unwrap();
+        // number of variables for add_i and mul_i is given by the following equation
+        // no_of_vars_for_i + (2 * no_of_vars_for_i+1)
+        // no_of_vars_for_i = log_2(8) = 3
+        // no_of_vars_for_i+1 = log_2(5) = 3
+        // total = 3 + 3(2) = 3 + 6 = 9
+        assert_eq!(add_last.n_vars(), 0);
+        assert_eq!(mul_last.n_vars(), 9);
+    }
+
+    #[test]
     fn test_w_function() {
         let evaluations = vec![vec![Fr::from(1), Fr::from(2)]];
         // try to generate w mle for non-existent layer
@@ -333,5 +425,41 @@ pub mod tests {
             Circuit::w(evaluations.as_slice(), 0).unwrap(),
             MultiLinearPolynomial::<Fr>::interpolate(evaluations[0].as_slice())
         );
+    }
+
+    #[test]
+    fn test_circuit_addition() {
+        // Circuit A
+        //    x
+        //  /   \
+        // a     b
+        // Circuit B
+        //    +
+        //  /   \
+        // c     d
+        // Expected Combination
+        //    x        +
+        //  /   \    /   \
+        // a     b  c     d
+
+        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]).unwrap();
+        let circuit_b = Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![])]).unwrap();
+
+        // c = a + b
+        let circuit_c = (circuit_a + circuit_b).unwrap();
+
+        let evaluation_result = circuit_c
+            .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
+            .unwrap();
+        assert_eq!(evaluation_result.len(), 2);
+        assert_eq!(evaluation_result[0], vec![Fr::from(6), Fr::from(9)]);
+    }
+
+    #[test]
+    fn test_circuit_additive_identity() {
+        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]).unwrap();
+        let circuit_b = Circuit::additive_identity(1);
+        let circuit_c = (circuit_a.clone() + circuit_b).unwrap();
+        assert_eq!(circuit_c, circuit_a);
     }
 }

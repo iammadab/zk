@@ -4,5 +4,5 @@ Implementations from Proofs, Arguments and Zero Knowledge
 - [Multilinear Polynomial](/src/polynomial/multilinear_poly.rs) ✅
 - [Sumcheck](/src/sumcheck) ✅
 - [GKR](/src/gkr) ✅
-- [Circom + GKR Backend]() (TODO)
-- [Cairo + GKR Backend]() (TODO)
+- [R1CS + GKR Backend](/src/r1cs_gkr) ✅
+  - [Circom Adapter]() (TODO)

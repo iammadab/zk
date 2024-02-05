@@ -4,7 +4,7 @@ use crate::polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolyn
 use ark_ff::PrimeField;
 
 /// Holds the add and mul gates in a given layer
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Layer {
     pub add_gates: Vec<Gate>,
     pub mul_gates: Vec<Gate>,
@@ -25,29 +25,47 @@ impl Layer {
     pub fn len(&self) -> usize {
         self.len
     }
-}
 
-/// Generate the add_i and mult_i multilinear extension polynomials given a layer
-impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
-    fn from(layer: &Layer) -> Self {
-        let layer_var_count = bit_count_for_n_elem(layer.len);
-        // we assume input fan in of 2
-        let input_var_count = bit_count_for_n_elem(layer.len * 2);
+    /// Return the maximum index for an input wiring into any gate in the given layer
+    pub fn max_input_index(&self) -> isize {
+        let max_add_gate_index = self
+            .add_gates
+            .iter()
+            .map(|gate| gate.in_a.max(gate.in_b) as isize)
+            .max()
+            .unwrap_or(-1);
+        let max_mul_gate_index = self
+            .mul_gates
+            .iter()
+            .map(|gate| gate.in_a.max(gate.in_b) as isize)
+            .max()
+            .unwrap_or(-1);
+        max_add_gate_index.max(max_mul_gate_index)
+    }
 
-        let add_mle = layer.add_gates.iter().fold(
+    /// Generate the add_i and mult_i multilinear extension polynomials for the current layer
+    /// also take the size of the next layer
+    pub fn add_mul_mle<F: PrimeField>(
+        &self,
+        next_layer_count: usize,
+    ) -> [MultiLinearPolynomial<F>; 2] {
+        let layer_var_count = bit_count_for_n_elem(self.len);
+        let next_layer_count = bit_count_for_n_elem(next_layer_count);
+
+        let add_mle = self.add_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
-                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
+                let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
                 let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
 
                 (&acc + &gate_bit_checker).unwrap()
             },
         );
 
-        let mult_mle = layer.mul_gates.iter().fold(
+        let mult_mle = self.mul_gates.iter().fold(
             MultiLinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
-                let gate_bits = gate.to_bit_string(layer_var_count, input_var_count);
+                let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
                 let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
 
                 (&acc + &gate_bit_checker).unwrap()
@@ -55,5 +73,32 @@ impl<F: PrimeField> From<&Layer> for [MultiLinearPolynomial<F>; 2] {
         );
 
         [add_mle, mult_mle]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::gkr::gate::Gate;
+    use crate::gkr::layer::Layer;
+
+    #[test]
+    fn test_max_input_index() {
+        let layer = Layer::new(
+            vec![],
+            vec![
+                Gate::new(0, 1, 0),
+                Gate::new(1, 1, 6),
+                Gate::new(2, 2, 0),
+                Gate::new(3, 0, 5),
+                Gate::new(4, 2, 0),
+                Gate::new(5, 1, 0),
+                Gate::new(6, 3, 0),
+                Gate::new(7, 0, 5),
+            ],
+        );
+        assert_eq!(layer.max_input_index(), 6);
+
+        let empty_layer = Layer::new(vec![], vec![]);
+        assert_eq!(empty_layer.max_input_index(), -1);
     }
 }

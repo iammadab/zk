@@ -1,6 +1,6 @@
-mod circuit;
-mod gate;
+pub mod circuit;
+pub mod gate;
 mod gate_eval_extension;
-mod gkr;
-mod layer;
+pub mod gkr;
+pub mod layer;
 mod util;
