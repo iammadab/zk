@@ -1,4 +1,4 @@
-pub mod circom_gkr;
+pub mod r1cs_gkr;
 mod gkr;
 pub mod polynomial;
 mod reed_solomon_fingerprinting;

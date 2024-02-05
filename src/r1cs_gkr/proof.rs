@@ -1,5 +1,5 @@
-use crate::circom_gkr::circuit::program_circuit;
-use crate::circom_gkr::program::R1CSProgram;
+use crate::r1cs_gkr::circuit::program_circuit;
+use crate::r1cs_gkr::program::R1CSProgram;
 use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
@@ -57,12 +57,12 @@ fn constrain_witness<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
-    use crate::circom_gkr::circuit::program_circuit;
-    use crate::circom_gkr::circuit::tests::x_cube;
-    use crate::circom_gkr::constraint::{Constraint, Term};
-    use crate::circom_gkr::program::test::eq_3a_plus_5b;
-    use crate::circom_gkr::program::R1CSProgram;
-    use crate::circom_gkr::proof::{prove, verify};
+    use crate::r1cs_gkr::circuit::program_circuit;
+    use crate::r1cs_gkr::circuit::tests::x_cube;
+    use crate::r1cs_gkr::constraint::{Constraint, Term};
+    use crate::r1cs_gkr::program::test::eq_3a_plus_5b;
+    use crate::r1cs_gkr::program::R1CSProgram;
+    use crate::r1cs_gkr::proof::{prove, verify};
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
     use std::ops::Neg;

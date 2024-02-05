@@ -1,4 +1,4 @@
-use crate::circom_gkr::constraint::{Constraint, ReducedConstraint, Term};
+use crate::r1cs_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
@@ -71,8 +71,8 @@ impl<F: PrimeField> SymbolTable<F> {
 
 #[cfg(test)]
 pub mod test {
-    use crate::circom_gkr::constraint::{Constraint, Term};
-    use crate::circom_gkr::program::R1CSProgram;
+    use crate::r1cs_gkr::constraint::{Constraint, Term};
+    use crate::r1cs_gkr::program::R1CSProgram;
     use ark_bls12_381::Fr;
 
     fn quadratic_checker_circuit() -> R1CSProgram<Fr> {
