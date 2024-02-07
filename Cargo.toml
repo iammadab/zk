@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ark-bls12-381 = "0.4.0"
 ark-bn254 = "0.4.0"
-ark-circom = "0.1.0"
+ark-circom = { git = "https://github.com/iammadab/circom-compat" }
 ark-ec = "0.4.1"
 ark-ff = "0.4.1"
 ark-poly = "0.4.1"
