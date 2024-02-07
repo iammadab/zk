@@ -3,7 +3,7 @@ use crate::r1cs_gkr::program::R1CSProgram;
 use ark_circom::{CircomBuilder, CircomConfig};
 use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
-use num_bigint::{BigInt, BigUint};
+use num_bigint::BigInt;
 use std::path::Path;
 
 /// Holds utility methods for going from .r1cs to R1CSProgram
@@ -66,5 +66,23 @@ impl<F: PrimeField, E: Pairing<ScalarField = F>> From<&CircomAdapter<E>> for R1C
             })
             .collect();
         R1CSProgram::new(constraints)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use crate::r1cs_gkr::adapters::circom::CircomAdapter;
+    use ark_bn254::Bn254;
+
+    #[test]
+    fn test_circom_adapter() {
+        let current_file = PathBuf::from(file!());
+        let parent_path = current_file.parent().unwrap();
+        let r1cs = parent_path.join("test_artifacts/test_circuit.r1cs");
+        let wtns = parent_path.join("test_artifacts/test_circuit.wasn");
+
+        // TODO: might need to create a fork of the circomadapter to make it fit Bn254
+        let adapter = CircomAdapter::<Bn254>::new(r1cs, wtns);
     }
 }
