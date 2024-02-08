@@ -2,7 +2,7 @@ use crate::r1cs_gkr::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 /// Represents an R1CSProgram as a collection of constraints
 pub struct R1CSProgram<F: PrimeField> {
     constraints: Vec<Constraint<F>>,
@@ -74,6 +74,7 @@ pub mod test {
     use crate::r1cs_gkr::constraint::{Constraint, Term};
     use crate::r1cs_gkr::program::R1CSProgram;
     use ark_bls12_381::Fr;
+    use ark_ff::PrimeField;
 
     fn quadratic_checker_circuit() -> R1CSProgram<Fr> {
         // constraints
@@ -180,7 +181,7 @@ pub mod test {
         R1CSProgram::new(constraints)
     }
 
-    pub fn eq_3a_plus_5b() -> R1CSProgram<Fr> {
+    pub fn eq_3a_plus_5b<Fr: PrimeField + std::convert::From<i32>>() -> R1CSProgram<Fr> {
         // constraints
         // 0 = 3a - threea
         // 0 = 5b - fiveb
@@ -236,9 +237,8 @@ pub mod test {
         // 11 + 1 = 12
         assert_eq!(compiled_program.len(), 12);
 
-        let eq_3a_plus_5b = eq_3a_plus_5b();
+        let eq_3a_plus_5b = eq_3a_plus_5b::<Fr>();
         let (compiled_program, _) = eq_3a_plus_5b.compile();
-        dbg!(&compiled_program);
         assert_eq!(compiled_program.len(), 4);
     }
 }
