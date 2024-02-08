@@ -95,14 +95,13 @@ mod tests {
     use crate::r1cs_gkr::program::R1CSProgram;
     use ark_bn254::Bn254;
     use ark_ec::pairing::Pairing;
-    use std::env::{current_dir, current_exe};
-    use std::fs::File;
     use std::path::PathBuf;
+    use crate::r1cs_gkr::proof::{prove, verify};
 
     type Fr = <Bn254 as Pairing>::ScalarField;
 
     #[test]
-    fn test_circom_adapter() {
+    fn test_circom_adapter_with_proof() {
         let mut test_artifacts = PathBuf::from(file!())
             .parent()
             .expect("should have parent")
@@ -133,5 +132,8 @@ mod tests {
                 Fr::from(15),
             ]
         );
+
+        let proof = prove(program.clone(), witness.clone()).unwrap();
+        assert!(verify(program, witness, proof).unwrap());
     }
 }

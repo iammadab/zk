@@ -7,7 +7,7 @@ use ark_ff::PrimeField;
 use std::collections::HashMap;
 
 /// Generate a GKR proof for a given R1CSProgram
-fn prove<F: PrimeField>(
+pub fn prove<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
 ) -> Result<GKRProof<F>, &'static str> {
@@ -17,7 +17,7 @@ fn prove<F: PrimeField>(
 }
 
 /// Verify a GKR proof for a given R1CSProgram
-fn verify<F: PrimeField>(
+pub fn verify<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
     proof: GKRProof<F>,
