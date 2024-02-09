@@ -93,10 +93,10 @@ mod tests {
     use crate::r1cs_gkr::adapters::circom::CircomAdapter;
     use crate::r1cs_gkr::program::test::eq_3a_plus_5b;
     use crate::r1cs_gkr::program::R1CSProgram;
+    use crate::r1cs_gkr::proof::{prove, verify};
     use ark_bn254::Bn254;
     use ark_ec::pairing::Pairing;
     use std::path::PathBuf;
-    use crate::r1cs_gkr::proof::{prove, verify};
 
     type Fr = <Bn254 as Pairing>::ScalarField;
 
