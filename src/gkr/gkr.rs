@@ -11,6 +11,9 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
 #[derive(Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct GKRProof<F: PrimeField> {
+    // TODO: seems it might be better to return the output points directly i.e. Vec<F>
+    //  feels like it will constrain the prover better. Don't make this change if you haven't
+    //  figured out a way to break it!!!!
     output_mle: MultiLinearPolynomial<F>,
     pub sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
