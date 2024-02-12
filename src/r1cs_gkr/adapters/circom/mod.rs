@@ -1,3 +1,7 @@
+mod cli_functions;
+
+// TODO: move into adpater.rs
+
 use crate::r1cs_gkr::constraint::{Constraint, Term};
 use crate::r1cs_gkr::program::R1CSProgram;
 use ark_circom::{CircomBuilder, CircomConfig};
