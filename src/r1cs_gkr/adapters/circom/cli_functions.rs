@@ -1,13 +1,17 @@
-use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use ark_ec::pairing::Pairing;
-use ark_ff::PrimeField;
+use ark_ff::{BigInt, PrimeField};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Number, Value};
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, process};
+use std::str::FromStr;
+use ark_serialize::CanonicalSerialize;
+use crate::r1cs_gkr::adapters::circom::CircomAdapter;
+use crate::r1cs_gkr::program::R1CSProgram;
+use crate::r1cs_gkr::proof::prove_circom_gkr;
 
 // TODO: add documentation
 fn file_name(source_file_path: &Path) -> String {
@@ -72,6 +76,7 @@ struct Witness {
 }
 
 // TODO: add documentation
+// TODO: fix considers 0 as empty string
 fn generate_witness<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>(
     source_file_path: &Path,
 ) {
@@ -132,12 +137,47 @@ fn read_input<F: PrimeField>(input_file_path: &Path) -> Vec<(String, F)> {
     inputs
 }
 
-fn prove(source_file_path: &Path) {
+fn read_witness<F: PrimeField>(witness_file_path: &Path) -> Vec<F> {
+    let file = File::open(witness_file_path).unwrap();
+    let reader = BufReader::new(file);
+
+    let json_data: Value = serde_json::from_reader(reader).unwrap();
+    let json_object = json_data.as_object().unwrap();
+
+    let mut witness_string_array = json_object.get("witness").unwrap().as_array().unwrap().to_owned();
+
+    let witness_field_elements = witness_string_array.into_iter().map(|val| {
+        let m = num_bigint::BigInt::from_str(val.as_str().unwrap()).unwrap();
+        F::from_be_bytes_mod_order(m.to_bytes_be().1.as_slice())
+    });
+
+    witness_field_elements.collect()
+}
+
+fn prove<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>(source_file_path: &Path) {
     // read witness
     // read .r1cs
     // use .r1cs to build circuit adapter to build r1csprogram
     // you can prove with r1cs program and witness
-    todo!()
+
+    let file_name = file_name(source_file_path);
+    let base_folder_path = base_folder(source_file_path);
+    let witness_path = base_folder_path.join("witness.json");
+    let r1cs_path = base_folder_path.join(format!("{}.r1cs", file_name));
+    let wtns_generator_file = base_folder_path.join(format!("{}_js/{}.wasm", file_name, file_name));
+
+    let witness: Vec<F> = read_witness(&witness_path);
+
+    let adapter = CircomAdapter::<E>::new(r1cs_path, wtns_generator_file);
+    let program: R1CSProgram<F> = (&adapter).into();
+
+    let proof = prove_circom_gkr(program, witness).unwrap();
+    let mut serialized_proof = vec![];
+    proof.serialize_uncompressed(&mut serialized_proof);
+
+    let mut proof_path = base_folder_path.join("proof.bin");
+    let mut proof_file = File::create(proof_path).expect("failed to create proof path");
+    proof_file.write_all(serialized_proof.as_slice()).expect("failed to write proof to file");
 }
 
 fn verify(source_file_path: &Path) {
@@ -149,15 +189,24 @@ mod tests {
     use super::*;
     use ark_bn254::{Bn254, Fr};
     use std::path::PathBuf;
+    use std::time::Instant;
 
     #[test]
     // TODO: test with temp folders
     fn test_cli_functions() {
-        let m = PathBuf::from(
-            "/Users/madab/Documents/projects/2023/thaler/src/r1cs_gkr/adapters/circom/test.circom",
+        // let p = PathBuf::from(
+        //     "/Users/madab/Documents/projects/2023/thaler/src/r1cs_gkr/adapters/circom/test.circom",
+        // );
+        let p = PathBuf::from(
+            "/Users/madab/Documents/projects/experiments/circom_experiments/circuits/add.circom"
         );
-        // compile(&m);
-        generate_witness::<Fr, Bn254>(&m);
+        // compile(&p);
+        // generate_witness::<Fr, Bn254>(&p);
+        let start_time = Instant::now();
+        prove::<Fr, Bn254>(&p);
+        let end_time = Instant::now();
+        let elapsed_time = end_time.duration_since(start_time);
+        println!("Elapsed time: {} secs", elapsed_time.as_secs());
     }
 }
 

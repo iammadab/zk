@@ -32,6 +32,8 @@ impl<F: PrimeField> R1CSProgram<F> {
             reduced_constraints.extend(constraint.reduce(&mut symbol_table))
         }
 
+        dbg!(reduced_constraints.len());
+
         (reduced_constraints, symbol_table)
     }
 }

@@ -7,7 +7,7 @@ use ark_ff::PrimeField;
 use std::collections::HashMap;
 
 /// Generate a GKR proof for a given R1CSProgram
-pub fn prove<F: PrimeField>(
+pub fn prove_circom_gkr<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
 ) -> Result<GKRProof<F>, &'static str> {
@@ -17,7 +17,7 @@ pub fn prove<F: PrimeField>(
 }
 
 /// Verify a GKR proof for a given R1CSProgram
-pub fn verify<F: PrimeField>(
+pub fn verify_circom_gkr<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
     proof: GKRProof<F>,
@@ -113,7 +113,7 @@ mod tests {
     use crate::r1cs_gkr::constraint::{Constraint, Term};
     use crate::r1cs_gkr::program::test::eq_3a_plus_5b;
     use crate::r1cs_gkr::program::R1CSProgram;
-    use crate::r1cs_gkr::proof::{prove, verify};
+    use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
     use std::ops::Neg;
@@ -135,9 +135,9 @@ mod tests {
         // a = 4
         // input structure [x, a]
         let witness = vec![Fr::from(2), Fr::from(4)];
-        let proof = prove(x_square(), witness.clone()).unwrap();
+        let proof = prove_circom_gkr(x_square(), witness.clone()).unwrap();
 
-        assert_eq!(verify(x_square(), witness, proof).unwrap(), true);
+        assert_eq!(verify_circom_gkr(x_square(), witness, proof).unwrap(), true);
     }
 
     #[test]
@@ -148,8 +148,8 @@ mod tests {
         // a = 4
         // input structure [x, a]
         let witness = vec![Fr::from(3), Fr::from(4)];
-        let proof = prove(x_square(), witness.clone()).unwrap();
-        assert_eq!(verify(x_square(), witness, proof).unwrap(), false);
+        let proof = prove_circom_gkr(x_square(), witness.clone()).unwrap();
+        assert_eq!(verify_circom_gkr(x_square(), witness, proof).unwrap(), false);
     }
 
     #[test]
@@ -163,8 +163,8 @@ mod tests {
         //  b = 27
         // input structure [x, a, b]
         let witness = vec![Fr::from(3), Fr::from(9), Fr::from(27)];
-        let proof = prove(x_cube(), witness.clone()).unwrap();
-        assert_eq!(verify(x_cube(), witness, proof).unwrap(), true);
+        let proof = prove_circom_gkr(x_cube(), witness.clone()).unwrap();
+        assert_eq!(verify_circom_gkr(x_cube(), witness, proof).unwrap(), true);
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
             Fr::from(6),
             Fr::from(15),
         ];
-        let proof = prove(eq_3a_plus_5b(), witness.clone()).unwrap();
-        assert_eq!(verify(eq_3a_plus_5b(), witness, proof).unwrap(), true);
+        let proof = prove_circom_gkr(eq_3a_plus_5b(), witness.clone()).unwrap();
+        assert_eq!(verify_circom_gkr(eq_3a_plus_5b(), witness, proof).unwrap(), true);
     }
 }
