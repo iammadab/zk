@@ -89,44 +89,51 @@ impl<'a> CLIFunctions<'a> {
         self.base_folder().join("proof.bin")
     }
 
-    //
-    //     // TODO: add documentation
-    // // TODO: return errors rather than unwrapping
-    //     fn compile(source_file_path: &Path) {
-    //         // TODO: ensure the source_file_path ends in .circom
-    //         let base_folder_path = base_folder(source_file_path);
-    //
-    //         // create the base folder if it doesn't exist
-    //         if !base_folder_path.exists() {
-    //             fs::create_dir(&base_folder_path).expect("failed to create base folder");
-    //         }
-    //
-    //         // compile the circom program
-    //         let _ = Command::new("circom")
-    //             .arg(source_file_path)
-    //             .arg("--r1cs")
-    //             .arg("--wasm")
-    //             .arg("--O0")
-    //             .arg("--output")
-    //             .arg(&base_folder_path)
-    //             .output()
-    //             .expect("circom command failed");
-    //
-    //         dbg!("creating json");
-    //         // create input.json file
-    //         let input_path = base_folder_path.join("input.json");
-    //         let mut input_file = File::create(input_path).expect("failed to create input file");
-    //         input_file
-    //             .write_all(b"{}")
-    //             .expect("failed to write json file");
-    //
-    //         // create witness.json file
-    //         let witness_path = base_folder_path.join("witness.json");
-    //         let mut witness_file = File::create(witness_path).expect("failed to create witness file");
-    //         witness_file
-    //             .write_all(b"{\"witness\": []}")
-    //             .expect("failed to write json file");
-    //     }
+    /// Create a new input.json file and write the empty object "{}"
+    fn write_empty_input(&self) -> Result<(), &'static str> {
+        let mut input_file =
+            File::create(self.input_path()).map_err(|_| "failed to create input.json file")?;
+        input_file
+            .write_all(b"{}")
+            .map_err(|_| "failed to write empty object to input.json")
+    }
+
+    /// Create new witness.jso file and write empty witness array "{ witness: [] }"
+    fn write_empty_witness(&self) -> Result<(), &'static str> {
+        let mut witness_file =
+            File::create(self.witness_path()).map_err(|_| "failed to create witness.json")?;
+        witness_file
+            .write_all(b"{\"witness\": []}")
+            .map_err(|_| "failed to write empty witness array to witness.json")
+    }
+
+    /// Compiles the circom source to .r1cs and .wasm
+    fn compile(&self) -> Result<(), &'static str> {
+        if !self.source_file_path.ends_with(".circom") {
+            return Err("source file must be a circom file");
+        }
+
+        if !self.base_folder().exists() {
+            fs::create_dir(&self.base_folder()).map_err(|_| "failed to create base folder")?;
+        }
+
+        // compile the circom program
+        let _ = Command::new("circom")
+            .arg(self.source_file_path)
+            .arg("--r1cs")
+            .arg("--wasm")
+            .arg("--O0")
+            .arg("--output")
+            .arg(self.base_folder())
+            .output()
+            .map_err(|_| "issue compiling source with circom compiler")?;
+
+        self.write_empty_input()?;
+        self.write_empty_witness()?;
+
+        Ok(())
+    }
+
     //
     //
     //     // TODO: add documentation
