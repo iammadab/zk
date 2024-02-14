@@ -3,15 +3,16 @@ use ark_ff::{BigInt, PrimeField};
 use serde::Serialize;
 use serde_json::{Number, Value};
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, process};
 use std::str::FromStr;
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+use crate::gkr::gkr::{GKRProof, GKRVerify};
 use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use crate::r1cs_gkr::program::R1CSProgram;
-use crate::r1cs_gkr::proof::prove_circom_gkr;
+use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
 
 // TODO: add documentation
 fn file_name(source_file_path: &Path) -> String {
@@ -180,8 +181,25 @@ fn prove<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>(s
     proof_file.write_all(serialized_proof.as_slice()).expect("failed to write proof to file");
 }
 
-fn verify(source_file_path: &Path) {
-    todo!()
+fn verify<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>(source_file_path: &Path) {
+    let file_name = file_name(source_file_path);
+    let base_folder_path = base_folder(source_file_path);
+    let proof_path = base_folder_path.join("proof.bin");
+
+    let wtns_generator_file = base_folder_path.join(format!("{}_js/{}.wasm", file_name, file_name));
+    let r1cs_path = base_folder_path.join(format!("{}.r1cs", file_name));
+
+    let adapter = CircomAdapter::<E>::new(r1cs_path, wtns_generator_file);
+    let program: R1CSProgram<F> = (&adapter).into();
+
+    let witness_path = base_folder_path.join("witness.json");
+    let witness: Vec<F> = read_witness(&witness_path);
+    let mut proof_file = File::open(proof_path).unwrap();
+    let mut proof_data = vec![];
+    proof_file.read_to_end(&mut proof_data);
+    let gkr_proof: GKRProof<F> = GKRProof::deserialize_uncompressed(Cursor::new(proof_data)).unwrap();
+
+    dbg!(verify_circom_gkr(program, witness, gkr_proof));
 }
 
 #[cfg(test)]
@@ -194,16 +212,17 @@ mod tests {
     #[test]
     // TODO: test with temp folders
     fn test_cli_functions() {
-        // let p = PathBuf::from(
-        //     "/Users/madab/Documents/projects/2023/thaler/src/r1cs_gkr/adapters/circom/test.circom",
-        // );
         let p = PathBuf::from(
-            "/Users/madab/Documents/projects/experiments/circom_experiments/circuits/add.circom"
+            "/Users/madab/Documents/projects/2023/thaler/src/r1cs_gkr/adapters/circom/test.circom",
         );
+        // let p = PathBuf::from(
+        //     "/Users/madab/Documents/projects/experiments/circom_experiments/circuits/add.circom"
+        // );
         // compile(&p);
         // generate_witness::<Fr, Bn254>(&p);
         let start_time = Instant::now();
-        prove::<Fr, Bn254>(&p);
+        // prove::<Fr, Bn254>(&p);
+        verify::<Fr, Bn254>(&p);
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
         println!("Elapsed time: {} secs", elapsed_time.as_secs());
