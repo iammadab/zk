@@ -149,7 +149,10 @@ mod tests {
         // input structure [x, a]
         let witness = vec![Fr::from(3), Fr::from(4)];
         let proof = prove_circom_gkr(x_square(), witness.clone()).unwrap();
-        assert_eq!(verify_circom_gkr(x_square(), witness, proof).unwrap(), false);
+        assert_eq!(
+            verify_circom_gkr(x_square(), witness, proof).unwrap(),
+            false
+        );
     }
 
     #[test]
@@ -191,6 +194,9 @@ mod tests {
             Fr::from(15),
         ];
         let proof = prove_circom_gkr(eq_3a_plus_5b(), witness.clone()).unwrap();
-        assert_eq!(verify_circom_gkr(eq_3a_plus_5b(), witness, proof).unwrap(), true);
+        assert_eq!(
+            verify_circom_gkr(eq_3a_plus_5b(), witness, proof).unwrap(),
+            true
+        );
     }
 }

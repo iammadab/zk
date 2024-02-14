@@ -105,6 +105,7 @@ mod tests {
     type Fr = <Bn254 as Pairing>::ScalarField;
 
     #[test]
+    // TODO: refactor this to use generated artifacts
     fn test_circom_adapter_with_proof() {
         let mut test_artifacts = PathBuf::from(file!())
             .parent()
