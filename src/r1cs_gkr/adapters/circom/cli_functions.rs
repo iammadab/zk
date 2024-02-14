@@ -134,6 +134,22 @@ impl<'a> CLIFunctions<'a> {
         Ok(())
     }
 
+    /// Generate circom witness from input
+    fn generate_witness(&self) -> Result<(), &'static str> {
+        // if no r1cs, witness generator or input file, perform compilation step
+        if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
+            self.compile()?
+        }
+
+        let input = self.read_input()?;
+        // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
+        // let witness = adapter.generate_witness(input).map_err(|_| "failed to generate witness from input, ensure you supplied the correct input")?;
+        // let witness_struct = serialize_witness(witness);
+        // let serialized_witness = serde_json::to_string()
+
+        todo!()
+    }
+
     //
     //
     //     // TODO: add documentation
