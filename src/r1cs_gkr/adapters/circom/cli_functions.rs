@@ -107,6 +107,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     }
 
     // TODO: deal with array based inputs
+    //  create issue
     /// Read and process the input.json file
     fn read_input(&self) -> Result<Vec<(String, F)>, &'static str> {
         let file = File::open(self.input_path()).map_err(|_| "failed to open input file")?;
@@ -122,6 +123,23 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
             .into_iter()
             .map(|(key, val)| json_value_to_field_element(val).map(|fe| (key.to_owned(), fe)))
             .collect::<Result<Vec<(String, F)>, &'static str>>()
+    }
+
+    /// Read and process the witness.json file
+    fn read_witness(&self) -> Result<Vec<F>, &'static str> {
+        let file = File::open(self.witness_path()).map_err(|_| "failed to open witness file")?;
+        let reader = BufReader::new(file);
+
+        let json_data: Value =
+            serde_json::from_reader(reader).map_err(|_| "corrupted data in witness.json")?;
+        let json_object = json_data
+            .as_array()
+            .ok_or("expect witness.json to contain a json object")?;
+
+        json_object
+            .into_iter()
+            .map(|val| json_value_to_field_element(val))
+            .collect::<Result<Vec<F>, &'static str>>()
     }
 
     /// Compiles the circom source to .r1cs and .wasm
@@ -185,7 +203,24 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
     /// Convert circom program to a gkr circuit and compute a proof with the witness
     fn prove(&self) -> Result<(), &'static str> {
-        todo!()
+        if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
+            self.compile()?
+        }
+
+        if !self.witness_path().exists() {
+            self.generate_witness()?;
+        }
+
+        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
+        let program: R1CSProgram<F> = (&adapter).into();
+        let witness = self.read_witness()?;
+
+        let proof = prove_circom_gkr(program, witness)?;
+
+        let mut serialized_proof = vec![];
+        proof.serialize_uncompressed(&mut serialized_proof);
+
+        write_file(&self.proof_path(), serialized_proof.as_slice())
     }
 
     //
@@ -407,7 +442,8 @@ mod tests {
             PathBuf::from("src/r1cs_gkr/adapters/circom/test_artifacts/program.circom");
         let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_path);
         // cli_functions.compile().unwrap();
-        cli_functions.generate_witness().unwrap();
+        // cli_functions.generate_witness().unwrap();
+        cli_functions.prove().unwrap();
     }
 }
 
