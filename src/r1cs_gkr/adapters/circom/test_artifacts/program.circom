@@ -1,29 +1,26 @@
 pragma circom 2.1.4;
 
-// Input : 'a',array of length 2 .
-// Output : 'c
-// Using a forLoop , add a[0] and a[1] , 4 times in a row .
+// Create a circuit which takes an input 'a',(array of length 2 ) , then  implement power modulo
+// and return it using output 'c'.
 
-template ForLoop() {
-    signal input a[2];
-    signal output c;
+// HINT: Non Quadratic constraints are not allowed.
 
-    signal sum;
-    signal repeated_sum[4];
+template Pow(power) {
+   signal input in;
+   signal exponentiation_trace[power];
+   signal output out;
 
-    sum <== a[0] + a[1];
-    repeated_sum[0] <== sum;
+   exponentiation_trace[0] <== in;
 
-    for (var i = 1; i <= 3; i++) {
-        repeated_sum[i] <== repeated_sum[i - 1] + sum;
-    }
+   for (var i = 1; i < power; i++) {
+      exponentiation_trace[i] <== exponentiation_trace[i-1] * in;
+   }
 
-    c <== repeated_sum[3];
+   out <== exponentiation_trace[power - 1];
 }
 
-component main = ForLoop();
-
+component main = Pow(4);
 
 /* INPUT = {
-    "a": ["2", "5"]
+    "in": "2"
 } */

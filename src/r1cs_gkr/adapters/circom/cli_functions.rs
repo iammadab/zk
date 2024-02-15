@@ -106,6 +106,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         write_file(&self.witness_path(), b"[]")
     }
 
+    // TODO: deal with array based inputs
     /// Read and process the input.json file
     fn read_input(&self) -> Result<Vec<(String, F)>, &'static str> {
         let file = File::open(self.input_path()).map_err(|_| "failed to open input file")?;
@@ -180,6 +181,11 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
                 .expect("this should not fail")
                 .as_bytes(),
         )
+    }
+
+    /// Convert circom program to a gkr circuit and compute a proof with the witness
+    fn prove(&self) -> Result<(), &'static str> {
+        todo!()
     }
 
     //
@@ -316,13 +322,13 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static str> {
     let val_str = val
         .as_str()
-        .ok_or("invalid input.json value: expected number")?;
+        .ok_or("invalid input.json expected number strings for value e.g. {\"a\": \"1\"}")?;
 
     if val_str == "" {
         return Ok(F::zero());
     }
 
-    let val_big_int = num_bigint::BigInt::from_str(val_str)
+    let val_big_int = num_bigint::BigInt::from_str(&val_str)
         .map_err(|_| "invalid input.json value: expected number")?;
 
     Ok(F::from_be_bytes_mod_order(
