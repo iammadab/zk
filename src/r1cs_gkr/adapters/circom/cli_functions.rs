@@ -109,6 +109,10 @@ impl<'a> CLIFunctions<'a> {
 
     /// Compiles the circom source to .r1cs and .wasm
     fn compile(&self) -> Result<(), &'static str> {
+        if self.source_file_path.exists() {
+            return Err("source file not found");
+        }
+
         if !self.source_file_path.ends_with(".circom") {
             return Err("source file must be a circom file");
         }
