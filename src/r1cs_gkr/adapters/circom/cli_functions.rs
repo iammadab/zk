@@ -175,6 +175,11 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         dbg!(input);
 
         let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
+        // let witness = adapter.generate_witness(input).map_err(|_| {
+        //     "failed to generate witness from input, ensure you supplied the correct witness"
+        // })?;
+
+        dbg!(F::zero().to_string());
 
         // let input = self.read_input()?;
         // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
@@ -320,8 +325,14 @@ fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static
     let val_str = val
         .as_str()
         .ok_or("invalid input.json value: expected number")?;
+
+    if val_str == "" {
+        return Ok(F::zero());
+    }
+
     let val_big_int = num_bigint::BigInt::from_str(val_str)
         .map_err(|_| "invalid input.json value: expected number")?;
+
     Ok(F::from_be_bytes_mod_order(
         val_big_int.to_bytes_be().1.as_slice(),
     ))
@@ -379,6 +390,8 @@ mod tests {
         );
         let field_element = json_value_to_field_element::<Fr>(&val_as_string).unwrap();
         assert_eq!(val_as_string, field_element.to_string());
+
+        assert_eq!(Fr::from(0), json_value_to_field_element(&Value::from("")).unwrap());
     }
 
     #[test]
