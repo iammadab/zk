@@ -6,7 +6,7 @@ use ark_ec::pairing::Pairing;
 use ark_ff::{BigInt, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use serde::Serialize;
-use serde_json::{Number, Value};
+use serde_json::{to_string, Number, Value};
 use std::fmt::format;
 use std::fs::File;
 use std::io::{stderr, BufReader, Cursor, Read, Write};
@@ -98,20 +98,12 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
     /// Create a new input.json file and write the empty object "{}"
     fn write_empty_input(&self) -> Result<(), &'static str> {
-        let mut input_file =
-            File::create(self.input_path()).map_err(|_| "failed to create input.json file")?;
-        input_file
-            .write_all(b"{}")
-            .map_err(|_| "failed to write empty object to input.json")
+        write_file(&self.input_path(), b"{}")
     }
 
-    /// Create new witness.jso file and write empty witness array "{ witness: [] }"
+    /// Create new witness.jso file and write empty witness array "[]"
     fn write_empty_witness(&self) -> Result<(), &'static str> {
-        let mut witness_file =
-            File::create(self.witness_path()).map_err(|_| "failed to create witness.json")?;
-        witness_file
-            .write_all(b"{\"witness\": []}")
-            .map_err(|_| "failed to write empty witness array to witness.json")
+        write_file(&self.witness_path(), b"[]")
     }
 
     /// Read and process the input.json file
@@ -172,22 +164,22 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
         // read and process the contents of the input.json file
         let input = self.read_input()?;
-        dbg!(input);
 
         let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
-        // let witness = adapter.generate_witness(input).map_err(|_| {
-        //     "failed to generate witness from input, ensure you supplied the correct witness"
-        // })?;
+        let witness = adapter.generate_witness(input).map_err(|_| {
+            "failed to generate witness from input, ensure you supplied the correct witness"
+        })?;
+        let witness_as_string = witness
+            .into_iter()
+            .map(|witness| witness.to_string())
+            .collect::<Vec<String>>();
 
-        dbg!(F::zero().to_string());
-
-        // let input = self.read_input()?;
-        // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
-        // let witness = adapter.generate_witness(input).map_err(|_| "failed to generate witness from input, ensure you supplied the correct input")?;
-        // let witness_struct = serialize_witness(witness);
-        // let serialized_witness = serde_json::to_string()
-
-        todo!()
+        write_file(
+            &self.witness_path(),
+            serde_json::to_string(&Value::from(witness_as_string))
+                .expect("this should not fail")
+                .as_bytes(),
+        )
     }
 
     //
@@ -338,6 +330,12 @@ fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static
     ))
 }
 
+/// Attempt to open a file at a specific path and overwrite it with some data
+fn write_file(file_path: &Path, data: &[u8]) -> Result<(), &'static str> {
+    let mut file = File::create(file_path).map_err(|_| "failed to create file")?;
+    file.write_all(data).map_err(|_| "failed to write to file")
+}
+
 #[cfg(test)]
 mod tests {
     use crate::r1cs_gkr::adapters::circom::cli_functions::{
@@ -391,7 +389,10 @@ mod tests {
         let field_element = json_value_to_field_element::<Fr>(&val_as_string).unwrap();
         assert_eq!(val_as_string, field_element.to_string());
 
-        assert_eq!(Fr::from(0), json_value_to_field_element(&Value::from("")).unwrap());
+        assert_eq!(
+            Fr::from(0),
+            json_value_to_field_element(&Value::from("")).unwrap()
+        );
     }
 
     #[test]

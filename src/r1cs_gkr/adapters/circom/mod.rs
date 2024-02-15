@@ -42,7 +42,9 @@ impl<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>> Circo
             });
 
         // generate the witness
-        let witness = self.builder.build().unwrap().witness
+        let witness = self.builder.build()
+            .map_err(|_| "failed to build the witness")?
+            .witness
             .ok_or("invalid input, ensure you pass all inputs defined by the circom source (they must also satisfy any relevant constraint)")?;
 
         // remove the first witness input
