@@ -1,37 +1,29 @@
-pragma circom 2.1.6;
+pragma circom 2.1.4;
 
-include "./node_modules/circomlib/circuits/comparators.circom";
+// Input : 'a',array of length 2 .
+// Output : 'c
+// Using a forLoop , add a[0] and a[1] , 4 times in a row .
 
-// Create a Quadratic Equation( ax^2 + bx + c ) verifier using the below data.
-// Use comparators.circom lib to compare results if equal
+template ForLoop() {
+    signal input a[2];
+    signal output c;
 
-template QuadraticEquation() {
-    signal input x;     // x value
-    signal input a;     // coeffecient of x^2
-    signal input b;     // coeffecient of x
-    signal input c;     // constant c in equation
-    signal input res;   // Expected result of the equation
-    signal output out;  // If res is correct , then return 1 , else 0 .
+    signal sum;
+    signal repeated_sum[4];
 
-    // your code here
-    signal x_squared <== x * x;
-    signal first_term <== a * x_squared;
-    signal second_term <== b * x;
-    signal partial_sum <== first_term + second_term;
+    sum <== a[0] + a[1];
+    repeated_sum[0] <== sum;
 
-    component equal = IsEqual();
-    equal.in[0] <== partial_sum + c;
-    equal.in[1] <== res;
+    for (var i = 1; i <= 3; i++) {
+        repeated_sum[i] <== repeated_sum[i - 1] + sum;
+    }
 
-    out <== equal.out;
+    c <== repeated_sum[3];
 }
 
-component main  = QuadraticEquation();
+component main = ForLoop();
+
 
 /* INPUT = {
-    "x": "2",
-    "a": "1",
-    "b": "5",
-    "c": "4",
-    "res": "18"
-} *
+    "a": ["2", "5"]
+} */

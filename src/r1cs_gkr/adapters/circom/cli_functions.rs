@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_json::{Number, Value};
 use std::fmt::format;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read, Write};
+use std::io::{BufReader, Cursor, Read, stderr, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -145,12 +145,13 @@ impl<'a, F: PrimeField> CLIFunctions<'a, F> {
 
         // compile the circom program
         let _ = Command::new("circom")
-            .arg(self.source_file_path)
+            .arg(&self.source_file_path)
             .arg("--r1cs")
             .arg("--wasm")
             .arg("--O0")
             .arg("--output")
-            .arg(self.base_folder())
+            .arg(&self.base_folder())
+            .stderr(stderr())
             .output()
             .map_err(|_| "issue compiling source with circom compiler")?;
 
@@ -162,12 +163,16 @@ impl<'a, F: PrimeField> CLIFunctions<'a, F> {
 
     /// Generate circom witness from input
     fn generate_witness(&self) -> Result<(), &'static str> {
+        dbg!(self.r1cs_path().exists());
+        dbg!(self.wasm_path().exists());
+        dbg!(self.input_path().exists());
         // if no r1cs, witness generator or input file, perform compilation step
         if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
             self.compile()?
         }
 
         let input = self.read_input()?;
+        dbg!(input);
 
         // let input = self.read_input()?;
         // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
