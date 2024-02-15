@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_json::{Number, Value};
 use std::fmt::format;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read, stderr, Write};
+use std::io::{stderr, BufReader, Cursor, Read, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -35,12 +35,14 @@ struct Witness {
     witness: Vec<String>,
 }
 
-struct CLIFunctions<'a, F> {
+struct CLIFunctions<'a, F, E> {
     source_file_path: &'a Path,
-    _marker: PhantomData<F>,
+    _marker: PhantomData<(F, E)>,
 }
 
-impl<'a, F: PrimeField> CLIFunctions<'a, F> {
+impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
+    CLIFunctions<'a, F, E>
+{
     /// Create new clifunctions from source file path
     fn new(source_file_path: &'a Path) -> Self {
         Self {
@@ -163,16 +165,16 @@ impl<'a, F: PrimeField> CLIFunctions<'a, F> {
 
     /// Generate circom witness from input
     fn generate_witness(&self) -> Result<(), &'static str> {
-        dbg!(self.r1cs_path().exists());
-        dbg!(self.wasm_path().exists());
-        dbg!(self.input_path().exists());
         // if no r1cs, witness generator or input file, perform compilation step
         if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
             self.compile()?
         }
 
+        // read and process the contents of the input.json file
         let input = self.read_input()?;
         dbg!(input);
+
+        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
 
         // let input = self.read_input()?;
         // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
@@ -330,7 +332,7 @@ mod tests {
     use crate::r1cs_gkr::adapters::circom::cli_functions::{
         json_value_to_field_element, CLIFunctions,
     };
-    use ark_bn254::Fr;
+    use ark_bn254::{Bn254, Fr};
     use serde_json::Value;
     use std::path::PathBuf;
 
@@ -341,7 +343,7 @@ mod tests {
         let source_path = test_artifacts + "/program.circom";
 
         let source_file_path = PathBuf::from(source_path);
-        let cli_functions = CLIFunctions::<Fr>::new(&source_file_path);
+        let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_file_path);
 
         assert_eq!(cli_functions.file_name(), "program");
         assert_eq!(
@@ -383,7 +385,7 @@ mod tests {
     fn fake_test() {
         let source_path =
             PathBuf::from("src/r1cs_gkr/adapters/circom/test_artifacts/program.circom");
-        let cli_functions = CLIFunctions::<Fr>::new(&source_path);
+        let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_path);
         // cli_functions.compile().unwrap();
         cli_functions.generate_witness().unwrap();
     }
