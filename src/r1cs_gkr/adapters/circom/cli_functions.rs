@@ -16,25 +16,6 @@ use std::process::Command;
 use std::str::FromStr;
 use std::{fs, process};
 
-// Refactor approach?
-// need dedicated functions for getting common file paths
-// file paths I care about are:
-//   r1cs, wasm, input, witness
-// will then create dedicated function for reading the contents of those files
-// this will allow proper cleaning of the cli functions
-// error handling should also be built in i.e. it should print to stderr directly
-//  - need an exit with message function
-
-// what does the cli function struct need?
-// guess the source file path
-
-// TODO: add documentation
-//  move to a better location
-#[derive(Serialize)]
-struct Witness {
-    witness: Vec<String>,
-}
-
 struct CLIFunctions<'a, F, E> {
     source_file_path: &'a Path,
     _marker: PhantomData<(F, E)>,
@@ -144,10 +125,14 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
     /// Read and process the proof.bin file
     fn read_proof(&self) -> Result<GKRProof<F>, &'static str> {
-        let mut proof_file = File::open(self.proof_path()).map_err(|_| "failed to open proof file")?;
+        let mut proof_file =
+            File::open(self.proof_path()).map_err(|_| "failed to open proof file")?;
         let mut proof_data = vec![];
-        proof_file.read_to_end(&mut proof_data).map_err(|_| "failed to read proof file")?;
-        GKRProof::deserialize_uncompressed(Cursor::new(proof_data)).map_err(|_| "failed to deserialize proof")
+        proof_file
+            .read_to_end(&mut proof_data)
+            .map_err(|_| "failed to read proof file")?;
+        GKRProof::deserialize_uncompressed(Cursor::new(proof_data))
+            .map_err(|_| "failed to deserialize proof")
     }
 
     /// Compiles the circom source to .r1cs and .wasm
@@ -205,7 +190,6 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         Ok((program, witness))
     }
 
-
     /// Generate circom witness from input
     fn generate_witness(&self) -> Result<(), &'static str> {
         // if no r1cs, witness generator or input file, perform compilation step
@@ -258,134 +242,6 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
         verify_circom_gkr(program, witness, proof)
     }
-
-    //
-    //
-    //     // TODO: add documentation
-    // // TODO: fix considers 0 as empty string
-    //     fn generate_witness<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField=F>>(
-    //         source_file_path: &Path,
-    //     ) {
-    //         let file_name = file_name(source_file_path);
-    //         let base_folder_path = base_folder(source_file_path);
-    //         let r1cs_file = base_folder_path.join(format!("{}.r1cs", file_name));
-    //         let wtns_generator_file = base_folder_path.join(format!("{}_js/{}.wasm", file_name, file_name));
-    //         let input_file = base_folder_path.join("input.json");
-    //
-    //         // if no r1cs file, witness generator or input file then perform compilation step
-    //         if !r1cs_file.exists() || !wtns_generator_file.exists() || !input_file.exists() {
-    //             compile(source_file_path)
-    //         }
-    //
-    //         // TODO: handle errors here
-    //         let input = read_input::<F>(&input_file);
-    //
-    //         let adapter = CircomAdapter::<E>::new(r1cs_file, wtns_generator_file);
-    //
-    //         let witness = adapter.generate_witness(input).unwrap();
-    //
-    //         let witness_as_strings = witness.into_iter().map(|v| v.to_string());
-    //
-    //         let witness_struct = Witness {
-    //             witness: witness_as_strings.collect(),
-    //         };
-    //
-    //         let serialized = serde_json::to_string(&witness_struct).unwrap();
-    //
-    //         let witness_path = base_folder_path.join("witness.json");
-    //         let mut witness_file = File::create(witness_path).expect("failed to create witness file");
-    //         witness_file
-    //             .write_all(serialized.as_bytes())
-    //             .expect("failed to write json file");
-    //     }
-    //
-    //     // TODO: add documentation
-    // // TODO: handle errors
-    //     fn read_input<F: PrimeField>(input_file_path: &Path) -> Vec<(String, F)> {
-    //         let file = File::open(input_file_path).unwrap();
-    //         let reader = BufReader::new(file);
-    //
-    //         let json_data: Value = serde_json::from_reader(reader).unwrap();
-    //         let json_object = json_data.as_object().unwrap();
-    //
-    //         let mut inputs = vec![];
-    //
-    //         for (key, value) in json_object {
-    //             if !value.is_number() {
-    //                 panic!("hello")
-    //             } else {
-    //                 let value_as_field_element =
-    //                     F::from(value.as_number().unwrap().as_u64().unwrap() as u128);
-    //                 inputs.push((key.to_owned(), value_as_field_element))
-    //             }
-    //         }
-    //
-    //         inputs
-    //     }
-    //
-    //     fn read_witness<F: PrimeField>(witness_file_path: &Path) -> Vec<F> {
-    //         let file = File::open(witness_file_path).unwrap();
-    //         let reader = BufReader::new(file);
-    //
-    //         let json_data: Value = serde_json::from_reader(reader).unwrap();
-    //         let json_object = json_data.as_object().unwrap();
-    //
-    //         let mut witness_string_array = json_object.get("witness").unwrap().as_array().unwrap().to_owned();
-    //
-    //         let witness_field_elements = witness_string_array.into_iter().map(|val| {
-    //             let m = num_bigint::BigInt::from_str(val.as_str().unwrap()).unwrap();
-    //             F::from_be_bytes_mod_order(m.to_bytes_be().1.as_slice())
-    //         });
-    //
-    //         witness_field_elements.collect()
-    //     }
-    //
-    //     fn prove<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField=F>>(source_file_path: &Path) {
-    //         // read witness
-    //         // read .r1cs
-    //         // use .r1cs to build circuit adapter to build r1csprogram
-    //         // you can prove with r1cs program and witness
-    //
-    //         let file_name = file_name(source_file_path);
-    //         let base_folder_path = base_folder(source_file_path);
-    //         let witness_path = base_folder_path.join("witness.json");
-    //         let r1cs_path = base_folder_path.join(format!("{}.r1cs", file_name));
-    //         let wtns_generator_file = base_folder_path.join(format!("{}_js/{}.wasm", file_name, file_name));
-    //
-    //         let witness: Vec<F> = read_witness(&witness_path);
-    //
-    //         let adapter = CircomAdapter::<E>::new(r1cs_path, wtns_generator_file);
-    //         let program: R1CSProgram<F> = (&adapter).into();
-    //
-    //         let proof = prove_circom_gkr(program, witness).unwrap();
-    //         let mut serialized_proof = vec![];
-    //         proof.serialize_uncompressed(&mut serialized_proof);
-    //
-    //         let mut proof_path = base_folder_path.join("proof.bin");
-    //         let mut proof_file = File::create(proof_path).expect("failed to create proof path");
-    //         proof_file.write_all(serialized_proof.as_slice()).expect("failed to write proof to file");
-    //     }
-    //
-    //     fn verify<F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField=F>>(source_file_path: &Path) {
-    //         let file_name = file_name(source_file_path);
-    //         let base_folder_path = base_folder(source_file_path);
-    //         let proof_path = base_folder_path.join("proof.bin");
-    //
-    //         let wtns_generator_file = base_folder_path.join(format!("{}_js/{}.wasm", file_name, file_name));
-    //         let r1cs_path = base_folder_path.join(format!("{}.r1cs", file_name));
-    //
-    //         let adapter = CircomAdapter::<E>::new(r1cs_path, wtns_generator_file);
-    //         let program: R1CSProgram<F> = (&adapter).into();
-    //
-    //         let witness_path = base_folder_path.join("witness.json");
-    //         let witness: Vec<F> = read_witness(&witness_path);
-    //         let mut proof_file = File::open(proof_path).unwrap();
-    //         let mut proof_data = vec![];
-    //         proof_file.read_to_end(&mut proof_data);
-    //         let gkr_proof: GKRProof<F> = GKRProof::deserialize_uncompressed(Cursor::new(proof_data)).unwrap();
-    //
-    //         dbg!(verify_circom_gkr(program, witness, gkr_proof));
-    //     }
 }
 
 /// Attempt to convert a json value to a field element
@@ -471,25 +327,4 @@ mod tests {
             json_value_to_field_element(&Value::from("")).unwrap()
         );
     }
-
-    #[test]
-    fn fake_test() {
-        let source_path =
-            PathBuf::from("src/r1cs_gkr/adapters/circom/test_artifacts/program.circom");
-        let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_path);
-        // cli_functions.compile().unwrap();
-        // cli_functions.generate_witness().unwrap();
-        // cli_functions.prove().unwrap();
-        dbg!(cli_functions.verify().unwrap());
-    }
 }
-
-// TODO: test vectors (cli tool should handle the following error in a nice way)
-//  point to a file that does not exist (done)
-//  point to a non-circom file (done)
-//  invalid input (bad data)
-//  invalid input (anything else e.g. incomplete)
-//  invalid witness
-//  incorrect witness
-//  invalid proof
-//  incorrect proof
