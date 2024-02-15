@@ -10,6 +10,7 @@ use serde_json::{Number, Value};
 use std::fmt::format;
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read, Write};
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
@@ -34,14 +35,18 @@ struct Witness {
     witness: Vec<String>,
 }
 
-struct CLIFunctions<'a> {
+struct CLIFunctions<'a, F> {
     source_file_path: &'a Path,
+    _marker: PhantomData<F>,
 }
 
-impl<'a> CLIFunctions<'a> {
+impl<'a, F: PrimeField> CLIFunctions<'a, F> {
     /// Create new clifunctions from source file path
     fn new(source_file_path: &'a Path) -> Self {
-        Self { source_file_path }
+        Self {
+            source_file_path,
+            _marker: PhantomData,
+        }
     }
 
     /// Returns the circom file name
@@ -107,13 +112,30 @@ impl<'a> CLIFunctions<'a> {
             .map_err(|_| "failed to write empty witness array to witness.json")
     }
 
+    /// Read and process the input.json file
+    fn read_input(&self) -> Result<Vec<(String, F)>, &'static str> {
+        let file = File::open(self.input_path()).map_err(|_| "failed to open input file")?;
+        let reader = BufReader::new(file);
+
+        let json_data: Value =
+            serde_json::from_reader(reader).map_err(|_| "corrupted data in input.json")?;
+        let json_object = json_data
+            .as_object()
+            .ok_or("expect input.json to contain a json object")?;
+
+        json_object
+            .into_iter()
+            .map(|(key, val)| json_value_to_field_element(val).map(|fe| (key.to_owned(), fe)))
+            .collect::<Result<Vec<(String, F)>, &'static str>>()
+    }
+
     /// Compiles the circom source to .r1cs and .wasm
     fn compile(&self) -> Result<(), &'static str> {
-        if self.source_file_path.exists() {
+        if !self.source_file_path.exists() {
             return Err("source file not found");
         }
 
-        if !self.source_file_path.ends_with(".circom") {
+        if !self.source_file_path.to_string_lossy().ends_with(".circom") {
             return Err("source file must be a circom file");
         }
 
@@ -146,6 +168,8 @@ impl<'a> CLIFunctions<'a> {
         }
 
         let input = self.read_input()?;
+
+        // let input = self.read_input()?;
         // let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
         // let witness = adapter.generate_witness(input).map_err(|_| "failed to generate witness from input, ensure you supplied the correct input")?;
         // let witness_struct = serialize_witness(witness);
@@ -283,9 +307,26 @@ impl<'a> CLIFunctions<'a> {
     //     }
 }
 
+/// Attempt to convert a json value to a field element
+/// return an error if not possible
+fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static str> {
+    let val_str = val
+        .as_str()
+        .ok_or("invalid input.json value: expected number")?;
+    let val_big_int = num_bigint::BigInt::from_str(val_str)
+        .map_err(|_| "invalid input.json value: expected number")?;
+    Ok(F::from_be_bytes_mod_order(
+        val_big_int.to_bytes_be().1.as_slice(),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::r1cs_gkr::adapters::circom::cli_functions::CLIFunctions;
+    use crate::r1cs_gkr::adapters::circom::cli_functions::{
+        json_value_to_field_element, CLIFunctions,
+    };
+    use ark_bn254::Fr;
+    use serde_json::Value;
     use std::path::PathBuf;
 
     #[test]
@@ -295,7 +336,7 @@ mod tests {
         let source_path = test_artifacts + "/program.circom";
 
         let source_file_path = PathBuf::from(source_path);
-        let cli_functions = CLIFunctions::new(&source_file_path);
+        let cli_functions = CLIFunctions::<Fr>::new(&source_file_path);
 
         assert_eq!(cli_functions.file_name(), "program");
         assert_eq!(
@@ -323,11 +364,29 @@ mod tests {
             base_folder.clone() + "/proof.bin"
         );
     }
+
+    #[test]
+    fn test_json_value_to_field_element() {
+        let val_as_string = Value::from(
+            "9824591917714408054315164033316029513904852844852789288956910420447629608399",
+        );
+        let field_element = json_value_to_field_element::<Fr>(&val_as_string).unwrap();
+        assert_eq!(val_as_string, field_element.to_string());
+    }
+
+    #[test]
+    fn fake_test() {
+        let source_path =
+            PathBuf::from("src/r1cs_gkr/adapters/circom/test_artifacts/program.circom");
+        let cli_functions = CLIFunctions::<Fr>::new(&source_path);
+        // cli_functions.compile().unwrap();
+        cli_functions.generate_witness().unwrap();
+    }
 }
 
 // TODO: test vectors (cli tool should handle the following error in a nice way)
-//  point to a file that does not exist
-//  point to a non-circom file
+//  point to a file that does not exist (done)
+//  point to a non-circom file (done)
 //  invalid input (bad data)
 //  invalid input (anything else e.g. incomplete)
 //  invalid witness
