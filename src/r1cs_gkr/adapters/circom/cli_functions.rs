@@ -142,6 +142,14 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
             .collect::<Result<Vec<F>, &'static str>>()
     }
 
+    /// Read and process the proof.bin file
+    fn read_proof(&self) -> Result<GKRProof<F>, &'static str> {
+        let mut proof_file = File::open(self.proof_path()).map_err(|_| "failed to open proof file")?;
+        let mut proof_data = vec![];
+        proof_file.read_to_end(&mut proof_data).map_err(|_| "failed to read proof file")?;
+        GKRProof::deserialize_uncompressed(Cursor::new(proof_data)).map_err(|_| "failed to deserialize proof")
+    }
+
     /// Compiles the circom source to .r1cs and .wasm
     fn compile(&self) -> Result<(), &'static str> {
         if !self.source_file_path.exists() {
@@ -174,6 +182,30 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         Ok(())
     }
 
+    /// Ensures that the compilation stage has occurred previously
+    fn guard(&self) -> Result<(), &'static str> {
+        // if no r1cs, witness generator or input file, perform compilation step
+        if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
+            self.compile()?;
+
+            if !self.witness_path().exists() {
+                return Err("insert input for witness generation");
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Converts the circom code to an R1CSProgram, also returns the witness
+    fn get_program_and_witness(&self) -> Result<(R1CSProgram<F>, Vec<F>), &'static str> {
+        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
+        let program: R1CSProgram<F> = (&adapter).into();
+        let witness = self.read_witness()?;
+
+        Ok((program, witness))
+    }
+
+
     /// Generate circom witness from input
     fn generate_witness(&self) -> Result<(), &'static str> {
         // if no r1cs, witness generator or input file, perform compilation step
@@ -203,17 +235,10 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
 
     /// Convert circom program to a gkr circuit and compute a proof with the witness
     fn prove(&self) -> Result<(), &'static str> {
-        if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
-            self.compile()?
-        }
+        // ensure we have the pre-requisites for proving
+        self.guard()?;
 
-        if !self.witness_path().exists() {
-            self.generate_witness()?;
-        }
-
-        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
-        let program: R1CSProgram<F> = (&adapter).into();
-        let witness = self.read_witness()?;
+        let (program, witness) = self.get_program_and_witness()?;
 
         let proof = prove_circom_gkr(program, witness)?;
 
@@ -221,6 +246,17 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         proof.serialize_uncompressed(&mut serialized_proof);
 
         write_file(&self.proof_path(), serialized_proof.as_slice())
+    }
+
+    /// Verify generate proof, for given program and witness
+    fn verify(&self) -> Result<bool, &'static str> {
+        // ensure we have the pre-requisites for proving
+        self.guard()?;
+
+        let (program, witness) = self.get_program_and_witness()?;
+        let proof = self.read_proof()?;
+
+        verify_circom_gkr(program, witness, proof)
     }
 
     //
@@ -443,7 +479,8 @@ mod tests {
         let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_path);
         // cli_functions.compile().unwrap();
         // cli_functions.generate_witness().unwrap();
-        cli_functions.prove().unwrap();
+        // cli_functions.prove().unwrap();
+        dbg!(cli_functions.verify().unwrap());
     }
 }
 
