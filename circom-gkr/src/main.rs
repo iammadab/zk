@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use clap::{command, Arg, Command, ArgMatches};
+use clap::{command, Arg, ArgMatches, Command};
 use crypto::r1cs_gkr::adapters::circom::cli_functions::CLIFunctions;
+use std::path::PathBuf;
 
 const SOURCE: &'static str = "source_file";
 
@@ -28,17 +28,32 @@ fn main() {
         .get_matches();
 
     match match_result.subcommand_name() {
-        Some("compile") => {
-            let source_path = get_source_file(match_result.subcommand_matches("compile").unwrap());
-            // let cli_functions = CLIFunctions::new(&source_path);
-            dbg!(source_path);
-            todo!()
-        },
-        Some("generate-witness") => {todo!()},
+        Some("compile") => run_cli_function(&match_result, "compile"),
+        Some("generate-witness") => run_cli_function(&match_result, "generate-witness"),
+        Some("prove") => run_cli_function(&match_result, "prove"),
+        Some("verify") => run_cli_function(&match_result, "verify"),
+        Some("prove-verify") => run_cli_function(&match_result, "prove-verify"),
         _ => {}
     }
 }
 
 fn get_source_file(matches: &ArgMatches) -> PathBuf {
-    matches.get_raw(SOURCE).unwrap().collect::<Vec<_>>()[0].clone().into()
+    matches.get_raw(SOURCE).unwrap().collect::<Vec<_>>()[0]
+        .clone()
+        .into()
+}
+
+fn run_cli_function(match_result: &ArgMatches, command: &str) {
+    let source_path = get_source_file(match_result.subcommand_matches(command).unwrap());
+    let cli_functions = CLIFunctions::new(&source_path);
+    let execution_result = match command {
+        "compile" => cli_functions.compile(),
+        "generate-witness" => cli_functions.generate_witness(),
+        "prove" => cli_functions.prove(),
+        "verify" => cli_functions.verify(),
+        "prove-verify" => cli_functions.prove().and_then(|()| cli_functions.verify()),
+        _ => unreachable!(),
+    };
+    // TODO: print as error (BIG RED!!)
+    dbg!(execution_result);
 }

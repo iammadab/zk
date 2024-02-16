@@ -2,6 +2,7 @@ use crate::gkr::gkr::{GKRProof, GKRVerify};
 use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use crate::r1cs_gkr::program::R1CSProgram;
 use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
+use ark_bn254::{Bn254, Fr};
 use ark_ec::pairing::Pairing;
 use ark_ff::{BigInt, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -15,20 +16,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::{fs, process};
-use ark_bn254::{Bn254, Fr};
 
 pub struct CLIFunctions<'a> {
     source_file_path: &'a Path,
 }
 
-impl<'a>
-    CLIFunctions<'a>
-{
+impl<'a> CLIFunctions<'a> {
     /// Create new clifunctions from source file path
     pub fn new(source_file_path: &'a Path) -> Self {
-        Self {
-            source_file_path,
-        }
+        Self { source_file_path }
     }
 
     /// Returns the circom file name
@@ -232,14 +228,21 @@ impl<'a>
     }
 
     /// Verify generate proof, for given program and witness
-    pub fn verify(&self) -> Result<bool, &'static str> {
+    pub fn verify(&self) -> Result<(), &'static str> {
         // ensure we have the pre-requisites for proving
         self.guard()?;
 
         let (program, witness) = self.get_program_and_witness()?;
         let proof = self.read_proof()?;
 
-        verify_circom_gkr(program, witness, proof)
+        // TODO: implement better logging
+        if verify_circom_gkr(program, witness, proof)? {
+            println!("verification successful");
+        } else {
+            println!("verfiication failed");
+        }
+
+        Ok(())
     }
 }
 
