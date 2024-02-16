@@ -6,6 +6,7 @@ use crate::sumcheck::util::{
 };
 use crate::transcript::Transcript;
 use ark_ff::{BigInteger, PrimeField};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use std::ops::Add;
 
 pub mod boolean_hypercube;
@@ -38,7 +39,7 @@ impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 /// Same as the sumcheck proof without the initial poly
 pub struct PartialSumcheckProof<F: PrimeField> {
     pub(crate) sum: F,

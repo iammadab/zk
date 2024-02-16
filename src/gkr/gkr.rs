@@ -7,9 +7,13 @@ use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::{PartialSumcheckProof, Sumcheck};
 use crate::transcript::Transcript;
 use ark_ff::PrimeField;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct GKRProof<F: PrimeField> {
+    // TODO: seems it might be better to return the output points directly i.e. Vec<F>
+    //  feels like it will constrain the prover better. Don't make this change if you haven't
+    //  figured out a way to break it!!!!
     output_mle: MultiLinearPolynomial<F>,
     pub sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
@@ -153,17 +157,45 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate::Gate;
-    use crate::gkr::gkr::{GKRProve, GKRVerify};
+    use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
     use crate::gkr::layer::Layer;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
+    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
+    use std::fs::read;
+    use std::io::Cursor;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
     #[generator = "3"]
     struct FqConfig;
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
+    #[test]
+    fn test_serialize_and_deserialize_gkrproof() {
+        let circuit = test_circuit();
+        let input = vec![
+            Fr::from(1),
+            Fr::from(2),
+            Fr::from(3),
+            Fr::from(4),
+            Fr::from(5),
+            Fr::from(6),
+            Fr::from(7),
+            Fr::from(8),
+        ];
+        let circut_eval = circuit.evaluate(input.clone()).unwrap();
+        let gkr_proof = GKRProve(test_circuit(), circut_eval).unwrap();
+
+        let mut serialized_gkr_proof = vec![];
+        gkr_proof.serialize_uncompressed(&mut serialized_gkr_proof);
+
+        let deserialized_gkr_proof: GKRProof<Fr> =
+            GKRProof::deserialize_compressed(Cursor::new(serialized_gkr_proof)).unwrap();
+
+        assert_eq!(deserialized_gkr_proof, gkr_proof);
+    }
 
     #[test]
     fn test_gkr() {

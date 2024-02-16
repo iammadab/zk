@@ -1,9 +1,10 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::{BigInteger, PrimeField};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use std::ops;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct UnivariatePolynomial<F: PrimeField> {
     /// Dense co-efficient representation of the polynomial
     /// lower degree co-efficients to higher degree co-efficients
