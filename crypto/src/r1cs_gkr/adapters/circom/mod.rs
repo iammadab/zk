@@ -107,11 +107,12 @@ mod tests {
     type Fr = <Bn254 as Pairing>::ScalarField;
 
     #[test]
-    // TODO: refactor this to use generated artifacts
     fn test_circom_adapter_with_proof() {
         let mut test_artifacts = PathBuf::from(file!())
             .parent()
             .expect("should have parent")
+            .strip_prefix("crypto")
+            .expect("should have crypto prefix")
             .join("test_artifacts");
         let r1cs = test_artifacts.join("test_circuit.r1cs");
         let wtns = test_artifacts.join("test_circuit.wasm");
