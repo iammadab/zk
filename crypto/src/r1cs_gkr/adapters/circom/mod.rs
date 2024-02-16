@@ -1,4 +1,4 @@
-mod cli_functions;
+pub mod cli_functions;
 
 // TODO: move into adpater.rs
 

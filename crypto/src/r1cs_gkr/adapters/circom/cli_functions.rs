@@ -15,20 +15,19 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 use std::{fs, process};
+use ark_bn254::{Bn254, Fr};
 
-struct CLIFunctions<'a, F, E> {
+pub struct CLIFunctions<'a> {
     source_file_path: &'a Path,
-    _marker: PhantomData<(F, E)>,
 }
 
-impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
-    CLIFunctions<'a, F, E>
+impl<'a>
+    CLIFunctions<'a>
 {
     /// Create new clifunctions from source file path
-    fn new(source_file_path: &'a Path) -> Self {
+    pub fn new(source_file_path: &'a Path) -> Self {
         Self {
             source_file_path,
-            _marker: PhantomData,
         }
     }
 
@@ -90,7 +89,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     // TODO: deal with array based inputs
     //  create issue
     /// Read and process the input.json file
-    fn read_input(&self) -> Result<Vec<(String, F)>, &'static str> {
+    fn read_input(&self) -> Result<Vec<(String, Fr)>, &'static str> {
         let file = File::open(self.input_path()).map_err(|_| "failed to open input file")?;
         let reader = BufReader::new(file);
 
@@ -103,11 +102,11 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         json_object
             .into_iter()
             .map(|(key, val)| json_value_to_field_element(val).map(|fe| (key.to_owned(), fe)))
-            .collect::<Result<Vec<(String, F)>, &'static str>>()
+            .collect::<Result<Vec<(String, Fr)>, &'static str>>()
     }
 
     /// Read and process the witness.json file
-    fn read_witness(&self) -> Result<Vec<F>, &'static str> {
+    fn read_witness(&self) -> Result<Vec<Fr>, &'static str> {
         let file = File::open(self.witness_path()).map_err(|_| "failed to open witness file")?;
         let reader = BufReader::new(file);
 
@@ -120,11 +119,11 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         json_object
             .into_iter()
             .map(|val| json_value_to_field_element(val))
-            .collect::<Result<Vec<F>, &'static str>>()
+            .collect::<Result<Vec<Fr>, &'static str>>()
     }
 
     /// Read and process the proof.bin file
-    fn read_proof(&self) -> Result<GKRProof<F>, &'static str> {
+    fn read_proof(&self) -> Result<GKRProof<Fr>, &'static str> {
         let mut proof_file =
             File::open(self.proof_path()).map_err(|_| "failed to open proof file")?;
         let mut proof_data = vec![];
@@ -136,7 +135,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     }
 
     /// Compiles the circom source to .r1cs and .wasm
-    fn compile(&self) -> Result<(), &'static str> {
+    pub fn compile(&self) -> Result<(), &'static str> {
         if !self.source_file_path.exists() {
             return Err("source file not found");
         }
@@ -182,16 +181,16 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     }
 
     /// Converts the circom code to an R1CSProgram, also returns the witness
-    fn get_program_and_witness(&self) -> Result<(R1CSProgram<F>, Vec<F>), &'static str> {
-        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
-        let program: R1CSProgram<F> = (&adapter).into();
+    fn get_program_and_witness(&self) -> Result<(R1CSProgram<Fr>, Vec<Fr>), &'static str> {
+        let adapter = CircomAdapter::<Bn254>::new(self.r1cs_path(), self.wasm_path());
+        let program: R1CSProgram<Fr> = (&adapter).into();
         let witness = self.read_witness()?;
 
         Ok((program, witness))
     }
 
     /// Generate circom witness from input
-    fn generate_witness(&self) -> Result<(), &'static str> {
+    pub fn generate_witness(&self) -> Result<(), &'static str> {
         // if no r1cs, witness generator or input file, perform compilation step
         if !self.r1cs_path().exists() || !self.wasm_path().exists() || !self.input_path().exists() {
             self.compile()?
@@ -200,7 +199,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
         // read and process the contents of the input.json file
         let input = self.read_input()?;
 
-        let adapter = CircomAdapter::<E>::new(self.r1cs_path(), self.wasm_path());
+        let adapter = CircomAdapter::<Bn254>::new(self.r1cs_path(), self.wasm_path());
         let witness = adapter.generate_witness(input).map_err(|_| {
             "failed to generate witness from input, ensure you supplied the correct witness"
         })?;
@@ -218,7 +217,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     }
 
     /// Convert circom program to a gkr circuit and compute a proof with the witness
-    fn prove(&self) -> Result<(), &'static str> {
+    pub fn prove(&self) -> Result<(), &'static str> {
         // ensure we have the pre-requisites for proving
         self.guard()?;
 
@@ -233,7 +232,7 @@ impl<'a, F: PrimeField + Into<ark_ff::BigInt<4>>, E: Pairing<ScalarField = F>>
     }
 
     /// Verify generate proof, for given program and witness
-    fn verify(&self) -> Result<bool, &'static str> {
+    pub fn verify(&self) -> Result<bool, &'static str> {
         // ensure we have the pre-requisites for proving
         self.guard()?;
 
@@ -285,7 +284,7 @@ mod tests {
         let source_path = test_artifacts + "/program.circom";
 
         let source_file_path = PathBuf::from(source_path);
-        let cli_functions = CLIFunctions::<Fr, Bn254>::new(&source_file_path);
+        let cli_functions = CLIFunctions::new(&source_file_path);
 
         assert_eq!(cli_functions.file_name(), "program");
         assert_eq!(

@@ -1,1 +1,1 @@
-mod circom;
+pub mod circom;

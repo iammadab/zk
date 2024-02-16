@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-    "crypto"
+    "circom-gkr",
+    "crypto",
 ]
