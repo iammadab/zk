@@ -72,6 +72,11 @@ impl<'a> CLIFunctions<'a> {
         self.base_folder().join("proof.bin")
     }
 
+    /// Returns the path to the proof hex file
+    fn proof_path_hex(&self) -> PathBuf {
+        self.base_folder().join("proof.hex")
+    }
+
     /// Create a new input.json file and write the empty object "{}"
     fn write_empty_input(&self) -> Result<(), &'static str> {
         write_file(&self.input_path(), b"{}")
@@ -159,6 +164,10 @@ impl<'a> CLIFunctions<'a> {
         self.write_empty_input()?;
         self.write_empty_witness()?;
 
+        println!("compilation successful");
+        println!("generated empty input.json");
+        println!("generated empty witness.json");
+
         Ok(())
     }
 
@@ -204,12 +213,17 @@ impl<'a> CLIFunctions<'a> {
             .map(|witness| witness.to_string())
             .collect::<Vec<String>>();
 
-        write_file(
+        let _ = write_file(
             &self.witness_path(),
             serde_json::to_string(&Value::from(witness_as_string))
                 .expect("this should not fail")
                 .as_bytes(),
-        )
+        )?;
+
+        println!("generated witness values");
+        println!("written to witness.json");
+
+        Ok(())
     }
 
     /// Convert circom program to a gkr circuit and compute a proof with the witness
@@ -224,7 +238,10 @@ impl<'a> CLIFunctions<'a> {
         let mut serialized_proof = vec![];
         proof.serialize_uncompressed(&mut serialized_proof);
 
-        write_file(&self.proof_path(), serialized_proof.as_slice())
+        let _ = write_file(&self.proof_path(), serialized_proof.as_slice());
+
+        let proof_hex = hex::encode(&serialized_proof);
+        write_file(&self.proof_path_hex(), proof_hex.as_bytes())
     }
 
     /// Verify generate proof, for given program and witness
@@ -235,11 +252,10 @@ impl<'a> CLIFunctions<'a> {
         let (program, witness) = self.get_program_and_witness()?;
         let proof = self.read_proof()?;
 
-        // TODO: implement better logging
         if verify_circom_gkr(program, witness, proof)? {
             println!("verification successful");
         } else {
-            println!("verfiication failed");
+            println!("verification failed");
         }
 
         Ok(())

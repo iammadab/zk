@@ -10,21 +10,21 @@ fn main() {
     let match_result = command!()
         .subcommand(
             Command::new("compile")
-                .about("uses circom cli to compile the circom source code")
+                .about("Uses circom cli to compile the circom source code")
                 .arg(source_file_arg.clone()),
         )
         .subcommand(
             Command::new("generate-witness")
-                .about("executes the circom program with inputs from the input.json to generate intermediate witness values")
+                .about("Executes the circom program with inputs from the input.json to generate intermediate witness values")
                 .arg(source_file_arg.clone()),
         )
-        .subcommand(Command::new("prove").about("generates gkr proof to prove constraint satisfaction").arg(source_file_arg.clone()))
+        .subcommand(Command::new("prove").about("Generates gkr proof to prove constraint satisfaction").arg(source_file_arg.clone()))
         .subcommand(
             Command::new("verify")
-                .about("verify generated gkr proof for constraint satisfaction")
+                .about("Verify generated gkr proof for constraint satisfaction")
                 .arg(source_file_arg.clone()),
         )
-        .subcommand(Command::new("prove-verify").about("prove and verify in one step").arg(source_file_arg))
+        .subcommand(Command::new("prove-verify").about("Prove and verify in one step").arg(source_file_arg))
         .get_matches();
 
     match match_result.subcommand_name() {
@@ -54,6 +54,8 @@ fn run_cli_function(match_result: &ArgMatches, command: &str) {
         "prove-verify" => cli_functions.prove().and_then(|()| cli_functions.verify()),
         _ => unreachable!(),
     };
-    // TODO: print as error (BIG RED!!)
-    dbg!(execution_result);
+
+    if let Err(err_msg) = execution_result {
+        println!("error: {}", err_msg);
+    }
 }

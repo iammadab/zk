@@ -824,6 +824,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "criterion 0.5.1",
+ "hex",
  "num-bigint",
  "rand",
  "serde",
