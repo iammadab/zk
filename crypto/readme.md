@@ -5,4 +5,4 @@ Implementations from Proofs, Arguments and Zero Knowledge
 - [Sumcheck](//sumcheck) ✅
 - [GKR](//gkr) ✅
 - [R1CS + GKR Backend](//r1cs_gkr) ✅
-  - [Circom Adapter]() (TODO)
+  - [Circom Adapter]() ✅
