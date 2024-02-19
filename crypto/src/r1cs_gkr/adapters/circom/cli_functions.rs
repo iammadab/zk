@@ -72,9 +72,9 @@ impl<'a> CLIFunctions<'a> {
         self.base_folder().join("proof.bin")
     }
 
-    /// Returns the path to the proof hex file
-    fn proof_path_hex(&self) -> PathBuf {
-        self.base_folder().join("proof.hex")
+    /// Returns the path to the proof json file
+    fn proof_path_json(&self) -> PathBuf {
+        self.base_folder().join("proof.json")
     }
 
     /// Create a new input.json file and write the empty object "{}"
@@ -240,8 +240,8 @@ impl<'a> CLIFunctions<'a> {
 
         let _ = write_file(&self.proof_path(), serialized_proof.as_slice());
 
-        let proof_hex = hex::encode(&serialized_proof);
-        write_file(&self.proof_path_hex(), proof_hex.as_bytes())
+        let proof_string = format!("{{\"proof\": \"{}\"}}", hex::encode(&serialized_proof));
+        write_file(&self.proof_path_json(), proof_string.as_bytes())
     }
 
     /// Verify generate proof, for given program and witness
