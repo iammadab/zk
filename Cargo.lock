@@ -538,7 +538,7 @@ name = "circom-gkr"
 version = "0.1.0"
 dependencies = [
  "clap 4.5.0",
- "crypto",
+ "protocols",
 ]
 
 [[package]]
@@ -810,27 +810,6 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
-
-[[package]]
-name = "crypto"
-version = "0.1.0"
-dependencies = [
- "ark-bls12-381",
- "ark-bn254",
- "ark-circom",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-serialize",
- "ark-std",
- "criterion 0.5.1",
- "hex",
- "num-bigint",
- "rand",
- "serde",
- "serde_json",
- "sha3",
-]
 
 [[package]]
 name = "crypto-bigint"
@@ -1869,6 +1848,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2422ad645d89c99f8f3e6b88a9fdeca7fabeac836b1002371c4367c8f984aae"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "protocols"
+version = "0.1.0"
+dependencies = [
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-circom",
+ "ark-ec",
+ "ark-ff",
+ "ark-poly",
+ "ark-serialize",
+ "ark-std",
+ "criterion 0.5.1",
+ "hex",
+ "num-bigint",
+ "rand",
+ "serde",
+ "serde_json",
+ "sha3",
 ]
 
 [[package]]
