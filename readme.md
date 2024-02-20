@@ -1,10 +1,10 @@
 ## Implementations from Proofs, Arguments and Zero Knowledge
 
 ### Status
-Pushing the currently implemented protocols to their performance limit (making this things fast 🚀).
+Pushing the currently implemented protocols to their performance limit (making these things fast 🚀).
 
 ### Crates
-[Protocols](Protocols): zk tooling and protocol implementation currently includes: 
+[Protocols](/protocols) - zk tooling and protocol implementation currently includes: 
 - uni poly, 
 - multilinear poly, 
 - sumcheck, 
@@ -12,4 +12,4 @@ Pushing the currently implemented protocols to their performance limit (making t
 - r1cs to gkr, 
 - circom adapater for r1cs to gkr.  
 
-[Circom GKR](Circom): CLI wrapper for circom+gkr prover / verifier. 
+[Circom GKR](/circom-gkr) -  CLI wrapper for circom+gkr prover / verifier. 
