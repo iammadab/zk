@@ -5,4 +5,4 @@
 - [Sumcheck](/protocols/src/sumcheck) ✅
 - [GKR](/protocols/src/gkr) ✅
 - [R1CS + GKR Backend](/protocols/src/r1cs_gkr) ✅
-  - [Circom Adapter](/protocols/src/r1cs_gkr/circom) ✅
+  - [Circom Adapter](/protocols/src/r1cs_gkr/adapters/circom) ✅
