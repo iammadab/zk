@@ -8,8 +8,29 @@ A constraint is an equation involving one or more terms
 e.g a + 2b = 5c + d. The constraint is satisfied if there exists values for a, b, c and d such that the LHS == RHS.
 
 ### Reduced Constraints
-Reduced constraints have a maximum of 3 terms usually of the form:
+Reduced constraints have exactly 3 terms and a single operation (addition or subtraction). Reduced constraints are of the following form:
 
-TermA + TermB = TermC  or
+term_a (op) term_b = term_c  (where op is either + or x)
 
-TermA + TermB = TermC
+### Constraint to Reduced Constraint
+
+
+### Reduced Constraints as a Circuit
+Recall each term is the product of some constant and a variable
+
+term_a (op) term_b = term_c   is equivalent to:
+
+const_a * var_a (op) const_b * var_b  = const_c * var_b
+
+The circuit needs to check that the relationship above holds:
+
+```text
+                                   +                               // output layer
+                    /                              \
+                  OP                                 x             // compute layer
+            /            \                     /             \
+          x               x                   x               x    // product layer
+      /      \        /       \           /        \       /     \
+ const_a   var_a const_b    var_b    const_c    var_c     1      -1
+```
+
