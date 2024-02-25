@@ -18,12 +18,12 @@ Reduced constraints have exactly 3 terms and a single operation (addition or sub
 
 term_a (op) term_b = term_c  (where op is either + or x)
 
-### Constraint to Reduced Constraint
+### Constraint to Reduced Constraint(s)
 
 ---
 
 
-### Reduced Constraints as a Circuit
+### Reduced Constraint as a Circuit
 
 ---
 Recall each term is the product of some constant and a variable
@@ -45,3 +45,11 @@ The circuit needs to check that the relationship above holds:
 ```
 
 If the output of the circuit is 0 then the constraint has been satisfied. 
+
+### Dealing with multiple reduced constraints
+
+---
+Each reduced constraint is converted into a circuit and each circuit is laid side by side in a row. Leading to a circuit that 
+has n outputs (where n is the number of constraints).
+
+All constraints are satisfied if all outputs are zeros. GKR is used to prove this combined circuit with an additional zero check during verification.
