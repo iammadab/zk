@@ -1,5 +1,4 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
-use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use crate::sumcheck::util::{
     partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
@@ -168,7 +167,7 @@ impl Sumcheck {
                 .unwrap();
             initial_poly_eval == subclaim.sum
         } else {
-            return false;
+            false
         }
     }
 

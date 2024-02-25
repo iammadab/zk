@@ -1,9 +1,7 @@
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
-use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
-use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::multilinear_poly::selector_from_position;
 use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
-use crate::transcript::Transcript;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::PrimeField;
 use std::ops::Add;
 
 // TODO: there is an optimization that prevents you from having to do this all the rounds
