@@ -18,11 +18,6 @@ Reduced constraints have exactly 3 terms and a single operation (addition or sub
 
 term_a (op) term_b = term_c  (where op is either + or x)
 
-### Constraint to Reduced Constraint(s)
-
----
-TODO
-
 
 ### Reduced Constraint as a Circuit
 
