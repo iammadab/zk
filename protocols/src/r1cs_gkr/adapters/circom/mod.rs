@@ -111,8 +111,8 @@ mod tests {
         let mut test_artifacts = PathBuf::from(file!())
             .parent()
             .expect("should have parent")
-            .strip_prefix("crypto")
-            .expect("should have crypto prefix")
+            .strip_prefix("protocols")
+            .expect("should have protocols prefix")
             .join("test_artifacts");
         let r1cs = test_artifacts.join("test_circuit.r1cs");
         let wtns = test_artifacts.join("test_circuit.wasm");

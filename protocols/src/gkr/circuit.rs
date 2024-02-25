@@ -1,7 +1,6 @@
 use crate::gkr::layer::Layer;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use ark_ff::PrimeField;
-use ark_std::iterable::Iterable;
 use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers

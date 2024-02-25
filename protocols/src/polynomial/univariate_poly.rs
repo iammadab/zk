@@ -86,11 +86,11 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
 
     /// return the degree of a polynomial
     fn degree(&self) -> usize {
-        return if self.coefficients.is_empty() {
+        if self.coefficients.is_empty() {
             0
         } else {
             self.coefficients.len() - 1
-        };
+        }
     }
 
     /// Additive identity poly

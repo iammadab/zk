@@ -2,7 +2,6 @@ use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::iterable::Iterable;
 use std::collections::BTreeMap;
 use std::ops::{Add, Mul};
 
