@@ -336,7 +336,7 @@ mod test {
 
         // construct relevant mles
         // add and mul mle from layer 1, (a, b, c) -> (len(1), len(2), len(2)) -> 5 total variables
-        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         // w_mle from layer 2 with len(2)
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
@@ -369,7 +369,7 @@ mod test {
     fn test_partial_evaluation() {
         let (circuit, circuit_eval) = evaluated_circuit();
 
-        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
         let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
@@ -413,7 +413,7 @@ mod test {
     fn test_to_univariate() {
         let (circuit, circuit_eval) = evaluated_circuit();
 
-        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
         let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
@@ -445,7 +445,7 @@ mod test {
     #[test]
     fn test_sum_check_eval() {
         let (circuit, circuit_eval) = evaluated_circuit();
-        let [add_1, mul_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
+        let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
         let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(0)], add_1, mul_1, w_2).unwrap();
 

@@ -42,7 +42,7 @@ pub fn GKRProve<F: PrimeField>(
     // f(b, c) = add(r, b, c)(w_i(b) + w_i(c)) + mul(r, b, c)(w_i(b) * w_i(c))
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
-        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
+        let [add_mle, mul_mle, exp_98_mle] = circuit.add_mul_mle(layer_index - 1)?;
         let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
         let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
 
@@ -121,7 +121,7 @@ pub fn GKRVerify<F: PrimeField>(
         }
 
         let (b, c) = subclaim.challenges.split_at(subclaim.challenges.len() / 2);
-        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index)?;
+        let [add_mle, mul_mle, exp_98_mle] = circuit.add_mul_mle(layer_index)?;
         let mut rbc = r.clone();
         rbc.extend(&subclaim.challenges);
 
@@ -250,11 +250,12 @@ mod test {
 
     #[test]
     fn test_output_zero_gkr() {
-        let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)]);
-        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 1, 2)]);
+        let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 1, 2)], vec![]);
         let layer_2 = Layer::new(
             vec![Gate::new(0, 0, 1), Gate::new(2, 4, 5)],
             vec![Gate::new(1, 2, 3)],
+            vec![]
         );
 
         let circuit = Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap();
