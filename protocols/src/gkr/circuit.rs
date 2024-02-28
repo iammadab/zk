@@ -48,7 +48,8 @@ impl Circuit {
 
             // exp_98 evaluations
             for wire in &layer.exp_98_gates {
-                layer_evaluations[wire.out] = (current_layer_input[wire.in_a] + current_layer_input[wire.in_b]).pow([98]);
+                layer_evaluations[wire.out] =
+                    (current_layer_input[wire.in_a] + current_layer_input[wire.in_b]).pow([98]);
             }
 
             current_layer_input = layer_evaluations.clone();
@@ -154,7 +155,7 @@ pub mod tests {
         let layer_2 = Layer::new(
             vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
             vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
-            vec![]
+            vec![],
         );
         Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
     }
@@ -169,7 +170,7 @@ pub mod tests {
                 Gate::new(2, 4, 5),
                 Gate::new(3, 6, 7),
             ],
-            vec![]
+            vec![],
         );
         let layer_2 = Layer::new(
             vec![],
@@ -183,7 +184,7 @@ pub mod tests {
                 Gate::new(6, 3, 0),
                 Gate::new(7, 0, 5),
             ],
-            vec![]
+            vec![],
         );
         Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
     }
@@ -307,7 +308,8 @@ pub mod tests {
         // circuit has 3 layers
 
         // layer 0 - output layer
-        let [add_0, mult_0, exp_98_0]: [MultiLinearPolynomial<Fr>; 3] = circuit.add_mul_mle(0).unwrap();
+        let [add_0, mult_0, exp_98_0]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(0).unwrap();
         // the number of variables for the add function should be 3
         assert_eq!(add_0.n_vars(), 3);
         // the number of variables for the mul function should be 0
@@ -326,7 +328,8 @@ pub mod tests {
         assert_eq!(sum_over_boolean_hyper_cube(&mult_0), Fr::from(0));
 
         // layer 1
-        let [add_1, mult_1, exp_98_1]: [MultiLinearPolynomial<Fr>; 3] = circuit.add_mul_mle(1).unwrap();
+        let [add_1, mult_1, exp_98_1]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(1).unwrap();
         // number of variables for add should be 5 (1 for current layer, then 2 each for next layer)
         assert_eq!(add_1.n_vars(), 5);
         // number of variables for mul should also be 5
@@ -363,7 +366,8 @@ pub mod tests {
         );
 
         // layer 2
-        let [add_2, mult_2, exp_98_2]: [MultiLinearPolynomial<Fr>; 3] = circuit.add_mul_mle(2).unwrap();
+        let [add_2, mult_2, exp_98_2]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(2).unwrap();
         // number of variables for add should be 8 (2 for current layer, then 3 each for next layer)
         assert_eq!(add_2.n_vars(), 8);
         // number of variables for mul should also be 8
@@ -485,8 +489,10 @@ pub mod tests {
         //  /   \    /   \
         // a     b  c     d
 
-        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
-        let circuit_b = Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![], vec![])]).unwrap();
+        let circuit_a =
+            Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
+        let circuit_b =
+            Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![], vec![])]).unwrap();
 
         // c = a + b
         let circuit_c = (circuit_a + circuit_b).unwrap();
@@ -500,7 +506,8 @@ pub mod tests {
 
     #[test]
     fn test_circuit_additive_identity() {
-        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
+        let circuit_a =
+            Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
         let circuit_b = Circuit::additive_identity(1);
         let circuit_c = (circuit_a.clone() + circuit_b).unwrap();
         assert_eq!(circuit_c, circuit_a);

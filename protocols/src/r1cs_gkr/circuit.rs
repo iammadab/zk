@@ -74,7 +74,7 @@ fn constraint_circuit<F: PrimeField>(
     let sign_layer = Layer::new(
         vec![],
         vec![a_mul_gate, b_mul_gate, c_mul_gate, minus_1_gate],
-        vec![]
+        vec![],
     );
 
     // compute layer

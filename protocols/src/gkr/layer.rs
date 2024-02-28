@@ -21,7 +21,7 @@ impl Layer {
             len: add_gates.len() + mul_gates.len() + exp_98_gates.len(),
             add_gates,
             mul_gates,
-            exp_98_gates
+            exp_98_gates,
         }
     }
 
@@ -49,7 +49,9 @@ impl Layer {
             .map(|gate| gate.in_a.max(gate.in_b) as isize)
             .max()
             .unwrap_or(-1);
-        max_add_gate_index.max(max_mul_gate_index).max(max_exp_98_gate_index)
+        max_add_gate_index
+            .max(max_mul_gate_index)
+            .max(max_exp_98_gate_index)
     }
 
     /// Generate the add_i and mult_i multilinear extension polynomials for the current layer
@@ -88,7 +90,7 @@ impl Layer {
                 let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
                 let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
                 (&acc + &gate_bit_checker).unwrap()
-            }
+            },
         );
 
         [add_mle, mult_mle, exp_98_mle]
@@ -114,7 +116,7 @@ mod test {
                 Gate::new(6, 3, 0),
                 Gate::new(7, 0, 5),
             ],
-            vec![]
+            vec![],
         );
         assert_eq!(layer.max_input_index(), 6);
 

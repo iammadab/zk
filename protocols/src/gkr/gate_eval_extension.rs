@@ -16,6 +16,7 @@ pub struct GateEvalExtension<F: PrimeField> {
     r: Vec<F>,
     add_mle: Vec<MultiLinearPolynomial<F>>,
     mul_mle: Vec<MultiLinearPolynomial<F>>,
+    exp_98_mle: Vec<MultiLinearPolynomial<F>>,
     w_b_mle: Vec<MultiLinearPolynomial<F>>,
     w_c_mle: Vec<MultiLinearPolynomial<F>>,
 }
@@ -25,6 +26,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
         r: Vec<F>,
         add_mle: MultiLinearPolynomial<F>,
         mul_mle: MultiLinearPolynomial<F>,
+        exp_98_mle: MultiLinearPolynomial<F>,
         w_mle: MultiLinearPolynomial<F>,
     ) -> Result<Self, &'static str> {
         // add_mle and mul_mle must have the same variable length
@@ -44,7 +46,10 @@ impl<F: PrimeField> GateEvalExtension<F> {
         // so total number of variables in selector_mle = len(r) + 2*len(w_mle)
 
         // have to get max because it's possible for one of them to be 0
-        let selector_var_count = add_mle.n_vars().max(mul_mle.n_vars());
+        let selector_var_count = add_mle
+            .n_vars()
+            .max(mul_mle.n_vars())
+            .max(exp_98_mle.n_vars());
 
         if selector_var_count < 2 * w_mle.n_vars() {
             return Err("selector mle is less than 2 * w_mle, invalid mle's");
@@ -58,6 +63,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
             r,
             add_mle: vec![add_mle],
             mul_mle: vec![mul_mle],
+            exp_98_mle: vec![exp_98_mle],
             w_b_mle: vec![w_mle.clone()],
             w_c_mle: vec![w_mle],
         })
@@ -67,6 +73,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
         if self.r.is_empty()
             && self.add_mle.is_empty()
             && self.mul_mle.is_empty()
+            && self.exp_98_mle.is_empty()
             && self.w_b_mle.is_empty()
             && self.w_c_mle.is_empty()
         {
@@ -114,8 +121,10 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
 
             let add_result = self.add_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
             let mul_result = self.mul_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
+            let exp_98_result =
+                self.exp_98_mle[i].evaluate(rbc.as_slice()).unwrap() * ((b_val + c_val).pow([98]));
 
-            evaluation_result += add_result + mul_result;
+            evaluation_result += add_result + mul_result + exp_98_result;
         }
 
         Ok(evaluation_result)
@@ -163,6 +172,7 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
                 result.add_mle[i].partial_evaluate(rbc_partial_assignments.as_slice())?;
             result.mul_mle[i] =
                 result.mul_mle[i].partial_evaluate(rbc_partial_assignments.as_slice())?;
+            result.exp_98_mle[i] = result.exp_98_mle[i].partial_evaluate(rbc_partial_assignments.as_slice())?;
 
             result.w_b_mle[i] =
                 result.w_b_mle[i].partial_evaluate(b_partial_assignments.as_slice())?;
@@ -201,6 +211,11 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
                 .partial_evaluate(r_assignments.as_slice())?
                 .relabel()
                 .to_univariate()?;
+            let exp_98_mle_uni = self.exp_98_mle[i]
+                .partial_evaluate(r_assignments.as_slice())?
+                .relabel()
+                .to_univariate()?;
+
             // TODO: do we need to relabel here
             //  figure out if you need to
             let w_b_uni = self.w_b_mle[i].to_univariate()?;
@@ -208,7 +223,12 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
 
             let add_result_uni = &add_mle_uni * &(&w_b_uni + &w_c_uni);
             let mul_result_uni = &mul_mle_uni * &(&w_b_uni * &w_c_uni);
+            let b_plus_c_exp_98 = (0..98).fold(UnivariatePolynomial::<F>::multiplicative_identity(), |acc, _| {
+               &acc * &(&w_b_uni + &w_c_uni)
+            });
+            let exp_98_result_uni = &exp_98_mle_uni * &b_plus_c_exp_98;
             let f_x = &add_result_uni + &mul_result_uni;
+            let f_x = &f_x + &exp_98_result_uni;
 
             result = &result + &f_x;
         }
@@ -221,6 +241,7 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             r: self.r,
             add_mle: self.add_mle.into_iter().map(|p| p.relabel()).collect(),
             mul_mle: self.mul_mle.into_iter().map(|p| p.relabel()).collect(),
+            exp_98_mle: self.exp_98_mle.into_iter().map(|p| p.relabel()).collect(),
             w_b_mle: self.w_b_mle.into_iter().map(|p| p.relabel()).collect(),
             w_c_mle: self.w_c_mle.into_iter().map(|p| p.relabel()).collect(),
         }
@@ -231,6 +252,7 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             r: vec![],
             add_mle: vec![],
             mul_mle: vec![],
+            exp_98_mle: vec![],
             w_b_mle: vec![],
             w_c_mle: vec![],
         }
@@ -245,6 +267,9 @@ impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
             .iter()
             .for_each(|p| result.extend(p.to_bytes()));
         self.mul_mle
+            .iter()
+            .for_each(|p| result.extend(p.to_bytes()));
+        self.exp_98_mle
             .iter()
             .for_each(|p| result.extend(p.to_bytes()));
         self.w_b_mle
@@ -283,6 +308,9 @@ impl<F: PrimeField> Add for &GateEvalExtension<F> {
         let mut new_mul_mle = self.mul_mle.clone();
         new_mul_mle.extend(rhs.mul_mle.clone());
 
+        let mut new_exp_98_mle = self.exp_98_mle.clone();
+        new_exp_98_mle.extend(rhs.exp_98_mle.clone());
+
         let mut new_w_b_mle = self.w_b_mle.clone();
         new_w_b_mle.extend(rhs.w_b_mle.clone());
 
@@ -293,6 +321,7 @@ impl<F: PrimeField> Add for &GateEvalExtension<F> {
             r: self.r.clone(),
             add_mle: new_add_mle,
             mul_mle: new_mul_mle,
+            exp_98_mle: new_exp_98_mle,
             w_b_mle: new_w_b_mle,
             w_c_mle: new_w_c_mle,
         })
@@ -303,7 +332,9 @@ impl<F: PrimeField> Add for &GateEvalExtension<F> {
 mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
+    use crate::gkr::gate::Gate;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
+    use crate::gkr::layer::Layer;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::{
@@ -312,8 +343,6 @@ mod test {
     use crate::sumcheck::{Sumcheck, SumcheckProof};
     use ark_bls12_381::Fr;
     use ark_ff::Field;
-    use crate::gkr::gate::Gate;
-    use crate::gkr::layer::Layer;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
         // construct and evaluate circuit
@@ -344,9 +373,14 @@ mod test {
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
         // setting r = 0
-        let gate_eval_ext =
-            GateEvalExtension::new(vec![Fr::from(0)], add_1.clone(), mul_1.clone(), w_2.clone())
-                .unwrap();
+        let gate_eval_ext = GateEvalExtension::new(
+            vec![Fr::from(0)],
+            add_1.clone(),
+            mul_1.clone(),
+            exp_1.clone(),
+            w_2.clone(),
+        )
+        .unwrap();
         // eval at b = 0 and c = 1, expected result = 14
         assert_eq!(
             gate_eval_ext
@@ -357,7 +391,8 @@ mod test {
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
         // setting r = 1
-        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(1)], add_1, mul_1, w_2).unwrap();
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(1)], add_1, mul_1, exp_1, w_2).unwrap();
         // eval at b = 2, and c = 3, expected result = 165
         assert_eq!(
             gate_eval_ext
@@ -371,14 +406,14 @@ mod test {
     #[test]
     fn test_gate_eval_extension_custom_gate() {
         // sample circuit evaluation
-        //     (5^98 + 20)(+)    - layer 0
+        //   ((5^98 + 20)^98)(exp_98)    - layer 0
         //         /     \
         // 5^98(exp_98)   20(*) - layer 1
         //      /   \    /  \
         //     2     3  4    5
 
         // instantiate circuit
-        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
+        let layer_0 = Layer::new(vec![], vec![], vec![Gate::new(0, 0, 1)]);
         assert_eq!(layer_0.len(), 1);
 
         let layer_1 = Layer::new(vec![], vec![Gate::new(1, 2, 3)], vec![Gate::new(0, 0, 1)]);
@@ -392,22 +427,32 @@ mod test {
 
         let five_exp_98 = Fr::from(5).pow([98]);
         let five_exp_98_plus_20 = five_exp_98 + Fr::from(20);
+        let five_exp_98_plus_20_all_exp_98 = five_exp_98_plus_20.pow([98]);
 
         // want to express the output as a function of the exp_98 / mul layer
         let [add_0, mul_0, exp_0] = circuit.add_mul_mle::<Fr>(0).unwrap();
         let w_1 = Circuit::w(circuit_eval.as_slice(), 1).unwrap();
 
         // setting r = 0
-        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(0)], add_0, mul_0, w_1).unwrap();
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(0)], add_0, mul_0, exp_0, w_1).unwrap();
         // eval at b = 0 and c = 1, expected result is five_exp_98_plus_20
         assert_eq!(
             gate_eval_ext.evaluate(&[Fr::from(0), Fr::from(1)]).unwrap(),
-            five_exp_98_plus_20
+            five_exp_98_plus_20_all_exp_98
         );
         // sum over the boolean hypercube should have the same result as the output has only one gate
         assert_eq!(
             sum_over_boolean_hyper_cube(&gate_eval_ext),
-            five_exp_98_plus_20
+            five_exp_98_plus_20_all_exp_98
+        );
+        // ensure partial eval works
+        let after_skip_first = skip_first_var_then_sum_over_boolean_hypercube(gate_eval_ext)
+            .to_univariate()
+            .unwrap();
+        assert_eq!(
+            after_skip_first.evaluate(&Fr::from(0)) + after_skip_first.evaluate(&Fr::from(1)),
+            five_exp_98_plus_20_all_exp_98
         );
     }
 
@@ -418,7 +463,8 @@ mod test {
         let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
-        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, exp_1, w_2).unwrap();
         assert_eq!(gate_eval_ext.n_vars(), 4);
 
         // first we perform a full evaluation to get the expected result
@@ -462,7 +508,8 @@ mod test {
         let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
 
-        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, w_2).unwrap();
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(10)], add_1, mul_1, exp_1, w_2).unwrap();
         assert_eq!(gate_eval_ext.n_vars(), 4);
 
         // eval b1, c1, and c2
@@ -493,7 +540,8 @@ mod test {
         let (circuit, circuit_eval) = evaluated_circuit();
         let [add_1, mul_1, exp_1] = circuit.add_mul_mle::<Fr>(1).unwrap();
         let w_2 = Circuit::w(circuit_eval.as_slice(), 2).unwrap();
-        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(0)], add_1, mul_1, w_2).unwrap();
+        let gate_eval_ext =
+            GateEvalExtension::new(vec![Fr::from(0)], add_1, mul_1, exp_1, w_2).unwrap();
 
         // sum over boolean hypercube = 14
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
