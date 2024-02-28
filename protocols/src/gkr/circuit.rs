@@ -46,6 +46,12 @@ impl Circuit {
                     current_layer_input[wire.in_a] * current_layer_input[wire.in_b];
             }
 
+            // exp_98 evaluations
+            for wire in &layer.exp_98_gates {
+                layer_evaluations[wire.out] =
+                    (current_layer_input[wire.in_a] + current_layer_input[wire.in_b]).pow([98]);
+            }
+
             current_layer_input = layer_evaluations.clone();
 
             evaluations.push(layer_evaluations);
@@ -77,7 +83,7 @@ impl Circuit {
     pub fn add_mul_mle<F: PrimeField>(
         &self,
         layer_index: usize,
-    ) -> Result<[MultiLinearPolynomial<F>; 2], &'static str> {
+    ) -> Result<[MultiLinearPolynomial<F>; 3], &'static str> {
         if layer_index >= self.layers.len() {
             return Err("invalid layer index");
         }
@@ -98,7 +104,7 @@ impl Circuit {
     pub fn additive_identity(no_of_layers: usize) -> Self {
         Self::new(
             (0..no_of_layers)
-                .map(|_| Layer::new(vec![], vec![]))
+                .map(|_| Layer::new(vec![], vec![], vec![]))
                 .collect(),
         )
         .unwrap()
@@ -122,7 +128,8 @@ impl Add for Circuit {
             .map(|(mut l1, l2)| {
                 l1.add_gates.extend(l2.add_gates);
                 l1.mul_gates.extend(l2.mul_gates);
-                Layer::new(l1.add_gates, l1.mul_gates)
+                l1.exp_98_gates.extend(l2.exp_98_gates);
+                Layer::new(l1.add_gates, l1.mul_gates, l1.exp_98_gates)
             })
             .collect();
 
@@ -140,19 +147,21 @@ pub mod tests {
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
+    use ark_ff::Field;
 
     pub fn test_circuit() -> Circuit {
-        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);
-        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)], vec![]);
         let layer_2 = Layer::new(
             vec![Gate::new(2, 4, 5), Gate::new(3, 6, 7)],
             vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)],
+            vec![],
         );
         Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
     }
 
     pub fn non_uniform_circuit() -> Circuit {
-        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)], vec![]);
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1), Gate::new(1, 2, 3)], vec![], vec![]);
         let layer_1 = Layer::new(
             vec![],
             vec![
@@ -161,6 +170,7 @@ pub mod tests {
                 Gate::new(2, 4, 5),
                 Gate::new(3, 6, 7),
             ],
+            vec![],
         );
         let layer_2 = Layer::new(
             vec![],
@@ -174,6 +184,7 @@ pub mod tests {
                 Gate::new(6, 3, 0),
                 Gate::new(7, 0, 5),
             ],
+            vec![],
         );
         Circuit::new(vec![layer_0, layer_1, layer_2]).unwrap()
     }
@@ -188,10 +199,10 @@ pub mod tests {
         //  2   3   4   5
 
         // instantiate circuit
-        let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)]);
+        let layer_0 = Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![]);
         assert_eq!(layer_0.len(), 1);
 
-        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)]);
+        let layer_1 = Layer::new(vec![Gate::new(0, 0, 1)], vec![Gate::new(1, 2, 3)], vec![]);
         assert_eq!(layer_1.len(), 2);
 
         let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
@@ -245,6 +256,40 @@ pub mod tests {
     }
 
     #[test]
+    fn test_circuit_evaluation_with_custom_gate() {
+        // sample circuit evaluation
+        //     (5^98 + 20)(+)    - layer 0
+        //         /     \
+        // 5^98(exp_98)   20(*) - layer 1
+        //      /   \    /  \
+        //     2     3  4    5
+
+        // instantiate circuit
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
+        assert_eq!(layer_0.len(), 1);
+
+        let layer_1 = Layer::new(vec![], vec![Gate::new(1, 2, 3)], vec![Gate::new(0, 0, 1)]);
+        assert_eq!(layer_1.len(), 2);
+
+        let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
+
+        let circuit_eval = circuit
+            .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
+            .expect("should eval");
+
+        let five_exp_98 = Fr::from(5).pow([98]);
+        let five_exp_98_plus_20 = five_exp_98 + Fr::from(20);
+
+        assert_eq!(circuit_eval.len(), 3);
+        assert_eq!(
+            circuit_eval[2],
+            vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)]
+        );
+        assert_eq!(circuit_eval[1], vec![five_exp_98, Fr::from(20)]);
+        assert_eq!(circuit_eval[0], vec![five_exp_98_plus_20]);
+    }
+
+    #[test]
     fn test_gate_to_binary_string() {
         let g1 = Gate::new(0, 0, 1);
         let gate_bit = g1.to_bit_string(1, 1);
@@ -263,7 +308,8 @@ pub mod tests {
         // circuit has 3 layers
 
         // layer 0 - output layer
-        let [add_0, mult_0]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(0).unwrap();
+        let [add_0, mult_0, exp_98_0]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(0).unwrap();
         // the number of variables for the add function should be 3
         assert_eq!(add_0.n_vars(), 3);
         // the number of variables for the mul function should be 0
@@ -282,7 +328,8 @@ pub mod tests {
         assert_eq!(sum_over_boolean_hyper_cube(&mult_0), Fr::from(0));
 
         // layer 1
-        let [add_1, mult_1]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(1).unwrap();
+        let [add_1, mult_1, exp_98_1]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(1).unwrap();
         // number of variables for add should be 5 (1 for current layer, then 2 each for next layer)
         assert_eq!(add_1.n_vars(), 5);
         // number of variables for mul should also be 5
@@ -319,7 +366,8 @@ pub mod tests {
         );
 
         // layer 2
-        let [add_2, mult_2]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(2).unwrap();
+        let [add_2, mult_2, exp_98_2]: [MultiLinearPolynomial<Fr>; 3] =
+            circuit.add_mul_mle(2).unwrap();
         // number of variables for add should be 8 (2 for current layer, then 3 each for next layer)
         assert_eq!(add_2.n_vars(), 8);
         // number of variables for mul should also be 8
@@ -404,7 +452,7 @@ pub mod tests {
         // normally it's assumed that the next layer is 2 * previous layer length
         // layer just above input is of length 8
         // so input would be of length 16 in a uniform circuit
-        let [add_last, mul_last]: [MultiLinearPolynomial<Fr>; 2] =
+        let [add_last, mul_last, exp_98_last]: [MultiLinearPolynomial<Fr>; 3] =
             circuit.add_mul_mle(circuit.layers.len() - 1).unwrap();
         // number of variables for add_i and mul_i is given by the following equation
         // no_of_vars_for_i + (2 * no_of_vars_for_i+1)
@@ -441,8 +489,10 @@ pub mod tests {
         //  /   \    /   \
         // a     b  c     d
 
-        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]).unwrap();
-        let circuit_b = Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![])]).unwrap();
+        let circuit_a =
+            Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
+        let circuit_b =
+            Circuit::new(vec![Layer::new(vec![Gate::new(1, 2, 3)], vec![], vec![])]).unwrap();
 
         // c = a + b
         let circuit_c = (circuit_a + circuit_b).unwrap();
@@ -456,7 +506,8 @@ pub mod tests {
 
     #[test]
     fn test_circuit_additive_identity() {
-        let circuit_a = Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)])]).unwrap();
+        let circuit_a =
+            Circuit::new(vec![Layer::new(vec![], vec![Gate::new(0, 0, 1)], vec![])]).unwrap();
         let circuit_b = Circuit::additive_identity(1);
         let circuit_c = (circuit_a.clone() + circuit_b).unwrap();
         assert_eq!(circuit_c, circuit_a);

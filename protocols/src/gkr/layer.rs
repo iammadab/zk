@@ -8,17 +8,20 @@ use ark_ff::PrimeField;
 pub struct Layer {
     pub add_gates: Vec<Gate>,
     pub mul_gates: Vec<Gate>,
+    // Takes two inputs a, b and computes (a + b)^98
+    pub exp_98_gates: Vec<Gate>,
     len: usize,
 }
 
 impl Layer {
     /// Instantiate a new gate layer, calculate the total gate count
     // TODO: don't allow the creation of empty layers
-    pub fn new(add_gates: Vec<Gate>, mul_gates: Vec<Gate>) -> Self {
+    pub fn new(add_gates: Vec<Gate>, mul_gates: Vec<Gate>, exp_98_gates: Vec<Gate>) -> Self {
         Self {
-            len: add_gates.len() + mul_gates.len(),
+            len: add_gates.len() + mul_gates.len() + exp_98_gates.len(),
             add_gates,
             mul_gates,
+            exp_98_gates,
         }
     }
 
@@ -40,7 +43,15 @@ impl Layer {
             .map(|gate| gate.in_a.max(gate.in_b) as isize)
             .max()
             .unwrap_or(-1);
-        max_add_gate_index.max(max_mul_gate_index)
+        let max_exp_98_gate_index = self
+            .exp_98_gates
+            .iter()
+            .map(|gate| gate.in_a.max(gate.in_b) as isize)
+            .max()
+            .unwrap_or(-1);
+        max_add_gate_index
+            .max(max_mul_gate_index)
+            .max(max_exp_98_gate_index)
     }
 
     /// Generate the add_i and mult_i multilinear extension polynomials for the current layer
@@ -48,7 +59,7 @@ impl Layer {
     pub fn add_mul_mle<F: PrimeField>(
         &self,
         next_layer_count: usize,
-    ) -> [MultiLinearPolynomial<F>; 2] {
+    ) -> [MultiLinearPolynomial<F>; 3] {
         let layer_var_count = bit_count_for_n_elem(self.len);
         let next_layer_count = bit_count_for_n_elem(next_layer_count);
 
@@ -72,7 +83,17 @@ impl Layer {
             },
         );
 
-        [add_mle, mult_mle]
+        // construct selector poly for exp_98 gates
+        let exp_98_mle = self.exp_98_gates.iter().fold(
+            MultiLinearPolynomial::<F>::additive_identity(),
+            |acc, gate| {
+                let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
+                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
+                (&acc + &gate_bit_checker).unwrap()
+            },
+        );
+
+        [add_mle, mult_mle, exp_98_mle]
     }
 }
 
@@ -95,10 +116,11 @@ mod test {
                 Gate::new(6, 3, 0),
                 Gate::new(7, 0, 5),
             ],
+            vec![],
         );
         assert_eq!(layer.max_input_index(), 6);
 
-        let empty_layer = Layer::new(vec![], vec![]);
+        let empty_layer = Layer::new(vec![], vec![], vec![]);
         assert_eq!(empty_layer.max_input_index(), -1);
     }
 }

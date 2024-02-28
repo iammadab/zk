@@ -74,6 +74,7 @@ fn constraint_circuit<F: PrimeField>(
     let sign_layer = Layer::new(
         vec![],
         vec![a_mul_gate, b_mul_gate, c_mul_gate, minus_1_gate],
+        vec![],
     );
 
     // compute layer
@@ -90,8 +91,8 @@ fn constraint_circuit<F: PrimeField>(
         3 + product_layer_offset,
     );
     let compute_layer = match constraint.operation {
-        Operation::Add => Layer::new(vec![a_op_b_gate], vec![c_mul_minus_1]),
-        Operation::Mul => Layer::new(vec![], vec![a_op_b_gate, c_mul_minus_1]),
+        Operation::Add => Layer::new(vec![a_op_b_gate], vec![c_mul_minus_1], vec![]),
+        Operation::Mul => Layer::new(vec![], vec![a_op_b_gate, c_mul_minus_1], vec![]),
     };
 
     // output layer
@@ -100,7 +101,7 @@ fn constraint_circuit<F: PrimeField>(
         0 + compute_layer_offset,
         1 + compute_layer_offset,
     );
-    let output_layer = Layer::new(vec![output_gate], vec![]);
+    let output_layer = Layer::new(vec![output_gate], vec![], vec![]);
 
     GKRCircuit::new(vec![output_layer, compute_layer, sign_layer]).expect("should generate circuit")
 }
