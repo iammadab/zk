@@ -129,7 +129,8 @@ pub fn GKRVerify<F: PrimeField>(
         let w_c = q_function.evaluate(&F::one());
         let add_result = add_mle.evaluate(rbc.as_slice())? * (w_b + w_c);
         let mul_result = mul_mle.evaluate(rbc.as_slice())? * (w_b * w_c);
-        let f_b_c_eval = add_result + mul_result;
+        let exp_98_result = exp_98_mle.evaluate(rbc.as_slice())? * (w_b + w_c).pow([98]);
+        let f_b_c_eval = add_result + mul_result + exp_98_result;
 
         // final sumcheck verifier check
         if f_b_c_eval != subclaim.sum {
@@ -161,7 +162,7 @@ mod test {
     use crate::gkr::layer::Layer;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
-    use ark_ff::{Fp64, MontBackend, MontConfig};
+    use ark_ff::{Field, Fp64, MontBackend, MontConfig};
     use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
     use std::fs::read;
     use std::io::Cursor;
@@ -195,6 +196,38 @@ mod test {
             GKRProof::deserialize_compressed(Cursor::new(serialized_gkr_proof)).unwrap();
 
         assert_eq!(deserialized_gkr_proof, gkr_proof);
+    }
+
+    #[test]
+    fn test_gkr_custom_gate() {
+        // sample circuit evaluation
+        //   ((5^98 + 20)^98)(exp_98)    - layer 0
+        //         /     \
+        // 5^98(exp_98)   20(*) - layer 1
+        //      /   \    /  \
+        //     2     3  4    5
+
+        // instantiate circuit
+        let layer_0 = Layer::new(vec![], vec![], vec![Gate::new(0, 0, 1)]);
+        assert_eq!(layer_0.len(), 1);
+
+        let layer_1 = Layer::new(vec![], vec![Gate::new(1, 2, 3)], vec![Gate::new(0, 0, 1)]);
+        assert_eq!(layer_1.len(), 2);
+
+        let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
+
+        let input = vec![
+            Fr::from(2),
+            Fr::from(3),
+            Fr::from(4),
+            Fr::from(5)
+        ];
+        let circuit_eval = circuit.evaluate(input.clone()).expect("should eval");
+
+        let gkr_proof = GKRProve(circuit.clone(), circuit_eval).unwrap();
+
+        let verification_result = GKRVerify(circuit, input, gkr_proof).unwrap();
+        assert!(verification_result);
     }
 
     #[test]
