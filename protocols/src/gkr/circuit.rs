@@ -46,6 +46,11 @@ impl Circuit {
                     current_layer_input[wire.in_a] * current_layer_input[wire.in_b];
             }
 
+            // exp_98 evaluations
+            for wire in &layer.exp_98_gates {
+                layer_evaluations[wire.out] = (current_layer_input[wire.in_a] + current_layer_input[wire.in_b]).pow([98]);
+            }
+
             current_layer_input = layer_evaluations.clone();
 
             evaluations.push(layer_evaluations);
@@ -141,6 +146,7 @@ pub mod tests {
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
+    use ark_ff::Field;
 
     pub fn test_circuit() -> Circuit {
         let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
@@ -246,6 +252,40 @@ pub mod tests {
                 Fr::from(8),
             ]
         );
+    }
+
+    #[test]
+    fn test_circuit_evaluation_with_custom_gate() {
+        // sample circuit evaluation
+        //     (5^98 + 20)(+)    - layer 0
+        //         /     \
+        // 5^98(exp_98)   20(*) - layer 1
+        //      /   \    /  \
+        //     2     3  4    5
+
+        // instantiate circuit
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
+        assert_eq!(layer_0.len(), 1);
+
+        let layer_1 = Layer::new(vec![], vec![Gate::new(1, 2, 3)], vec![Gate::new(0, 0, 1)]);
+        assert_eq!(layer_1.len(), 2);
+
+        let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
+
+        let circuit_eval = circuit
+            .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
+            .expect("should eval");
+
+        let five_exp_98 = Fr::from(5).pow([98]);
+        let five_exp_98_plus_20 = five_exp_98 + Fr::from(20);
+
+        assert_eq!(circuit_eval.len(), 3);
+        assert_eq!(
+            circuit_eval[2],
+            vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)]
+        );
+        assert_eq!(circuit_eval[1], vec![five_exp_98, Fr::from(20)]);
+        assert_eq!(circuit_eval[0], vec![five_exp_98_plus_20]);
     }
 
     #[test]
