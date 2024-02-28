@@ -311,6 +311,9 @@ mod test {
     };
     use crate::sumcheck::{Sumcheck, SumcheckProof};
     use ark_bls12_381::Fr;
+    use ark_ff::Field;
+    use crate::gkr::gate::Gate;
+    use crate::gkr::layer::Layer;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
         // construct and evaluate circuit
@@ -363,6 +366,49 @@ mod test {
             Fr::from(165)
         );
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(165));
+    }
+
+    #[test]
+    fn test_gate_eval_extension_custom_gate() {
+        // sample circuit evaluation
+        //     (5^98 + 20)(+)    - layer 0
+        //         /     \
+        // 5^98(exp_98)   20(*) - layer 1
+        //      /   \    /  \
+        //     2     3  4    5
+
+        // instantiate circuit
+        let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![], vec![]);
+        assert_eq!(layer_0.len(), 1);
+
+        let layer_1 = Layer::new(vec![], vec![Gate::new(1, 2, 3)], vec![Gate::new(0, 0, 1)]);
+        assert_eq!(layer_1.len(), 2);
+
+        let circuit = Circuit::new(vec![layer_0, layer_1]).unwrap();
+
+        let circuit_eval = circuit
+            .evaluate(vec![Fr::from(2), Fr::from(3), Fr::from(4), Fr::from(5)])
+            .expect("should eval");
+
+        let five_exp_98 = Fr::from(5).pow([98]);
+        let five_exp_98_plus_20 = five_exp_98 + Fr::from(20);
+
+        // want to express the output as a function of the exp_98 / mul layer
+        let [add_0, mul_0, exp_0] = circuit.add_mul_mle::<Fr>(0).unwrap();
+        let w_1 = Circuit::w(circuit_eval.as_slice(), 1).unwrap();
+
+        // setting r = 0
+        let gate_eval_ext = GateEvalExtension::new(vec![Fr::from(0)], add_0, mul_0, w_1).unwrap();
+        // eval at b = 0 and c = 1, expected result is five_exp_98_plus_20
+        assert_eq!(
+            gate_eval_ext.evaluate(&[Fr::from(0), Fr::from(1)]).unwrap(),
+            five_exp_98_plus_20
+        );
+        // sum over the boolean hypercube should have the same result as the output has only one gate
+        assert_eq!(
+            sum_over_boolean_hyper_cube(&gate_eval_ext),
+            five_exp_98_plus_20
+        );
     }
 
     #[test]
