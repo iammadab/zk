@@ -1,6 +1,5 @@
 use crate::r1cs_gkr::program::SymbolTable;
 use ark_ff::PrimeField;
-use std::cmp::max;
 
 #[derive(Debug, PartialEq)]
 /// Simplified constraint that contains at most 3 operations

@@ -133,7 +133,6 @@ impl Add for Circuit {
 #[cfg(test)]
 pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
-    use std::ops::Add;
 
     use crate::gkr::gate::Gate;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;

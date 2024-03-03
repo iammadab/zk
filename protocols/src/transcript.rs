@@ -1,4 +1,4 @@
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::PrimeField;
 use sha3::{Digest, Keccak256};
 
 // TODO: implement better transcript

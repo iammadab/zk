@@ -1,21 +1,17 @@
-use crate::gkr::gkr::{GKRProof, GKRVerify};
+use crate::gkr::gkr::GKRProof;
 use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use crate::r1cs_gkr::program::R1CSProgram;
 use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
 use ark_bn254::{Bn254, Fr};
-use ark_ec::pairing::Pairing;
-use ark_ff::{BigInt, PrimeField};
+use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use serde::Serialize;
-use serde_json::{to_string, Number, Value};
-use std::fmt::format;
+use serde_json::Value;
+use std::fs;
 use std::fs::File;
 use std::io::{stderr, BufReader, Cursor, Read, Write};
-use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
-use std::{fs, process};
 
 pub struct CLIFunctions<'a> {
     source_file_path: &'a Path,
@@ -292,7 +288,7 @@ mod tests {
     use crate::r1cs_gkr::adapters::circom::cli_functions::{
         json_value_to_field_element, CLIFunctions,
     };
-    use ark_bn254::{Bn254, Fr};
+    use ark_bn254::Fr;
     use serde_json::Value;
     use std::path::PathBuf;
 

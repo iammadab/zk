@@ -190,7 +190,6 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use crate::r1cs_gkr::circuit::{
         constraint_circuit, generate_constant_map, program_circuit,
         reduced_constraint_to_circuit_input,

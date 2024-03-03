@@ -19,7 +19,7 @@ pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
 }
 
 impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
-    fn new(poly: P, sum: F) -> Self {
+    pub fn new(poly: P, sum: F) -> Self {
         Self {
             poly,
             sum,
@@ -214,12 +214,9 @@ impl Sumcheck {
 
 #[cfg(test)]
 mod tests {
-    use crate::transcript::Transcript;
-    use sha3::digest::typenum::Sum;
-
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::Sumcheck;
-    use ark_ff::{Fp64, MontBackend, MontConfig, One};
+    use ark_ff::{Fp64, MontBackend, MontConfig};
 
     #[derive(MontConfig)]
     #[modulus = "17"]

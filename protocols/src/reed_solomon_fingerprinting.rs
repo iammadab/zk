@@ -19,12 +19,7 @@
 mod tests {
     use crate::polynomial::univariate_poly::UnivariatePolynomial;
     use ark_bls12_381::Fr;
-    use ark_ff::{Fp64, MontBackend, MontConfig, UniformRand};
-    use rand::random;
-
-    fn fr_from_vec(values: Vec<i64>) -> Vec<Fr> {
-        values.into_iter().map(Fr::from).collect()
-    }
+    use ark_ff::UniformRand;
 
     #[test]
     fn reed_solomon_fingerprinting() {

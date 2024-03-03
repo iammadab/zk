@@ -159,11 +159,9 @@ mod test {
     use crate::gkr::gate::Gate;
     use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
     use crate::gkr::layer::Layer;
-    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
-    use std::fs::read;
+    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
     use std::io::Cursor;
 
     #[derive(MontConfig)]

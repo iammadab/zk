@@ -518,8 +518,8 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 mod tests {
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::{
-        mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
-        to_power_of_two, MultiLinearPolynomial,
+        mapping_instruction_from_variable_presence, selector_to_index, to_power_of_two,
+        MultiLinearPolynomial,
     };
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::collections::BTreeMap;

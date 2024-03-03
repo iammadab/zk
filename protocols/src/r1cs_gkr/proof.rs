@@ -108,15 +108,12 @@ fn constrain_witness<F: PrimeField>(
 
 #[cfg(test)]
 mod tests {
-    use crate::r1cs_gkr::circuit::program_circuit;
     use crate::r1cs_gkr::circuit::tests::x_cube;
     use crate::r1cs_gkr::constraint::{Constraint, Term};
     use crate::r1cs_gkr::program::test::eq_3a_plus_5b;
     use crate::r1cs_gkr::program::R1CSProgram;
     use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
     use ark_bls12_381::Fr;
-    use ark_ff::{One, Zero};
-    use std::ops::Neg;
 
     fn x_square() -> R1CSProgram<Fr> {
         // x * x = a
