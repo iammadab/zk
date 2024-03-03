@@ -1,6 +1,5 @@
 use crate::r1cs_gkr::program::SymbolTable;
 use ark_ff::PrimeField;
-use std::cmp::max;
 
 #[derive(Debug, PartialEq)]
 /// Simplified constraint that contains at most 3 operations
@@ -39,11 +38,6 @@ impl<F: PrimeField> Constraint<F> {
             Operation::Mul
         };
 
-        Self { a, b, c, operation }
-    }
-
-    /// Create new constraint with automatic operation detection
-    fn new_with_operation(a: Slot<F>, b: Slot<F>, c: Slot<F>, operation: Operation) -> Self {
         Self { a, b, c, operation }
     }
 
@@ -102,11 +96,7 @@ impl<F: PrimeField> Constraint<F> {
     fn can_simplify(&self) -> bool {
         let has_more_than_one_term_in_a_slot =
             self.a.len() > 1 || self.b.len() > 1 || self.c.len() > 1;
-        if self.terms_count() > 3 || has_more_than_one_term_in_a_slot {
-            true
-        } else {
-            false
-        }
+        self.terms_count() > 3 || has_more_than_one_term_in_a_slot
     }
 
     /// Simplifies constraint by moving extra terms to empty slots (as many as possible)
@@ -230,9 +220,9 @@ impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
         }
 
         Ok(Self {
-            a: value.a.get(0).cloned(),
-            b: value.b.get(0).cloned(),
-            c: value.c.get(0).cloned(),
+            a: value.a.first().cloned(),
+            b: value.b.first().cloned(),
+            c: value.c.first().cloned(),
             operation: value.operation.clone(),
         })
     }
@@ -423,7 +413,7 @@ mod tests {
             vec![Term(0, Fr::from(1))],
             vec![Term(0, Fr::from(2))],
         );
-        let (empty_slot, slot_location) = constraint.get_empty_slot();
+        let (empty_slot, _) = constraint.get_empty_slot();
         assert_eq!(empty_slot.is_none(), true);
     }
 
@@ -462,7 +452,7 @@ mod tests {
         assert_eq!(movable_item.unwrap(), Term(3, Fr::from(1)));
         assert_eq!(slot_location, EquationDirection::Right);
 
-        let (movable_item, slot_location) = constraint.get_movable_term();
+        let (movable_item, _) = constraint.get_movable_term();
         assert_eq!(movable_item.is_some(), false);
     }
 
@@ -532,12 +522,12 @@ mod tests {
 
         assert_eq!(
             constraint,
-            Constraint::new_with_operation(
-                vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
-                vec![Term(3, Fr::from(1))],
-                vec![Term(2, Fr::from(5))],
-                Operation::Add
-            )
+            Constraint {
+                a: vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
+                b: vec![Term(3, Fr::from(1))],
+                c: vec![Term(2, Fr::from(5))],
+                operation: Operation::Add
+            }
         )
     }
 
@@ -564,7 +554,7 @@ mod tests {
         // s5 = 6
         // s6 = 7
 
-        let mut constraint = Constraint::new(
+        let constraint = Constraint::new(
             // -s3
             vec![Term(3, Fr::from(-1))],
             // (s1 + s2)

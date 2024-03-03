@@ -19,7 +19,7 @@ pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
 }
 
 impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
-    fn new(poly: P, sum: F) -> Self {
+    pub fn new(poly: P, sum: F) -> Self {
         Self {
             poly,
             sum,
@@ -155,7 +155,7 @@ impl Sumcheck {
 
         let mut transcript = Transcript::new();
         // add poly to transcript
-        transcript.append(&proof.poly.to_bytes().as_slice());
+        transcript.append(proof.poly.to_bytes().as_slice());
 
         let initial_poly = proof.poly.clone();
 
@@ -197,7 +197,7 @@ impl Sumcheck {
             }
 
             // add poly to transcript
-            transcript.append(&poly.to_bytes().as_slice());
+            transcript.append(poly.to_bytes().as_slice());
 
             // sample challenge and update claimed sum
             let challenge = transcript.sample_field_element::<F>();
@@ -214,12 +214,9 @@ impl Sumcheck {
 
 #[cfg(test)]
 mod tests {
-    use crate::transcript::Transcript;
-    use sha3::digest::typenum::Sum;
-
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::Sumcheck;
-    use ark_ff::{Fp64, MontBackend, MontConfig, One};
+    use ark_ff::{Fp64, MontBackend, MontConfig};
 
     #[derive(MontConfig)]
     #[modulus = "17"]

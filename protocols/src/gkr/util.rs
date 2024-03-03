@@ -2,7 +2,6 @@ use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{selector_from_usize, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
 use ark_ff::PrimeField;
-use ark_std::iterable::Iterable;
 
 /// Generate a unique line such that l(0) = b and l(1) = c
 pub fn l<F: PrimeField>(b: &[F], c: &[F]) -> Result<Vec<UnivariatePolynomial<F>>, &'static str> {

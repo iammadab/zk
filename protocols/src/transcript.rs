@@ -1,4 +1,4 @@
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::PrimeField;
 use sha3::{Digest, Keccak256};
 
 // TODO: implement better transcript
@@ -14,7 +14,7 @@ impl Transcript {
     }
 
     pub(crate) fn append(&mut self, new_data: &[u8]) {
-        self.hasher.update(&mut new_data.clone());
+        self.hasher.update(new_data);
     }
 
     fn sample_challenge(&mut self) -> [u8; 32] {

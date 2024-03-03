@@ -1,21 +1,17 @@
-use crate::gkr::gkr::{GKRProof, GKRVerify};
+use crate::gkr::protocol::Proof as GKRProof;
 use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use crate::r1cs_gkr::program::R1CSProgram;
 use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
 use ark_bn254::{Bn254, Fr};
-use ark_ec::pairing::Pairing;
-use ark_ff::{BigInt, PrimeField};
+use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use serde::Serialize;
-use serde_json::{to_string, Number, Value};
-use std::fmt::format;
+use serde_json::Value;
+use std::fs;
 use std::fs::File;
 use std::io::{stderr, BufReader, Cursor, Read, Write};
-use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
-use std::{fs, process};
 
 pub struct CLIFunctions<'a> {
     source_file_path: &'a Path,
@@ -41,8 +37,7 @@ impl<'a> CLIFunctions<'a> {
     fn base_folder(&self) -> PathBuf {
         let source_folder = self.source_file_path.parent().unwrap();
         let base_folder_name = self.file_name() + "_gkr";
-        let base_folder_path = source_folder.join(PathBuf::from(base_folder_name));
-        base_folder_path
+        source_folder.join(PathBuf::from(base_folder_name))
     }
 
     /// Returns the path to the R1CS file
@@ -118,8 +113,8 @@ impl<'a> CLIFunctions<'a> {
             .ok_or("expect witness.json to contain a json object")?;
 
         json_object
-            .into_iter()
-            .map(|val| json_value_to_field_element(val))
+            .iter()
+            .map(json_value_to_field_element)
             .collect::<Result<Vec<Fr>, &'static str>>()
     }
 
@@ -146,12 +141,12 @@ impl<'a> CLIFunctions<'a> {
         }
 
         if !self.base_folder().exists() {
-            fs::create_dir(&self.base_folder()).map_err(|_| "failed to create base folder")?;
+            fs::create_dir(self.base_folder()).map_err(|_| "failed to create base folder")?;
         }
 
         // compile the circom program
         let _ = Command::new("circom")
-            .arg(&self.source_file_path)
+            .arg(self.source_file_path)
             .arg("--r1cs")
             .arg("--wasm")
             .arg("--O0")
@@ -213,7 +208,7 @@ impl<'a> CLIFunctions<'a> {
             .map(|witness| witness.to_string())
             .collect::<Vec<String>>();
 
-        let _ = write_file(
+        write_file(
             &self.witness_path(),
             serde_json::to_string(&Value::from(witness_as_string))
                 .expect("this should not fail")
@@ -236,7 +231,9 @@ impl<'a> CLIFunctions<'a> {
         let proof = prove_circom_gkr(program, witness)?;
 
         let mut serialized_proof = vec![];
-        proof.serialize_uncompressed(&mut serialized_proof);
+        proof
+            .serialize_uncompressed(&mut serialized_proof)
+            .map_err(|_| "failed to seralize proof")?;
 
         let _ = write_file(&self.proof_path(), serialized_proof.as_slice());
 
@@ -269,11 +266,11 @@ fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static
         .as_str()
         .ok_or("invalid input.json expected number strings for value e.g. {\"a\": \"1\"}")?;
 
-    if val_str == "" {
+    if val_str.is_empty() {
         return Ok(F::zero());
     }
 
-    let val_big_int = num_bigint::BigInt::from_str(&val_str)
+    let val_big_int = num_bigint::BigInt::from_str(val_str)
         .map_err(|_| "invalid input.json value: expected number")?;
 
     Ok(F::from_be_bytes_mod_order(
@@ -292,7 +289,7 @@ mod tests {
     use crate::r1cs_gkr::adapters::circom::cli_functions::{
         json_value_to_field_element, CLIFunctions,
     };
-    use ark_bn254::{Bn254, Fr};
+    use ark_bn254::Fr;
     use serde_json::Value;
     use std::path::PathBuf;
 

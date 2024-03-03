@@ -2,7 +2,7 @@ use clap::{command, Arg, ArgMatches, Command};
 use protocols::r1cs_gkr::adapters::circom::cli_functions::CLIFunctions;
 use std::path::PathBuf;
 
-const SOURCE: &'static str = "source_file";
+const SOURCE: &str = "source_file";
 
 fn main() {
     let source_file_arg = Arg::new(SOURCE).required(true);
@@ -38,9 +38,7 @@ fn main() {
 }
 
 fn get_source_file(matches: &ArgMatches) -> PathBuf {
-    matches.get_raw(SOURCE).unwrap().collect::<Vec<_>>()[0]
-        .clone()
-        .into()
+    matches.get_raw(SOURCE).unwrap().collect::<Vec<_>>()[0].into()
 }
 
 fn run_cli_function(match_result: &ArgMatches, command: &str) {

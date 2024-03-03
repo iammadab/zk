@@ -24,7 +24,7 @@ impl<F: PrimeField> R1CSProgram<F> {
     }
 
     /// Compiles a list of Constraint into a list of ReducedConstraint
-    pub fn compile(mut self) -> (Vec<ReducedConstraint<F>>, SymbolTable<F>) {
+    pub fn compile(self) -> (Vec<ReducedConstraint<F>>, SymbolTable<F>) {
         let mut symbol_table = SymbolTable::<F>::new(self.get_last_variable_index());
         let mut reduced_constraints = vec![];
 

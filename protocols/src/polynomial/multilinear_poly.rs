@@ -51,7 +51,7 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
         let assignments = &assignments[..self.n_vars()];
 
         let mut indexed_assignments = vec![];
-        for (position, assignment) in assignments.into_iter().enumerate() {
+        for (position, assignment) in assignments.iter().enumerate() {
             indexed_assignments.push((
                 selector_from_position(self.n_vars as usize, position)?,
                 assignment,
@@ -178,7 +178,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         number_of_variables: u32,
         coefficients: BTreeMap<usize, F>,
     ) -> Result<Self, &'static str> {
-        if let Some((largest_key, value)) = coefficients.last_key_value() {
+        if let Some((largest_key, _)) = coefficients.last_key_value() {
             if largest_key >= &Self::variable_combination_count(number_of_variables) {
                 return Err("coefficient map represents more than specificed number of variables");
             }
@@ -206,8 +206,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
         let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
-            let poly =
-                Self::lagrange_basis_poly(i, num_of_variables as usize).scalar_multiply(value);
+            let poly = Self::lagrange_basis_poly(i, num_of_variables).scalar_multiply(value);
             result = (&result + &poly).unwrap();
         }
         result
@@ -246,7 +245,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             .fold(vec![false; self.n_vars as usize], |acc, key| {
                 let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
                 acc.into_iter()
-                    .zip(current_bool_rep.into_iter())
+                    .zip(current_bool_rep)
                     .map(|(a, b)| a | b)
                     .collect()
             })
@@ -271,7 +270,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Co-efficient wise multiplication with scalar
     pub fn scalar_multiply(&self, scalar: &F) -> Self {
         // TODO: consider inplace operations
-        let mut updated_coefficients = self
+        let updated_coefficients = self
             .coefficients
             .clone()
             .into_iter()
@@ -303,7 +302,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             return Err("only select single variable, cannot get indexes for constant or multiple variables");
         }
 
-        let variable_id = selector_to_index(&selector);
+        let variable_id = selector_to_index(selector);
         let mut indexes = vec![];
         let mut count = 0;
         let mut skip = false;
@@ -358,10 +357,7 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
             *longer_coeff.entry(*index).or_insert(F::zero()) += coeff;
         }
 
-        Ok(MultiLinearPolynomial::new_with_coefficient(
-            n_vars,
-            longer_coeff,
-        )?)
+        MultiLinearPolynomial::new_with_coefficient(n_vars, longer_coeff)
     }
 }
 
@@ -371,9 +367,9 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     fn mul(self, rhs: Self) -> Self::Output {
         // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
         if self.n_vars == 0 {
-            return rhs.scalar_multiply(&self.coefficients.get(&0).unwrap_or(&F::zero()));
+            return rhs.scalar_multiply(self.coefficients.get(&0).unwrap_or(&F::zero()));
         } else if rhs.n_vars == 0 {
-            return self.scalar_multiply(&rhs.coefficients.get(&0).unwrap_or(&F::zero()));
+            return self.scalar_multiply(rhs.coefficients.get(&0).unwrap_or(&F::zero()));
         };
 
         // It is assumed that both lhs and rhs don't share common variables
@@ -409,8 +405,8 @@ fn selector_to_index(selector: &[bool]) -> usize {
     let mut sum = 0;
     let mut adder = 1;
 
-    for i in 0..selector.len() {
-        if selector[i] {
+    for bit_present in selector {
+        if *bit_present {
             sum += adder;
         }
         adder *= 2;
@@ -431,9 +427,7 @@ pub fn selector_from_usize(value: usize, exact_size: usize) -> Vec<bool> {
         }
     }
     result.reverse();
-    for _ in 0..(exact_size - binary_value.len()) {
-        result.push(false);
-    }
+    result.resize(exact_size, false);
     result
 }
 
@@ -452,7 +446,7 @@ pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>,
 /// Convert a number to a binary string of a given size
 pub fn binary_string(index: usize, bit_count: usize) -> String {
     let binary = format!("{:b}", index);
-    "0".repeat(bit_count.checked_sub(binary.len()).unwrap_or(0)) + &binary
+    "0".repeat(bit_count.saturating_sub(binary.len())) + &binary
 }
 
 /// Generate remapping instruction for truncating a presence vector
@@ -518,8 +512,8 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 mod tests {
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::{
-        mapping_instruction_from_variable_presence, remap_coefficient_keys, selector_to_index,
-        to_power_of_two, MultiLinearPolynomial,
+        mapping_instruction_from_variable_presence, selector_to_index, to_power_of_two,
+        MultiLinearPolynomial,
     };
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::collections::BTreeMap;
@@ -707,7 +701,6 @@ mod tests {
         // apply mod 17
         // p = 13 + 4c + 8d
         // [13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0]
-        let p = poly_5ab_7bc_8d();
         let p_13_4c_8d = poly_5ab_7bc_8d()
             .partial_evaluate(&[
                 (vec![false, true, false, false], &Fq::from(3)),
@@ -746,7 +739,6 @@ mod tests {
         // p = 11
         // dense form
         // [11, .....]
-        let p = poly_5ab_7bc_8d();
         let eval = poly_5ab_7bc_8d()
             .partial_evaluate(&[
                 (vec![true, false, false, false], &Fq::from(2)),

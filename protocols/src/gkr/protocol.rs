@@ -10,7 +10,7 @@ use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
 #[derive(Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
-pub struct GKRProof<F: PrimeField> {
+pub struct Proof<F: PrimeField> {
     // TODO: seems it might be better to return the output points directly i.e. Vec<F>
     //  feels like it will constrain the prover better. Don't make this change if you haven't
     //  figured out a way to break it!!!!
@@ -20,10 +20,10 @@ pub struct GKRProof<F: PrimeField> {
 }
 
 /// Prove correct circuit evaluation using the GKR protocol
-pub fn GKRProve<F: PrimeField>(
+pub fn prove<F: PrimeField>(
     circuit: Circuit,
     evaluations: Vec<Vec<F>>,
-) -> Result<GKRProof<F>, &'static str> {
+) -> Result<Proof<F>, &'static str> {
     // TODO: do I need to add the circuit and the input to the transcript
     let mut transcript = Transcript::new();
     let mut sumcheck_proofs = vec![];
@@ -66,7 +66,7 @@ pub fn GKRProve<F: PrimeField>(
         m = w_i.evaluate(r.as_slice())?;
     }
 
-    Ok(GKRProof {
+    Ok(Proof {
         output_mle: w_0,
         sumcheck_proofs,
         q_functions,
@@ -74,10 +74,10 @@ pub fn GKRProve<F: PrimeField>(
 }
 
 /// Verify a GKR proof
-pub fn GKRVerify<F: PrimeField>(
+pub fn verify<F: PrimeField>(
     circuit: Circuit,
     input: Vec<F>,
-    proof: GKRProof<F>,
+    proof: Proof<F>,
 ) -> Result<bool, &'static str> {
     if proof.sumcheck_proofs.len() != proof.q_functions.len() {
         return Err("invalid gkr proof");
@@ -88,16 +88,16 @@ pub fn GKRVerify<F: PrimeField>(
 
     let mut r = transcript.sample_n_field_elements(proof.output_mle.n_vars());
     let mut m = proof.output_mle.evaluate(r.as_slice())?;
-    let mut layer_index = 0;
 
     let sumcheck_and_q_functions = proof
         .sumcheck_proofs
         .clone()
         .into_iter()
-        .zip(proof.q_functions.clone().into_iter());
+        .zip(proof.q_functions);
 
     // Verify each sumcheck proof and update next round parameters
-    for (partial_sumcheck_proof, q_function) in sumcheck_and_q_functions {
+    for (layer_index, (partial_sumcheck_proof, q_function)) in sumcheck_and_q_functions.enumerate()
+    {
         // here we ensure that the sumcheck proof proves the correct sum
         if partial_sumcheck_proof.sum != m {
             return Err("invalid sumcheck proof");
@@ -141,7 +141,6 @@ pub fn GKRVerify<F: PrimeField>(
 
         r = evaluate_l_function(l_function.as_slice(), &r_star);
         m = q_function.evaluate(&r_star);
-        layer_index += 1;
     }
 
     // since the verifier has access to the input layer
@@ -157,13 +156,11 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate::Gate;
-    use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
     use crate::gkr::layer::Layer;
-    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+    use crate::gkr::protocol::{prove as GKRProve, verify as GKRVerify, Proof as GKRProof};
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
-    use std::fs::read;
+    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
     use std::io::Cursor;
 
     #[derive(MontConfig)]
@@ -189,7 +186,10 @@ mod test {
         let gkr_proof = GKRProve(test_circuit(), circut_eval).unwrap();
 
         let mut serialized_gkr_proof = vec![];
-        gkr_proof.serialize_uncompressed(&mut serialized_gkr_proof);
+        gkr_proof
+            .serialize_uncompressed(&mut serialized_gkr_proof)
+            .map_err(|_| "failed to serialize proof")
+            .unwrap();
 
         let deserialized_gkr_proof: GKRProof<Fr> =
             GKRProof::deserialize_compressed(Cursor::new(serialized_gkr_proof)).unwrap();
@@ -265,14 +265,6 @@ mod test {
             Fq::from(4),
             Fq::from(9),
             Fq::from(8),
-        ];
-        let verify_input = vec![
-            Fq::from(5),
-            Fq::from(2),
-            Fq::from(3),
-            Fq::from(4),
-            Fq::from(8),
-            Fq::from(9),
         ];
 
         let evaluation = circuit.evaluate(eval_input.clone()).unwrap();

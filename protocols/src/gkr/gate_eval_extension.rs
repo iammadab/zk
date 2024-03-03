@@ -1,4 +1,3 @@
-use crate::gkr::gate::Gate;
 use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
@@ -305,11 +304,8 @@ mod test {
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
     use crate::polynomial::multilinear_extension::MultiLinearExtension;
-    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
-    use crate::sumcheck::util::{
-        skip_first_var_then_sum_over_boolean_hypercube, sum_over_boolean_hyper_cube,
-    };
-    use crate::sumcheck::{Sumcheck, SumcheckProof};
+    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+    use crate::sumcheck::Sumcheck;
     use ark_bls12_381::Fr;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {

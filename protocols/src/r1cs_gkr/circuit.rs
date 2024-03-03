@@ -23,7 +23,7 @@ pub fn program_circuit<F: PrimeField>(
 
     for (circuit_index, constraint) in compiled_program.iter().enumerate() {
         program_circuit = (program_circuit
-            + constraint_circuit(&constraint, &constant_map, circuit_index))
+            + constraint_circuit(constraint, &constant_map, circuit_index))
         .unwrap();
     }
 
@@ -50,16 +50,12 @@ fn constraint_circuit<F: PrimeField>(
     let compute_layer_offset = output_layer_offset * 2;
     let product_layer_offset = compute_layer_offset * 2;
 
-    let circuit_input = reduced_constraint_to_circuit_input(constraint, &constant_map);
+    let circuit_input = reduced_constraint_to_circuit_input(constraint, constant_map);
     let one_index = constant_map.get(&F::one()).unwrap();
     let minus_one_index = constant_map.get(&F::one().neg()).unwrap();
 
     // product layer
-    let a_mul_gate = Gate::new(
-        0 + product_layer_offset,
-        circuit_input[0].0,
-        circuit_input[0].1,
-    );
+    let a_mul_gate = Gate::new(product_layer_offset, circuit_input[0].0, circuit_input[0].1);
     let b_mul_gate = Gate::new(
         1 + product_layer_offset,
         circuit_input[1].0,
@@ -80,8 +76,8 @@ fn constraint_circuit<F: PrimeField>(
     // computes A op B where op is either + or *
     // and computes -c
     let a_op_b_gate = Gate::new(
-        0 + compute_layer_offset,
-        0 + product_layer_offset,
+        compute_layer_offset,
+        product_layer_offset,
         1 + product_layer_offset,
     );
     let c_mul_minus_1 = Gate::new(
@@ -97,7 +93,7 @@ fn constraint_circuit<F: PrimeField>(
     // output layer
     let output_gate = Gate::new(
         output_layer_offset,
-        0 + compute_layer_offset,
+        compute_layer_offset,
         1 + compute_layer_offset,
     );
     let output_layer = Layer::new(vec![output_gate], vec![]);
@@ -163,26 +159,26 @@ fn generate_constant_map<F: PrimeField>(
     constant_map.insert(F::one().neg(), last_variable_index);
 
     for constraint in reduced_constraints {
-        constraint.a.map(|term| {
-            if !constant_map.contains_key(&term.1) {
+        if let Some(term) = constraint.a {
+            constant_map.entry(term.1).or_insert_with(|| {
                 last_variable_index += 1;
-                constant_map.insert(term.1, last_variable_index);
-            }
-        });
+                last_variable_index
+            });
+        }
 
-        constraint.b.map(|term| {
-            if !constant_map.contains_key(&term.1) {
+        if let Some(term) = constraint.b {
+            constant_map.entry(term.1).or_insert_with(|| {
                 last_variable_index += 1;
-                constant_map.insert(term.1, last_variable_index);
-            }
-        });
+                last_variable_index
+            });
+        }
 
-        constraint.c.map(|term| {
-            if !constant_map.contains_key(&term.1) {
+        if let Some(term) = constraint.c {
+            constant_map.entry(term.1).or_insert_with(|| {
                 last_variable_index += 1;
-                constant_map.insert(term.1, last_variable_index);
-            }
-        });
+                last_variable_index
+            });
+        }
     }
 
     constant_map
@@ -190,7 +186,6 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::gkr::gkr::{GKRProve, GKRVerify};
     use crate::r1cs_gkr::circuit::{
         constraint_circuit, generate_constant_map, program_circuit,
         reduced_constraint_to_circuit_input,
@@ -222,7 +217,7 @@ pub mod tests {
 
     #[test]
     fn test_generate_constant_map() {
-        let mut program = R1CSProgram::new(vec![Constraint::new(
+        let program = R1CSProgram::new(vec![Constraint::new(
             vec![
                 Term(0, Fr::from(1)),
                 Term(1, Fr::from(-1)),
