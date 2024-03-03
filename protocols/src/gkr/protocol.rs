@@ -186,7 +186,10 @@ mod test {
         let gkr_proof = GKRProve(test_circuit(), circut_eval).unwrap();
 
         let mut serialized_gkr_proof = vec![];
-        gkr_proof.serialize_uncompressed(&mut serialized_gkr_proof);
+        gkr_proof
+            .serialize_uncompressed(&mut serialized_gkr_proof)
+            .map_err(|_| "failed to serialize proof")
+            .unwrap();
 
         let deserialized_gkr_proof: GKRProof<Fr> =
             GKRProof::deserialize_compressed(Cursor::new(serialized_gkr_proof)).unwrap();
@@ -262,14 +265,6 @@ mod test {
             Fq::from(4),
             Fq::from(9),
             Fq::from(8),
-        ];
-        let verify_input = vec![
-            Fq::from(5),
-            Fq::from(2),
-            Fq::from(3),
-            Fq::from(4),
-            Fq::from(8),
-            Fq::from(9),
         ];
 
         let evaluation = circuit.evaluate(eval_input.clone()).unwrap();

@@ -23,7 +23,7 @@ mod tests {
 
     #[test]
     fn reed_solomon_fingerprinting() {
-        for i in 0..10000 {
+        for _ in 0..10000 {
             // randomness
             // TODO: might need a cryptographically secure hash function
             let mut rng = rand::thread_rng();

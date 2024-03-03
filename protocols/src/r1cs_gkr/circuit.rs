@@ -217,7 +217,7 @@ pub mod tests {
 
     #[test]
     fn test_generate_constant_map() {
-        let mut program = R1CSProgram::new(vec![Constraint::new(
+        let program = R1CSProgram::new(vec![Constraint::new(
             vec![
                 Term(0, Fr::from(1)),
                 Term(1, Fr::from(-1)),

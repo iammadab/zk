@@ -413,7 +413,7 @@ mod tests {
             vec![Term(0, Fr::from(1))],
             vec![Term(0, Fr::from(2))],
         );
-        let (empty_slot, slot_location) = constraint.get_empty_slot();
+        let (empty_slot, _) = constraint.get_empty_slot();
         assert_eq!(empty_slot.is_none(), true);
     }
 
@@ -452,7 +452,7 @@ mod tests {
         assert_eq!(movable_item.unwrap(), Term(3, Fr::from(1)));
         assert_eq!(slot_location, EquationDirection::Right);
 
-        let (movable_item, slot_location) = constraint.get_movable_term();
+        let (movable_item, _) = constraint.get_movable_term();
         assert_eq!(movable_item.is_some(), false);
     }
 
@@ -554,7 +554,7 @@ mod tests {
         // s5 = 6
         // s6 = 7
 
-        let mut constraint = Constraint::new(
+        let constraint = Constraint::new(
             // -s3
             vec![Term(3, Fr::from(-1))],
             // (s1 + s2)

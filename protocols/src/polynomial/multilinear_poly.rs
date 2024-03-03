@@ -701,7 +701,6 @@ mod tests {
         // apply mod 17
         // p = 13 + 4c + 8d
         // [13, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0]
-        let p = poly_5ab_7bc_8d();
         let p_13_4c_8d = poly_5ab_7bc_8d()
             .partial_evaluate(&[
                 (vec![false, true, false, false], &Fq::from(3)),
@@ -740,7 +739,6 @@ mod tests {
         // p = 11
         // dense form
         // [11, .....]
-        let p = poly_5ab_7bc_8d();
         let eval = poly_5ab_7bc_8d()
             .partial_evaluate(&[
                 (vec![true, false, false, false], &Fq::from(2)),
