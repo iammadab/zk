@@ -1,10 +1,12 @@
 use crate::gkr::circuit::Circuit;
-use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
+use crate::gkr::protocol::{prove as GKRProve, verify as GKRVerify, Proof as GKRProof};
 use crate::r1cs_gkr::circuit::program_circuit;
 use crate::r1cs_gkr::constraint::Term;
 use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
+
+type Operands<F> = (Term<F>, Term<F>);
 
 /// Generate a GKR proof for a given R1CSProgram
 pub fn prove_circom_gkr<F: PrimeField>(
@@ -59,7 +61,7 @@ fn generate_intermediate_witness_values<F: PrimeField>(
     // and since each variable must use two variable that already exists
     // this order allows for all needed values to be present every time we want to perform
     // a variable value computation
-    let mut variable_map_tuples: Vec<((Term<F>, Term<F>), usize)> =
+    let mut variable_map_tuples: Vec<(Operands<F>, usize)> =
         symbol_table.variable_map.into_iter().collect();
     variable_map_tuples.sort_by(|a, b| a.1.cmp(&b.1));
 

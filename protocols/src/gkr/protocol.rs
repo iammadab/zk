@@ -10,7 +10,7 @@ use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
 #[derive(Debug, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
-pub struct GKRProof<F: PrimeField> {
+pub struct Proof<F: PrimeField> {
     // TODO: seems it might be better to return the output points directly i.e. Vec<F>
     //  feels like it will constrain the prover better. Don't make this change if you haven't
     //  figured out a way to break it!!!!
@@ -20,10 +20,10 @@ pub struct GKRProof<F: PrimeField> {
 }
 
 /// Prove correct circuit evaluation using the GKR protocol
-pub fn GKRProve<F: PrimeField>(
+pub fn prove<F: PrimeField>(
     circuit: Circuit,
     evaluations: Vec<Vec<F>>,
-) -> Result<GKRProof<F>, &'static str> {
+) -> Result<Proof<F>, &'static str> {
     // TODO: do I need to add the circuit and the input to the transcript
     let mut transcript = Transcript::new();
     let mut sumcheck_proofs = vec![];
@@ -66,7 +66,7 @@ pub fn GKRProve<F: PrimeField>(
         m = w_i.evaluate(r.as_slice())?;
     }
 
-    Ok(GKRProof {
+    Ok(Proof {
         output_mle: w_0,
         sumcheck_proofs,
         q_functions,
@@ -74,10 +74,10 @@ pub fn GKRProve<F: PrimeField>(
 }
 
 /// Verify a GKR proof
-pub fn GKRVerify<F: PrimeField>(
+pub fn verify<F: PrimeField>(
     circuit: Circuit,
     input: Vec<F>,
-    proof: GKRProof<F>,
+    proof: Proof<F>,
 ) -> Result<bool, &'static str> {
     if proof.sumcheck_proofs.len() != proof.q_functions.len() {
         return Err("invalid gkr proof");
@@ -156,8 +156,8 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate::Gate;
-    use crate::gkr::gkr::{GKRProof, GKRProve, GKRVerify};
     use crate::gkr::layer::Layer;
+    use crate::gkr::protocol::{prove as GKRProve, verify as GKRVerify, Proof as GKRProof};
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
     use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};

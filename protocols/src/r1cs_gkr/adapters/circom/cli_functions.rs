@@ -1,4 +1,4 @@
-use crate::gkr::gkr::GKRProof;
+use crate::gkr::protocol::Proof as GKRProof;
 use crate::r1cs_gkr::adapters::circom::CircomAdapter;
 use crate::r1cs_gkr::program::R1CSProgram;
 use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
