@@ -96,11 +96,7 @@ impl<F: PrimeField> Constraint<F> {
     fn can_simplify(&self) -> bool {
         let has_more_than_one_term_in_a_slot =
             self.a.len() > 1 || self.b.len() > 1 || self.c.len() > 1;
-        if self.terms_count() > 3 || has_more_than_one_term_in_a_slot {
-            true
-        } else {
-            false
-        }
+        self.terms_count() > 3 || has_more_than_one_term_in_a_slot
     }
 
     /// Simplifies constraint by moving extra terms to empty slots (as many as possible)
@@ -224,9 +220,9 @@ impl<F: PrimeField> TryFrom<&Constraint<F>> for ReducedConstraint<F> {
         }
 
         Ok(Self {
-            a: value.a.get(0).cloned(),
-            b: value.b.get(0).cloned(),
-            c: value.c.get(0).cloned(),
+            a: value.a.first().cloned(),
+            b: value.b.first().cloned(),
+            c: value.c.first().cloned(),
             operation: value.operation.clone(),
         })
     }

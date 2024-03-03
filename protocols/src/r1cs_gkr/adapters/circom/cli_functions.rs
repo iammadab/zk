@@ -114,7 +114,7 @@ impl<'a> CLIFunctions<'a> {
 
         json_object
             .iter()
-            .map(|val| json_value_to_field_element(val))
+            .map(json_value_to_field_element)
             .collect::<Result<Vec<Fr>, &'static str>>()
     }
 
@@ -141,12 +141,12 @@ impl<'a> CLIFunctions<'a> {
         }
 
         if !self.base_folder().exists() {
-            fs::create_dir(&self.base_folder()).map_err(|_| "failed to create base folder")?;
+            fs::create_dir(self.base_folder()).map_err(|_| "failed to create base folder")?;
         }
 
         // compile the circom program
         let _ = Command::new("circom")
-            .arg(&self.source_file_path)
+            .arg(self.source_file_path)
             .arg("--r1cs")
             .arg("--wasm")
             .arg("--O0")
@@ -208,7 +208,7 @@ impl<'a> CLIFunctions<'a> {
             .map(|witness| witness.to_string())
             .collect::<Vec<String>>();
 
-        let _ = write_file(
+        write_file(
             &self.witness_path(),
             serde_json::to_string(&Value::from(witness_as_string))
                 .expect("this should not fail")
@@ -231,7 +231,9 @@ impl<'a> CLIFunctions<'a> {
         let proof = prove_circom_gkr(program, witness)?;
 
         let mut serialized_proof = vec![];
-        proof.serialize_uncompressed(&mut serialized_proof);
+        proof
+            .serialize_uncompressed(&mut serialized_proof)
+            .map_err(|_| "failed to seralize proof")?;
 
         let _ = write_file(&self.proof_path(), serialized_proof.as_slice());
 
@@ -264,11 +266,11 @@ fn json_value_to_field_element<F: PrimeField>(val: &Value) -> Result<F, &'static
         .as_str()
         .ok_or("invalid input.json expected number strings for value e.g. {\"a\": \"1\"}")?;
 
-    if val_str == "" {
+    if val_str.is_empty() {
         return Ok(F::zero());
     }
 
-    let val_big_int = num_bigint::BigInt::from_str(&val_str)
+    let val_big_int = num_bigint::BigInt::from_str(val_str)
         .map_err(|_| "invalid input.json value: expected number")?;
 
     Ok(F::from_be_bytes_mod_order(

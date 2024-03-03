@@ -155,7 +155,7 @@ impl Sumcheck {
 
         let mut transcript = Transcript::new();
         // add poly to transcript
-        transcript.append(&proof.poly.to_bytes().as_slice());
+        transcript.append(proof.poly.to_bytes().as_slice());
 
         let initial_poly = proof.poly.clone();
 
@@ -197,7 +197,7 @@ impl Sumcheck {
             }
 
             // add poly to transcript
-            transcript.append(&poly.to_bytes().as_slice());
+            transcript.append(poly.to_bytes().as_slice());
 
             // sample challenge and update claimed sum
             let challenge = transcript.sample_field_element::<F>();

@@ -14,7 +14,7 @@ impl Transcript {
     }
 
     pub(crate) fn append(&mut self, new_data: &[u8]) {
-        self.hasher.update(&mut new_data.clone());
+        self.hasher.update(new_data);
     }
 
     fn sample_challenge(&mut self) -> [u8; 32] {

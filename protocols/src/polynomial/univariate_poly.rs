@@ -64,7 +64,7 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
                 }
 
                 // numerator = x -xs[i] where i != lagrange_basis_index
-                let numerator = UnivariatePolynomial::new(vec![-x_value.clone(), F::from(1_u8)]);
+                let numerator = UnivariatePolynomial::new(vec![-(*x_value), F::from(1_u8)]);
                 let denominator = (*x - x_value).inverse().unwrap();
 
                 lagrange_basis =
