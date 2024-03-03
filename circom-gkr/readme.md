@@ -1,5 +1,5 @@
 ## Circom GKR
-circom-gkr is a command line interface for proving and verifying code written in circom using a GKR backend. 
+circom-gkr is a command line interface for proving and verifying code written in circom using a GKR backend. Demo available [here](https://youtu.be/iML6Q9q0Nag?si=tVum62k_TV08gsMH)
 
 ## Dependency
 - you should already have circom cli installed
