@@ -41,11 +41,6 @@ impl<F: PrimeField> Constraint<F> {
         Self { a, b, c, operation }
     }
 
-    /// Create new constraint with automatic operation detection
-    fn new_with_operation(a: Slot<F>, b: Slot<F>, c: Slot<F>, operation: Operation) -> Self {
-        Self { a, b, c, operation }
-    }
-
     /// Reduce a constraint into one or more reduced constraints.
     /// First it tries to move extra terms to empty slots, then it attempts merging terms into
     /// new constraints
@@ -531,12 +526,12 @@ mod tests {
 
         assert_eq!(
             constraint,
-            Constraint::new_with_operation(
-                vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
-                vec![Term(3, Fr::from(1))],
-                vec![Term(2, Fr::from(5))],
-                Operation::Add
-            )
+            Constraint {
+                a: vec![Term(0, Fr::from(1)), Term(1, Fr::from(1))],
+                b: vec![Term(3, Fr::from(1))],
+                c: vec![Term(2, Fr::from(5))],
+                operation: Operation::Add
+            }
         )
     }
 

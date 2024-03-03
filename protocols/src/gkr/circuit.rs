@@ -118,7 +118,7 @@ impl Add for Circuit {
         let combined_layers = self
             .layers
             .into_iter()
-            .zip(rhs.layers.into_iter())
+            .zip(rhs.layers)
             .map(|(mut l1, l2)| {
                 l1.add_gates.extend(l2.add_gates);
                 l1.mul_gates.extend(l2.mul_gates);
@@ -126,7 +126,7 @@ impl Add for Circuit {
             })
             .collect();
 
-        Ok(Circuit::new(combined_layers)?)
+        Circuit::new(combined_layers)
     }
 }
 

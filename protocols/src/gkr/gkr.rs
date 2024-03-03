@@ -88,16 +88,16 @@ pub fn GKRVerify<F: PrimeField>(
 
     let mut r = transcript.sample_n_field_elements(proof.output_mle.n_vars());
     let mut m = proof.output_mle.evaluate(r.as_slice())?;
-    let mut layer_index = 0;
 
     let sumcheck_and_q_functions = proof
         .sumcheck_proofs
         .clone()
         .into_iter()
-        .zip(proof.q_functions.clone().into_iter());
+        .zip(proof.q_functions);
 
     // Verify each sumcheck proof and update next round parameters
-    for (partial_sumcheck_proof, q_function) in sumcheck_and_q_functions {
+    for (layer_index, (partial_sumcheck_proof, q_function)) in sumcheck_and_q_functions.enumerate()
+    {
         // here we ensure that the sumcheck proof proves the correct sum
         if partial_sumcheck_proof.sum != m {
             return Err("invalid sumcheck proof");
@@ -141,7 +141,6 @@ pub fn GKRVerify<F: PrimeField>(
 
         r = evaluate_l_function(l_function.as_slice(), &r_star);
         m = q_function.evaluate(&r_star);
-        layer_index += 1;
     }
 
     // since the verifier has access to the input layer

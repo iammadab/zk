@@ -51,7 +51,7 @@ impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
         let assignments = &assignments[..self.n_vars()];
 
         let mut indexed_assignments = vec![];
-        for (position, assignment) in assignments.into_iter().enumerate() {
+        for (position, assignment) in assignments.iter().enumerate() {
             indexed_assignments.push((
                 selector_from_position(self.n_vars as usize, position)?,
                 assignment,
@@ -178,7 +178,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         number_of_variables: u32,
         coefficients: BTreeMap<usize, F>,
     ) -> Result<Self, &'static str> {
-        if let Some((largest_key, value)) = coefficients.last_key_value() {
+        if let Some((largest_key, _)) = coefficients.last_key_value() {
             if largest_key >= &Self::variable_combination_count(number_of_variables) {
                 return Err("coefficient map represents more than specificed number of variables");
             }
@@ -206,8 +206,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
         let mut result = Self::additive_identity();
         for (i, value) in values.iter().enumerate() {
-            let poly =
-                Self::lagrange_basis_poly(i, num_of_variables as usize).scalar_multiply(value);
+            let poly = Self::lagrange_basis_poly(i, num_of_variables).scalar_multiply(value);
             result = (&result + &poly).unwrap();
         }
         result
@@ -246,7 +245,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             .fold(vec![false; self.n_vars as usize], |acc, key| {
                 let current_bool_rep = selector_from_usize(*key, self.n_vars as usize);
                 acc.into_iter()
-                    .zip(current_bool_rep.into_iter())
+                    .zip(current_bool_rep)
                     .map(|(a, b)| a | b)
                     .collect()
             })
@@ -271,7 +270,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Co-efficient wise multiplication with scalar
     pub fn scalar_multiply(&self, scalar: &F) -> Self {
         // TODO: consider inplace operations
-        let mut updated_coefficients = self
+        let updated_coefficients = self
             .coefficients
             .clone()
             .into_iter()
@@ -303,7 +302,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             return Err("only select single variable, cannot get indexes for constant or multiple variables");
         }
 
-        let variable_id = selector_to_index(&selector);
+        let variable_id = selector_to_index(selector);
         let mut indexes = vec![];
         let mut count = 0;
         let mut skip = false;
@@ -358,10 +357,7 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
             *longer_coeff.entry(*index).or_insert(F::zero()) += coeff;
         }
 
-        Ok(MultiLinearPolynomial::new_with_coefficient(
-            n_vars,
-            longer_coeff,
-        )?)
+        MultiLinearPolynomial::new_with_coefficient(n_vars, longer_coeff)
     }
 }
 
