@@ -37,8 +37,7 @@ impl<'a> CLIFunctions<'a> {
     fn base_folder(&self) -> PathBuf {
         let source_folder = self.source_file_path.parent().unwrap();
         let base_folder_name = self.file_name() + "_gkr";
-        let base_folder_path = source_folder.join(PathBuf::from(base_folder_name));
-        base_folder_path
+        source_folder.join(PathBuf::from(base_folder_name))
     }
 
     /// Returns the path to the R1CS file
@@ -114,7 +113,7 @@ impl<'a> CLIFunctions<'a> {
             .ok_or("expect witness.json to contain a json object")?;
 
         json_object
-            .into_iter()
+            .iter()
             .map(|val| json_value_to_field_element(val))
             .collect::<Result<Vec<Fr>, &'static str>>()
     }

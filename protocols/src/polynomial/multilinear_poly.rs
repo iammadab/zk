@@ -367,9 +367,9 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
     fn mul(self, rhs: Self) -> Self::Output {
         // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
         if self.n_vars == 0 {
-            return rhs.scalar_multiply(&self.coefficients.get(&0).unwrap_or(&F::zero()));
+            return rhs.scalar_multiply(self.coefficients.get(&0).unwrap_or(&F::zero()));
         } else if rhs.n_vars == 0 {
-            return self.scalar_multiply(&rhs.coefficients.get(&0).unwrap_or(&F::zero()));
+            return self.scalar_multiply(rhs.coefficients.get(&0).unwrap_or(&F::zero()));
         };
 
         // It is assumed that both lhs and rhs don't share common variables
@@ -405,8 +405,8 @@ fn selector_to_index(selector: &[bool]) -> usize {
     let mut sum = 0;
     let mut adder = 1;
 
-    for i in 0..selector.len() {
-        if selector[i] {
+    for bit_present in selector {
+        if *bit_present {
             sum += adder;
         }
         adder *= 2;
@@ -427,9 +427,7 @@ pub fn selector_from_usize(value: usize, exact_size: usize) -> Vec<bool> {
         }
     }
     result.reverse();
-    for _ in 0..(exact_size - binary_value.len()) {
-        result.push(false);
-    }
+    result.resize(exact_size, false);
     result
 }
 
@@ -448,7 +446,7 @@ pub fn selector_from_position(size: usize, position: usize) -> Result<Vec<bool>,
 /// Convert a number to a binary string of a given size
 pub fn binary_string(index: usize, bit_count: usize) -> String {
     let binary = format!("{:b}", index);
-    "0".repeat(bit_count.checked_sub(binary.len()).unwrap_or(0)) + &binary
+    "0".repeat(bit_count.saturating_sub(binary.len())) + &binary
 }
 
 /// Generate remapping instruction for truncating a presence vector
