@@ -96,7 +96,7 @@ impl<F: PrimeField> Polynomial<F> for GateEvalExtension<F> {
         self.b_vars() + self.c_vars()
     }
 
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+    fn evaluate_slice(&self, assignments: &[F]) -> Result<F, &'static str> {
         if assignments.len() != self.n_vars() {
             return Err("invalid assignment length, should be twice the size of w_mle.n_vars()");
         }
@@ -108,11 +108,13 @@ impl<F: PrimeField> Polynomial<F> for GateEvalExtension<F> {
 
         for i in 0..self.count() {
             let mid = self.w_b_mle[i].n_vars();
-            let b_val = self.w_b_mle[i].evaluate(&assignments[..mid]).unwrap();
-            let c_val = self.w_c_mle[i].evaluate(&assignments[mid..]).unwrap();
+            let b_val = self.w_b_mle[i].evaluate_slice(&assignments[..mid]).unwrap();
+            let c_val = self.w_c_mle[i].evaluate_slice(&assignments[mid..]).unwrap();
 
-            let add_result = self.add_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val + c_val);
-            let mul_result = self.mul_mle[i].evaluate(rbc.as_slice()).unwrap() * (b_val * c_val);
+            let add_result =
+                self.add_mle[i].evaluate_slice(rbc.as_slice()).unwrap() * (b_val + c_val);
+            let mul_result =
+                self.mul_mle[i].evaluate_slice(rbc.as_slice()).unwrap() * (b_val * c_val);
 
             evaluation_result += add_result + mul_result;
         }
@@ -343,7 +345,7 @@ mod test {
         // eval at b = 0 and c = 1, expected result = 14
         assert_eq!(
             gate_eval_ext
-                .evaluate(&[Fr::from(0), Fr::from(0), Fr::from(0), Fr::from(1)])
+                .evaluate_slice(&[Fr::from(0), Fr::from(0), Fr::from(0), Fr::from(1)])
                 .unwrap(),
             Fr::from(14)
         );
@@ -354,7 +356,7 @@ mod test {
         // eval at b = 2, and c = 3, expected result = 165
         assert_eq!(
             gate_eval_ext
-                .evaluate(&[Fr::from(1), Fr::from(0), Fr::from(1), Fr::from(1)])
+                .evaluate_slice(&[Fr::from(1), Fr::from(0), Fr::from(1), Fr::from(1)])
                 .unwrap(),
             Fr::from(165)
         );
@@ -374,7 +376,7 @@ mod test {
         // first we perform a full evaluation to get the expected result
         assert_eq!(
             gate_eval_ext
-                .evaluate(&[Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)])
+                .evaluate_slice(&[Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)])
                 .unwrap(),
             Fr::from(6840)
         );
@@ -402,7 +404,7 @@ mod test {
         let p4 = p4.relabel();
         assert_eq!(p4.n_vars(), 0);
 
-        assert_eq!(p4.evaluate(&[]).unwrap(), Fr::from(6840));
+        assert_eq!(p4.evaluate_slice(&[]).unwrap(), Fr::from(6840));
     }
 
     #[test]
@@ -430,7 +432,7 @@ mod test {
         assert_eq!(p1.w_b_mle[0].n_vars(), 1);
         assert_eq!(p1.w_c_mle[0].n_vars(), 0);
 
-        let evaluation = p1.evaluate(&[Fr::from(12)]).unwrap();
+        let evaluation = p1.evaluate_slice(&[Fr::from(12)]).unwrap();
 
         let p1_univariate = p1.to_univariate().unwrap();
         let uni_evaluation = p1_univariate.evaluate(&Fr::from(12));

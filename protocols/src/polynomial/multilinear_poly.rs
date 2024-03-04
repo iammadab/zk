@@ -35,7 +35,7 @@ impl<F: PrimeField> Polynomial<F> for MultiLinearPolynomial<F> {
     }
 
     /// Assign a value to every variable in the polynomial, result is a Field element
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+    fn evaluate_slice(&self, assignments: &[F]) -> Result<F, &'static str> {
         // Associates every assignment with the correct selector vector and calls
         // partial evaluate on the expanded assignment
 
@@ -795,7 +795,7 @@ mod tests {
     fn test_evaluation_incomplete_assignment() {
         // p has 4 variables so requires 4 assignments
         let p = poly_5ab_7bc_8d();
-        assert_eq!(p.evaluate(&[Fq::from(4)]).is_err(), true);
+        assert_eq!(p.evaluate_slice(&[Fq::from(4)]).is_err(), true);
     }
 
     #[test]
@@ -810,7 +810,7 @@ mod tests {
         // dense form
         // [11, .....]
         let p = poly_5ab_7bc_8d();
-        let eval = p.evaluate(&fq_from_vec(vec![2, 4, 3, 5])).unwrap();
+        let eval = p.evaluate_slice(&fq_from_vec(vec![2, 4, 3, 5])).unwrap();
         assert_eq!(eval, Fq::from(11));
     }
 
@@ -818,7 +818,7 @@ mod tests {
     fn test_evaluation_with_more_than_n_points() {
         // p has 4 variables, but passing 5
         let p = poly_5ab_7bc_8d();
-        let eval = p.evaluate(&fq_from_vec(vec![2, 4, 3, 5, 8])).unwrap();
+        let eval = p.evaluate_slice(&fq_from_vec(vec![2, 4, 3, 5, 8])).unwrap();
         assert_eq!(eval, Fq::from(11));
     }
 
@@ -1000,10 +1000,16 @@ mod tests {
     #[test]
     fn test_check_zero() {
         let zero_checker = MultiLinearPolynomial::<Fq>::check_zero();
-        assert_eq!(zero_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::one());
-        assert_eq!(zero_checker.evaluate(&[Fq::one()]).unwrap(), Fq::zero());
         assert_eq!(
-            zero_checker.evaluate(&[Fq::from(5)]).unwrap(),
+            zero_checker.evaluate_slice(&[Fq::zero()]).unwrap(),
+            Fq::one()
+        );
+        assert_eq!(
+            zero_checker.evaluate_slice(&[Fq::one()]).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(
+            zero_checker.evaluate_slice(&[Fq::from(5)]).unwrap(),
             Fq::from(4).neg()
         );
     }
@@ -1011,9 +1017,15 @@ mod tests {
     #[test]
     fn test_check_one() {
         let one_checker = MultiLinearPolynomial::<Fq>::check_one();
-        assert_eq!(one_checker.evaluate(&[Fq::zero()]).unwrap(), Fq::zero());
-        assert_eq!(one_checker.evaluate(&[Fq::one()]).unwrap(), Fq::one());
-        assert_eq!(one_checker.evaluate(&[Fq::from(20)]).unwrap(), Fq::from(20));
+        assert_eq!(
+            one_checker.evaluate_slice(&[Fq::zero()]).unwrap(),
+            Fq::zero()
+        );
+        assert_eq!(one_checker.evaluate_slice(&[Fq::one()]).unwrap(), Fq::one());
+        assert_eq!(
+            one_checker.evaluate_slice(&[Fq::from(20)]).unwrap(),
+            Fq::from(20)
+        );
     }
 
     #[test]
@@ -1023,35 +1035,51 @@ mod tests {
         let five_checker = MultiLinearPolynomial::<Fq>::lagrange_basis_poly(5, 3);
         assert_eq!(five_checker.n_vars, 3);
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![0, 0, 0])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![0, 0, 0]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![0, 0, 1])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![0, 0, 1]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![0, 1, 0])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![0, 1, 0]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![0, 1, 1])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![0, 1, 1]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![1, 0, 0])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![1, 0, 0]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![1, 0, 1])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![1, 0, 1]))
+                .unwrap(),
             Fq::one()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![1, 1, 0])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![1, 1, 0]))
+                .unwrap(),
             Fq::zero()
         );
         assert_eq!(
-            five_checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
+            five_checker
+                .evaluate_slice(&fq_from_vec(vec![1, 1, 1]))
+                .unwrap(),
             Fq::zero()
         );
     }
@@ -1074,19 +1102,19 @@ mod tests {
 
         // verify evaluation points
         assert_eq!(
-            poly.evaluate(&fq_from_vec(vec![0, 0])).unwrap(),
+            poly.evaluate_slice(&fq_from_vec(vec![0, 0])).unwrap(),
             Fq::from(2)
         );
         assert_eq!(
-            poly.evaluate(&fq_from_vec(vec![0, 1])).unwrap(),
+            poly.evaluate_slice(&fq_from_vec(vec![0, 1])).unwrap(),
             Fq::from(4)
         );
         assert_eq!(
-            poly.evaluate(&fq_from_vec(vec![1, 0])).unwrap(),
+            poly.evaluate_slice(&fq_from_vec(vec![1, 0])).unwrap(),
             Fq::from(8)
         );
         assert_eq!(
-            poly.evaluate(&fq_from_vec(vec![1, 1])).unwrap(),
+            poly.evaluate_slice(&fq_from_vec(vec![1, 1])).unwrap(),
             Fq::from(3)
         );
     }
@@ -1201,35 +1229,35 @@ mod tests {
         // poly to check 001
         let checker = MultiLinearPolynomial::<Fq>::bit_string_checker("001".to_string());
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![0, 0, 0])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![0, 0, 0])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![0, 0, 1])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![0, 0, 1])).unwrap(),
             Fq::from(1)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![0, 1, 0])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![0, 1, 0])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![0, 1, 1])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![0, 1, 1])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![1, 0, 0])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![1, 0, 0])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![1, 0, 1])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![1, 0, 1])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![1, 1, 0])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![1, 1, 0])).unwrap(),
             Fq::from(0)
         );
         assert_eq!(
-            checker.evaluate(&fq_from_vec(vec![1, 1, 1])).unwrap(),
+            checker.evaluate_slice(&fq_from_vec(vec![1, 1, 1])).unwrap(),
             Fq::from(0)
         );
     }
@@ -1237,7 +1265,7 @@ mod tests {
     #[test]
     fn test_evaluate_zero_poly() {
         let zero_poly = MultiLinearPolynomial::<Fq>::additive_identity();
-        assert_eq!(zero_poly.evaluate(&[]).unwrap(), Fq::from(0));
+        assert_eq!(zero_poly.evaluate_slice(&[]).unwrap(), Fq::from(0));
     }
 
     #[test]
@@ -1245,7 +1273,7 @@ mod tests {
         // p = 2a
         let p = MultiLinearPolynomial::<Fq>::new(1, vec![(Fq::from(2), vec![true])]).unwrap();
         // p(2) = 4
-        assert_eq!(p.evaluate(&[Fq::from(2)]).unwrap(), Fq::from(4));
+        assert_eq!(p.evaluate_slice(&[Fq::from(2)]).unwrap(), Fq::from(4));
         let p_univariate = p.to_univariate().unwrap();
         assert_eq!(p_univariate.evaluate(&Fq::from(2)), Fq::from(4));
 
@@ -1255,13 +1283,13 @@ mod tests {
             vec![(Fq::from(3), vec![true]), (Fq::from(4), vec![false])],
         )
         .unwrap();
-        assert_eq!(p.evaluate(&[Fq::from(3)]).unwrap(), Fq::from(13));
+        assert_eq!(p.evaluate_slice(&[Fq::from(3)]).unwrap(), Fq::from(13));
         let p_univariate = p.to_univariate().unwrap();
         assert_eq!(p_univariate.evaluate(&Fq::from(3)), Fq::from(13));
 
         // p = 0
         let p = MultiLinearPolynomial::<Fq>::additive_identity();
-        assert_eq!(p.evaluate(&[Fq::from(3)]).unwrap(), Fq::from(0));
+        assert_eq!(p.evaluate_slice(&[Fq::from(3)]).unwrap(), Fq::from(0));
         let p_univariate = p.to_univariate().unwrap();
         assert_eq!(p_univariate.evaluate(&Fq::from(25)), Fq::from(0));
 

@@ -161,7 +161,7 @@ impl Sumcheck {
             // final verifier check
             // p_v(r_v) = p(r_1, r_2, ..., r_v)
             let initial_poly_eval = initial_poly
-                .evaluate(subclaim.challenges.as_slice())
+                .evaluate_slice(subclaim.challenges.as_slice())
                 .unwrap();
             initial_poly_eval == subclaim.sum
         } else {

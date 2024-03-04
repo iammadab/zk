@@ -37,7 +37,7 @@ pub fn prove<F: PrimeField>(
     let mut r = transcript.sample_n_field_elements::<F>(w_0.n_vars());
 
     // evaluate w_0(r) to get m
-    let mut m = w_0.evaluate(r.as_slice())?;
+    let mut m = w_0.evaluate_slice(r.as_slice())?;
 
     // f(b, c) = add(r, b, c)(w_i(b) + w_i(c)) + mul(r, b, c)(w_i(b) * w_i(c))
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
@@ -63,7 +63,7 @@ pub fn prove<F: PrimeField>(
 
         let r_star = transcript.sample_field_element();
         r = evaluate_l_function(l_function.as_slice(), &r_star);
-        m = w_i.evaluate(r.as_slice())?;
+        m = w_i.evaluate_slice(r.as_slice())?;
     }
 
     Ok(Proof {
@@ -87,7 +87,7 @@ pub fn verify<F: PrimeField>(
     transcript.append(proof.output_mle.to_bytes().as_slice());
 
     let mut r = transcript.sample_n_field_elements(proof.output_mle.n_vars());
-    let mut m = proof.output_mle.evaluate(r.as_slice())?;
+    let mut m = proof.output_mle.evaluate_slice(r.as_slice())?;
 
     let sumcheck_and_q_functions = proof
         .sumcheck_proofs
@@ -127,8 +127,8 @@ pub fn verify<F: PrimeField>(
 
         let w_b = q_function.evaluate(&F::zero());
         let w_c = q_function.evaluate(&F::one());
-        let add_result = add_mle.evaluate(rbc.as_slice())? * (w_b + w_c);
-        let mul_result = mul_mle.evaluate(rbc.as_slice())? * (w_b * w_c);
+        let add_result = add_mle.evaluate_slice(rbc.as_slice())? * (w_b + w_c);
+        let mul_result = mul_mle.evaluate_slice(rbc.as_slice())? * (w_b * w_c);
         let f_b_c_eval = add_result + mul_result;
 
         // final sumcheck verifier check
@@ -147,7 +147,7 @@ pub fn verify<F: PrimeField>(
     // the verifier can check for the correctness of last m itself
     // by evaluating the input_mle at r and comparing that to the claimed m
     let input_mle = MultiLinearPolynomial::<F>::interpolate(input.as_slice());
-    let actual_m = input_mle.evaluate(r.as_slice())?;
+    let actual_m = input_mle.evaluate_slice(r.as_slice())?;
     Ok(actual_m == m)
 }
 

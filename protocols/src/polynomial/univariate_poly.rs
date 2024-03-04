@@ -104,7 +104,7 @@ impl<F: PrimeField> Polynomial<F> for UnivariatePolynomial<F> {
         1
     }
 
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+    fn evaluate_slice(&self, assignments: &[F]) -> Result<F, &'static str> {
         if assignments.is_empty() {
             return Err("empty assignment, cannot evaluate univariate polynomial");
         }
@@ -115,10 +115,6 @@ impl<F: PrimeField> Polynomial<F> for UnivariatePolynomial<F> {
     where
         Self: Sized,
     {
-        // there should be only 1 assignment since only one variable
-        // the selector length should be just 1 also
-        // then we just call evaluate
-        // but we wrap things in a constant
         if assignments.len() != 1 {
             return Err(
                 "cannot partially evaluate a univariate polynomial at more than 1 variable",
@@ -407,5 +403,38 @@ mod tests {
         assert_eq!(uni_poly_result.is_err(), false);
         let uni_poly = uni_poly_result.unwrap();
         assert_eq!(uni_poly, poly_from_vec(vec![2, 3]));
+    }
+
+    #[test]
+    fn test_univariate_polynomial_trait_methods() {
+        // p = 5x^3 - 12x
+        let p = UnivariatePolynomial::interpolate_xy(
+            fq_from_vec(vec![5, 7, 9, 1]),
+            fq_from_vec(vec![565, 1631, 3537, -7]),
+        );
+
+        // n_vars
+        assert_eq!(p.n_vars(), 1);
+
+        // additive_identity
+        let p_1 = &p + &UnivariatePolynomial::additive_identity();
+        assert_eq!(p, p_1);
+
+        // to_univariate
+        assert_eq!(p, p.to_univariate().unwrap());
+
+        // evaluate
+        assert_eq!(p.evaluate_slice(&[Fq::from(5)]).unwrap(), Fq::from(565));
+
+        // partial evaluate
+        let p_poly = p.partial_evaluate(&[(vec![true], &Fq::from(5))]).unwrap();
+        assert_eq!(p_poly, UnivariatePolynomial::new(vec![Fq::from(565)]));
+        // partial evaluation on the constant poly should return the same constant
+        assert_eq!(
+            p_poly
+                .partial_evaluate(&[(vec![true], &Fq::from(10))])
+                .unwrap(),
+            p_poly
+        );
     }
 }

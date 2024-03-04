@@ -11,7 +11,7 @@ pub trait Polynomial<F: PrimeField>: Clone {
     fn n_vars(&self) -> usize;
 
     /// Assign a value to every variable, return the evaluation
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str>;
+    fn evaluate_slice(&self, assignments: &[F]) -> Result<F, &'static str>;
 
     /// Fix certain variables in the polynomial, return the reduced polynomial
     fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>

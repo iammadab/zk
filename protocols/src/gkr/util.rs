@@ -106,7 +106,7 @@ mod test {
         let x = Fr::rand(&mut test_rng());
         assert_eq!(
             q.evaluate(&x),
-            p.evaluate(evaluate_l_function(l_functions.as_slice(), &x).as_slice())
+            p.evaluate_slice(evaluate_l_function(l_functions.as_slice(), &x).as_slice())
                 .unwrap()
         );
     }
