@@ -93,23 +93,68 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
         }
     }
 
-    /// Additive identity poly
-    pub fn additive_identity() -> Self {
-        Self::new(vec![])
-    }
-
     /// Multiplicative identity poly
     pub fn multiplicative_identity() -> Self {
         Self::new(vec![F::one()])
     }
+}
 
-    /// Serialize the univariate polynomial
-    pub fn to_bytes(&self) -> Vec<u8> {
+impl<F: PrimeField> Polynomial<F> for UnivariatePolynomial<F> {
+    fn n_vars(&self) -> usize {
+        1
+    }
+
+    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+        if assignments.is_empty() {
+            return Err("empty assignment, cannot evaluate univariate polynomial");
+        }
+        Ok(self.evaluate(&assignments[0]))
+    }
+
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
+    where
+        Self: Sized,
+    {
+        // there should be only 1 assignment since only one variable
+        // the selector length should be just 1 also
+        // then we just call evaluate
+        // but we wrap things in a constant
+        if assignments.len() != 1 {
+            return Err(
+                "cannot partially evaluate a univariate polynomial at more than 1 variable",
+            );
+        }
+
+        if assignments[0].0.len() != 1 {
+            return Err("partial evaluation selector should point to only 1 variable");
+        }
+
+        if assignments[0].0[0] == true {
+            Ok(Self::new(vec![self.evaluate(assignments[0].1)]))
+        } else {
+            // TODO: get rid of this clone
+            Ok(self.clone())
+        }
+    }
+
+    fn relabel(self) -> Self {
+        self
+    }
+
+    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
+        Ok(self.clone())
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
         for coeff in self.coefficients() {
             result.extend(coeff.into_bigint().to_bytes_be());
         }
         result
+    }
+
+    fn additive_identity() -> Self {
+        Self::new(vec![])
     }
 }
 
