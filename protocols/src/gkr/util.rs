@@ -1,6 +1,6 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{selector_from_usize, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::Polynomial;
 use ark_ff::PrimeField;
 
 /// Generate a unique line such that l(0) = b and l(1) = c
@@ -106,7 +106,7 @@ mod test {
         let x = Fr::rand(&mut test_rng());
         assert_eq!(
             q.evaluate(&x),
-            p.evaluate(evaluate_l_function(l_functions.as_slice(), &x).as_slice())
+            p.evaluate_slice(evaluate_l_function(l_functions.as_slice(), &x).as_slice())
                 .unwrap()
         );
     }

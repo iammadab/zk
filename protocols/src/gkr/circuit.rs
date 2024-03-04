@@ -133,10 +133,9 @@ impl Add for Circuit {
 #[cfg(test)]
 pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
-
     use crate::gkr::gate::Gate;
-    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+    use crate::polynomial::Polynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
 
@@ -273,7 +272,7 @@ pub mod tests {
         // the only eval should be what we expect (a, b, c) -> (0, 0, 1)
         assert_eq!(
             add_0
-                .evaluate(&[Fr::from(0), Fr::from(0), Fr::from(1)])
+                .evaluate_slice(&[Fr::from(0), Fr::from(0), Fr::from(1)])
                 .unwrap(),
             Fr::from(1)
         );
@@ -291,7 +290,7 @@ pub mod tests {
         // exact evaluation should be (a, b, c) -> (0, 0, 1) -> (0, 00, 01)
         assert_eq!(
             add_1
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(0),
                     Fr::from(0),
                     Fr::from(0),
@@ -306,7 +305,7 @@ pub mod tests {
         // exact evaluation should be (a, b, c) -> (1, 2, 3) -> (1, 10, 11)
         assert_eq!(
             mult_1
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(1),
                     Fr::from(1),
                     Fr::from(0),
@@ -330,7 +329,7 @@ pub mod tests {
         // (3, 6, 7) -> (11, 110, 111)
         assert_eq!(
             add_2
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(1),
                     Fr::from(0),
                     Fr::from(1),
@@ -345,7 +344,7 @@ pub mod tests {
         );
         assert_eq!(
             add_2
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(1),
                     Fr::from(1),
                     Fr::from(1),
@@ -365,7 +364,7 @@ pub mod tests {
         // (1, 2, 3) -> (01, 010, 011)
         assert_eq!(
             mult_2
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(0),
                     Fr::from(0),
                     Fr::from(0),
@@ -380,7 +379,7 @@ pub mod tests {
         );
         assert_eq!(
             mult_2
-                .evaluate(&[
+                .evaluate_slice(&[
                     Fr::from(0),
                     Fr::from(1),
                     Fr::from(0),

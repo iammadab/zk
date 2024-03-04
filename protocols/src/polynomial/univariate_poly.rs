@@ -1,5 +1,5 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+use crate::polynomial::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use std::ops;
@@ -93,23 +93,64 @@ impl<F: PrimeField> UnivariatePolynomial<F> {
         }
     }
 
-    /// Additive identity poly
-    pub fn additive_identity() -> Self {
-        Self::new(vec![])
-    }
-
     /// Multiplicative identity poly
     pub fn multiplicative_identity() -> Self {
         Self::new(vec![F::one()])
     }
+}
 
-    /// Serialize the univariate polynomial
-    pub fn to_bytes(&self) -> Vec<u8> {
+impl<F: PrimeField> Polynomial<F> for UnivariatePolynomial<F> {
+    fn n_vars(&self) -> usize {
+        1
+    }
+
+    fn evaluate_slice(&self, assignments: &[F]) -> Result<F, &'static str> {
+        if assignments.is_empty() {
+            return Err("empty assignment, cannot evaluate univariate polynomial");
+        }
+        Ok(self.evaluate(&assignments[0]))
+    }
+
+    fn partial_evaluate(&self, assignments: &[(Vec<bool>, &F)]) -> Result<Self, &'static str>
+    where
+        Self: Sized,
+    {
+        if assignments.len() != 1 {
+            return Err(
+                "cannot partially evaluate a univariate polynomial at more than 1 variable",
+            );
+        }
+
+        if assignments[0].0.len() != 1 {
+            return Err("partial evaluation selector should point to only 1 variable");
+        }
+
+        if assignments[0].0[0] == true {
+            Ok(Self::new(vec![self.evaluate(assignments[0].1)]))
+        } else {
+            // TODO: get rid of this clone
+            Ok(self.clone())
+        }
+    }
+
+    fn relabel(self) -> Self {
+        self
+    }
+
+    fn to_univariate(&self) -> Result<UnivariatePolynomial<F>, &'static str> {
+        Ok(self.clone())
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![];
         for coeff in self.coefficients() {
             result.extend(coeff.into_bigint().to_bytes_be());
         }
         result
+    }
+
+    fn additive_identity() -> Self {
+        Self::new(vec![])
     }
 }
 
@@ -188,8 +229,8 @@ impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F
 #[cfg(test)]
 mod tests {
     use super::UnivariatePolynomial;
-    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
+    use crate::polynomial::Polynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend};
 
@@ -362,5 +403,38 @@ mod tests {
         assert_eq!(uni_poly_result.is_err(), false);
         let uni_poly = uni_poly_result.unwrap();
         assert_eq!(uni_poly, poly_from_vec(vec![2, 3]));
+    }
+
+    #[test]
+    fn test_univariate_polynomial_trait_methods() {
+        // p = 5x^3 - 12x
+        let p = UnivariatePolynomial::interpolate_xy(
+            fq_from_vec(vec![5, 7, 9, 1]),
+            fq_from_vec(vec![565, 1631, 3537, -7]),
+        );
+
+        // n_vars
+        assert_eq!(p.n_vars(), 1);
+
+        // additive_identity
+        let p_1 = &p + &UnivariatePolynomial::additive_identity();
+        assert_eq!(p, p_1);
+
+        // to_univariate
+        assert_eq!(p, p.to_univariate().unwrap());
+
+        // evaluate
+        assert_eq!(p.evaluate_slice(&[Fq::from(5)]).unwrap(), Fq::from(565));
+
+        // partial evaluate
+        let p_poly = p.partial_evaluate(&[(vec![true], &Fq::from(5))]).unwrap();
+        assert_eq!(p_poly, UnivariatePolynomial::new(vec![Fq::from(565)]));
+        // partial evaluation on the constant poly should return the same constant
+        assert_eq!(
+            p_poly
+                .partial_evaluate(&[(vec![true], &Fq::from(10))])
+                .unwrap(),
+            p_poly
+        );
     }
 }

@@ -2,3 +2,4 @@
 /protocols/Cargo.lock
 .DS_STORE
 .zed/
+.idea
