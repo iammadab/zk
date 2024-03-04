@@ -1,5 +1,5 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::Polynomial;
 use crate::sumcheck::util::{
     partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
 };
@@ -12,13 +12,13 @@ pub mod boolean_hypercube;
 pub mod util;
 
 #[derive(Debug, Clone)]
-pub struct SumcheckProof<F: PrimeField, P: MultiLinearExtension<F>> {
+pub struct SumcheckProof<F: PrimeField, P: Polynomial<F>> {
     poly: P,
     sum: F,
     uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
-impl<F: PrimeField, P: MultiLinearExtension<F>> SumcheckProof<F, P> {
+impl<F: PrimeField, P: Polynomial<F>> SumcheckProof<F, P> {
     pub fn new(poly: P, sum: F) -> Self {
         Self {
             poly,
@@ -45,9 +45,7 @@ pub struct PartialSumcheckProof<F: PrimeField> {
     uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
-impl<F: PrimeField, P: MultiLinearExtension<F>> From<SumcheckProof<F, P>>
-    for PartialSumcheckProof<F>
-{
+impl<F: PrimeField, P: Polynomial<F>> From<SumcheckProof<F, P>> for PartialSumcheckProof<F> {
     fn from(value: SumcheckProof<F, P>) -> Self {
         Self {
             sum: value.sum,
@@ -78,7 +76,7 @@ pub struct Sumcheck {}
 
 impl Sumcheck {
     /// Generate a sum check proof given the poly and the claimed sum
-    pub fn prove<F: PrimeField, P: MultiLinearExtension<F>>(poly: P, sum: F) -> SumcheckProof<F, P>
+    pub fn prove<F: PrimeField, P: Polynomial<F>>(poly: P, sum: F) -> SumcheckProof<F, P>
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {
@@ -89,7 +87,7 @@ impl Sumcheck {
     }
 
     /// Generates a sumcheck proof that makes no statement about the initial poly
-    pub fn prove_partial<F: PrimeField, P: MultiLinearExtension<F>>(
+    pub fn prove_partial<F: PrimeField, P: Polynomial<F>>(
         poly: P,
         sum: F,
     ) -> (PartialSumcheckProof<F>, Vec<F>)
@@ -101,7 +99,7 @@ impl Sumcheck {
         (proof.into(), challenges)
     }
 
-    fn prove_internal<F: PrimeField, P: MultiLinearExtension<F>>(
+    fn prove_internal<F: PrimeField, P: Polynomial<F>>(
         poly: P,
         sum: F,
         transcript: &mut Transcript,
@@ -144,7 +142,7 @@ impl Sumcheck {
     }
 
     /// Verify a sumcheck proof
-    pub fn verify<F: PrimeField, P: MultiLinearExtension<F>>(proof: SumcheckProof<F, P>) -> bool
+    pub fn verify<F: PrimeField, P: Polynomial<F>>(proof: SumcheckProof<F, P>) -> bool
     where
         for<'a> &'a P: Add<Output = Result<P, &'static str>>,
     {

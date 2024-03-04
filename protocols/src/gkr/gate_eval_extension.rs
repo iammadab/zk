@@ -1,6 +1,6 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Add;
 
@@ -90,7 +90,7 @@ impl<F: PrimeField> GateEvalExtension<F> {
     }
 }
 
-impl<F: PrimeField> MultiLinearExtension<F> for GateEvalExtension<F> {
+impl<F: PrimeField> Polynomial<F> for GateEvalExtension<F> {
     fn n_vars(&self) -> usize {
         // n vars = |b| + |c|
         self.b_vars() + self.c_vars()
@@ -303,7 +303,7 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
-    use crate::polynomial::multilinear_extension::MultiLinearExtension;
+    use crate::polynomial::Polynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use crate::sumcheck::Sumcheck;
     use ark_bls12_381::Fr;

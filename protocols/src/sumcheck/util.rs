@@ -1,5 +1,5 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::selector_from_position;
+use crate::polynomial::Polynomial;
 use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
 use ark_ff::PrimeField;
 use std::ops::Add;
@@ -8,9 +8,7 @@ use std::ops::Add;
 //  by evaluating the polynomial from the back and caching the intermediate results
 /// Keep the first variable free then sum over the boolean hypercube
 /// Assumes polynomial has no unused free variables i.e poly has been relabelled
-pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField, P: MultiLinearExtension<F>>(
-    poly: P,
-) -> P
+pub fn skip_first_var_then_sum_over_boolean_hypercube<F: PrimeField, P: Polynomial<F>>(poly: P) -> P
 where
     for<'a> &'a P: Add<Output = Result<P, &'static str>>,
 {
@@ -36,7 +34,7 @@ where
 }
 
 /// Sum a polynomial over the boolean hypercube
-pub fn sum_over_boolean_hyper_cube<F: PrimeField, P: MultiLinearExtension<F>>(poly: &P) -> F {
+pub fn sum_over_boolean_hyper_cube<F: PrimeField, P: Polynomial<F>>(poly: &P) -> F {
     BooleanHyperCube::<F>::new(poly.n_vars()).fold(F::zero(), |sum, point| {
         sum + poly.evaluate(point.as_slice()).unwrap()
     })

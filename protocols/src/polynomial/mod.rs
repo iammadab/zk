@@ -2,11 +2,11 @@ use ark_ff::PrimeField;
 
 use self::univariate_poly::UnivariatePolynomial;
 
-pub mod multilinear_extension;
+// pub mod multilinear_extension;
 pub mod multilinear_poly;
 pub mod univariate_poly;
 
-trait Polynomial<F: PrimeField>: Clone {
+pub trait Polynomial<F: PrimeField>: Clone {
     /// Returns the number of variables in the extension
     fn n_vars(&self) -> usize;
 

@@ -1,9 +1,9 @@
 use crate::gkr::circuit::Circuit;
 use crate::gkr::gate_eval_extension::GateEvalExtension;
 use crate::gkr::util::{evaluate_l_function, l, q};
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::Polynomial;
 use crate::sumcheck::{PartialSumcheckProof, Sumcheck};
 use crate::transcript::Transcript;
 use ark_ff::PrimeField;

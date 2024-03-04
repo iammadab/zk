@@ -1,5 +1,5 @@
-use crate::polynomial::multilinear_extension::MultiLinearExtension;
 use crate::polynomial::univariate_poly::UnivariatePolynomial;
+use crate::polynomial::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use std::collections::BTreeMap;
@@ -28,7 +28,7 @@ pub struct MultiLinearPolynomial<F: PrimeField> {
     coefficients: BTreeMap<usize, F>,
 }
 
-impl<F: PrimeField> MultiLinearExtension<F> for MultiLinearPolynomial<F> {
+impl<F: PrimeField> Polynomial<F> for MultiLinearPolynomial<F> {
     /// Return the number of variables in the poly
     fn n_vars(&self) -> usize {
         self.n_vars as usize
@@ -510,11 +510,11 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::polynomial::multilinear_extension::MultiLinearExtension;
     use crate::polynomial::multilinear_poly::{
         mapping_instruction_from_variable_presence, selector_to_index, to_power_of_two,
         MultiLinearPolynomial,
     };
+    use crate::polynomial::Polynomial;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::collections::BTreeMap;
     use std::ops::Neg;
