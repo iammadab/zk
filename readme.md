@@ -2,15 +2,15 @@
 
 ### Crates
 
-[Polynomial](/polynomial)
+[Polynomial](/polynomial) - univariate polynomial, multilinear extension polynomial
 
-[Sumcheck](/sumcheck)
+[Sumcheck](/sumcheck) - full sumcheck, paritial sumcheck (verifies to subclaim)
 
-[GKR](/gkr)
+[GKR](/gkr) - gkr implementation
 
-[R1CS GKR](/r1cs_gkr)
+[R1CS GKR](/r1cs_gkr) - converts r1cs description to gkr circuit
 
-[Circom GKR](/circom-gkr) - CLI wrapper for circom+gkr prover / verifier.
+[Circom GKR](/circom-gkr) - cli wrapper for circom+gkr prover / verifier.
 
 ### Research Direction
 
