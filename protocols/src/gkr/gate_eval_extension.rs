@@ -305,10 +305,10 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
-    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
-    use crate::sumcheck::Sumcheck;
     use ark_bls12_381::Fr;
     use polynomial::Polynomial;
+    use sumcheck::util::sum_over_boolean_hyper_cube;
+    use sumcheck::Sumcheck;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
         // construct and evaluate circuit

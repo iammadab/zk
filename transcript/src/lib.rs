@@ -7,13 +7,13 @@ pub struct Transcript {
 }
 
 impl Transcript {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             hasher: Keccak256::new(),
         }
     }
 
-    pub(crate) fn append(&mut self, new_data: &[u8]) {
+    pub fn append(&mut self, new_data: &[u8]) {
         self.hasher.update(new_data);
     }
 
@@ -24,12 +24,12 @@ impl Transcript {
         result_hash
     }
 
-    pub(crate) fn sample_field_element<F: PrimeField>(&mut self) -> F {
+    pub fn sample_field_element<F: PrimeField>(&mut self) -> F {
         let challenge = self.sample_challenge();
         F::from_be_bytes_mod_order(&challenge)
     }
 
-    pub(crate) fn sample_n_field_elements<F: PrimeField>(&mut self, n: usize) -> Vec<F> {
+    pub fn sample_n_field_elements<F: PrimeField>(&mut self, n: usize) -> Vec<F> {
         (0..n).map(|_| self.sample_field_element()).collect()
     }
 }

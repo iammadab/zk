@@ -134,10 +134,10 @@ impl Add for Circuit {
 pub mod tests {
     use crate::gkr::circuit::{Circuit, Layer};
     use crate::gkr::gate::Gate;
-    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_bls12_381::Fr;
     use polynomial::multilinear_poly::MultiLinearPolynomial;
     use polynomial::Polynomial;
+    use sumcheck::util::sum_over_boolean_hyper_cube;
 
     pub fn test_circuit() -> Circuit {
         let layer_0 = Layer::new(vec![Gate::new(0, 0, 1)], vec![]);

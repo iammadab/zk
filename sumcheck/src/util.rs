@@ -1,4 +1,4 @@
-use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
+use crate::boolean_hypercube::BooleanHyperCube;
 use ark_ff::PrimeField;
 use polynomial::multilinear_poly::selector_from_position;
 use polynomial::Polynomial;
@@ -54,7 +54,7 @@ pub fn partial_evaluation_points<'a, F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-    use crate::sumcheck::util::sum_over_boolean_hyper_cube;
+    use crate::util::sum_over_boolean_hyper_cube;
     use ark_ff::{Fp64, MontBackend, MontConfig};
     use polynomial::multilinear_poly::MultiLinearPolynomial;
 

@@ -1,12 +1,10 @@
-use crate::sumcheck::util::{
-    partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
-};
-use crate::transcript::Transcript;
+use crate::util::{partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube};
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use std::ops::Add;
+use transcript::Transcript;
 
 pub mod boolean_hypercube;
 pub mod util;
@@ -41,7 +39,7 @@ impl<F: PrimeField, P: Polynomial<F>> SumcheckProof<F, P> {
 #[derive(Debug, Clone, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 /// Same as the sumcheck proof without the initial poly
 pub struct PartialSumcheckProof<F: PrimeField> {
-    pub(crate) sum: F,
+    pub sum: F,
     uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
@@ -68,8 +66,8 @@ impl<F: PrimeField> PartialSumcheckProof<F> {
 #[derive(Debug, PartialEq)]
 /// Represents the result of a partial sumcheck proof verification
 pub struct SubClaim<F: PrimeField> {
-    pub(crate) sum: F,
-    pub(crate) challenges: Vec<F>,
+    pub sum: F,
+    pub challenges: Vec<F>,
 }
 
 pub struct Sumcheck {}
@@ -212,7 +210,7 @@ impl Sumcheck {
 
 #[cfg(test)]
 mod tests {
-    use crate::sumcheck::Sumcheck;
+    use crate::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig};
     use polynomial::multilinear_poly::MultiLinearPolynomial;
 

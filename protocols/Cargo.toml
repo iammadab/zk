@@ -19,8 +19,9 @@ num-bigint = "0.4.3"
 rand = "0.8.5"
 serde = "1.0.196"
 serde_json = "1.0.113"
-sha3 = "0.10.8"
 polynomial = { path = "../polynomial" }
+sumcheck = { path = "../sumcheck" }
+transcript = { path = "../transcript" }
 
 [dev-dependencies]
 criterion = "0.5.1"

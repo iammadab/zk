@@ -46,7 +46,7 @@ impl<F: PrimeField> Iterator for BooleanHyperCube<F> {
 
 #[cfg(test)]
 mod tests {
-    use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
+    use crate::boolean_hypercube::BooleanHyperCube;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::iter::Iterator;
 
