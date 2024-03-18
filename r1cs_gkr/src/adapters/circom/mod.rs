@@ -2,8 +2,8 @@ pub mod cli_functions;
 
 // TODO: move into adpater.rs
 
-use crate::r1cs_gkr::constraint::{Constraint, Term};
-use crate::r1cs_gkr::program::R1CSProgram;
+use crate::constraint::{Constraint, Term};
+use crate::program::R1CSProgram;
 use ark_circom::{CircomBuilder, CircomConfig};
 use ark_ec::pairing::Pairing;
 use ark_ff::{BigInteger, PrimeField};
@@ -96,10 +96,10 @@ impl From<BigIntAdapter> for BigInt {
 
 #[cfg(test)]
 mod tests {
-    use crate::r1cs_gkr::adapters::circom::CircomAdapter;
-    use crate::r1cs_gkr::program::test::eq_3a_plus_5b;
-    use crate::r1cs_gkr::program::R1CSProgram;
-    use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
+    use crate::adapters::circom::CircomAdapter;
+    use crate::program::test::eq_3a_plus_5b;
+    use crate::program::R1CSProgram;
+    use crate::proof::{prove_circom_gkr, verify_circom_gkr};
     use ark_bn254::Bn254;
     use ark_ec::pairing::Pairing;
     use std::path::PathBuf;
@@ -111,7 +111,7 @@ mod tests {
         let test_artifacts = PathBuf::from(file!())
             .parent()
             .expect("should have parent")
-            .strip_prefix("protocols")
+            .strip_prefix("r1cs_gkr")
             .expect("should have protocols prefix")
             .join("test_artifacts");
         let r1cs = test_artifacts.join("test_circuit.r1cs");

@@ -1,4 +1,4 @@
-use crate::r1cs_gkr::program::SymbolTable;
+use crate::program::SymbolTable;
 use ark_ff::PrimeField;
 
 #[derive(Debug, PartialEq)]
@@ -273,10 +273,10 @@ impl<F: PrimeField> From<Term<F>> for (usize, F) {
 
 #[cfg(test)]
 mod tests {
-    use crate::r1cs_gkr::constraint::{
+    use crate::constraint::{
         move_term_to_slot, Constraint, EquationDirection, Operation, ReducedConstraint, Term,
     };
-    use crate::r1cs_gkr::program::SymbolTable;
+    use crate::program::SymbolTable;
     use ark_bls12_381::Fr;
 
     #[test]

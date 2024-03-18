@@ -1,4 +1,4 @@
-use crate::r1cs_gkr::constraint::{Constraint, ReducedConstraint, Term};
+use crate::constraint::{Constraint, ReducedConstraint, Term};
 use ark_ff::PrimeField;
 use std::collections::HashMap;
 
@@ -71,8 +71,8 @@ impl<F: PrimeField> SymbolTable<F> {
 
 #[cfg(test)]
 pub mod test {
-    use crate::r1cs_gkr::constraint::{Constraint, Term};
-    use crate::r1cs_gkr::program::R1CSProgram;
+    use crate::constraint::{Constraint, Term};
+    use crate::program::R1CSProgram;
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
 

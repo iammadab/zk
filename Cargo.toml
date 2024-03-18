@@ -1,4 +1,4 @@
 [workspace]
 resolver = "2"
 
-members = ["circom-gkr", "gkr", "polynomial", "protocols", "sumcheck", "transcript"]
+members = ["circom-gkr", "gkr", "polynomial", "protocols", "r1cs_gkr", "sumcheck", "transcript"]

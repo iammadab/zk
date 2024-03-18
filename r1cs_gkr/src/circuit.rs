@@ -1,5 +1,5 @@
-use crate::r1cs_gkr::constraint::{Operation, ReducedConstraint, Term};
-use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
+use crate::constraint::{Operation, ReducedConstraint, Term};
+use crate::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
 use gkr::circuit::Circuit as GKRCircuit;
 use gkr::gate::Gate;
@@ -186,12 +186,12 @@ fn generate_constant_map<F: PrimeField>(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::r1cs_gkr::circuit::{
+    use crate::circuit::{
         constraint_circuit, generate_constant_map, program_circuit,
         reduced_constraint_to_circuit_input,
     };
-    use crate::r1cs_gkr::constraint::{Constraint, Operation, ReducedConstraint, Term};
-    use crate::r1cs_gkr::program::R1CSProgram;
+    use crate::constraint::{Constraint, Operation, ReducedConstraint, Term};
+    use crate::program::R1CSProgram;
     use ark_bls12_381::Fr;
     use ark_ff::{One, Zero};
     use std::collections::HashMap;

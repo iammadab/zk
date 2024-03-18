@@ -1,6 +1,6 @@
-use crate::r1cs_gkr::adapters::circom::CircomAdapter;
-use crate::r1cs_gkr::program::R1CSProgram;
-use crate::r1cs_gkr::proof::{prove_circom_gkr, verify_circom_gkr};
+use crate::adapters::circom::CircomAdapter;
+use crate::program::R1CSProgram;
+use crate::proof::{prove_circom_gkr, verify_circom_gkr};
 use ark_bn254::{Bn254, Fr};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -286,9 +286,7 @@ fn write_file(file_path: &Path, data: &[u8]) -> Result<(), &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::r1cs_gkr::adapters::circom::cli_functions::{
-        json_value_to_field_element, CLIFunctions,
-    };
+    use crate::adapters::circom::cli_functions::{json_value_to_field_element, CLIFunctions};
     use ark_bn254::Fr;
     use serde_json::Value;
     use std::path::PathBuf;

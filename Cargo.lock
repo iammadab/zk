@@ -1925,6 +1925,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "r1cs_gkr"
+version = "0.1.0"
+dependencies = [
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-circom",
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "gkr",
+ "hex",
+ "num-bigint",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
