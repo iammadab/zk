@@ -1,9 +1,9 @@
-use crate::gkr::circuit::Circuit as GKRCircuit;
-use crate::gkr::gate::Gate;
-use crate::gkr::layer::Layer;
 use crate::r1cs_gkr::constraint::{Operation, ReducedConstraint, Term};
 use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
+use gkr::circuit::Circuit as GKRCircuit;
+use gkr::gate::Gate;
+use gkr::layer::Layer;
 use std::collections::HashMap;
 
 const CIRCUIT_DEPTH: usize = 3;

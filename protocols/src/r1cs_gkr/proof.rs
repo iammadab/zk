@@ -1,9 +1,9 @@
-use crate::gkr::circuit::Circuit;
-use crate::gkr::protocol::{prove as GKRProve, verify as GKRVerify, Proof as GKRProof};
 use crate::r1cs_gkr::circuit::program_circuit;
 use crate::r1cs_gkr::constraint::Term;
 use crate::r1cs_gkr::program::{R1CSProgram, SymbolTable};
 use ark_ff::PrimeField;
+use gkr::circuit::Circuit;
+use gkr::protocol::{prove as GKRProve, verify as GKRVerify, Proof as GKRProof};
 use std::collections::HashMap;
 
 type Operands<F> = (Term<F>, Term<F>);
