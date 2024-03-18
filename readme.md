@@ -3,8 +3,11 @@
 ### Crates
 
 [Polynomial](/polynomial)
+
 [Sumcheck](/sumcheck)
+
 [GKR](/gkr)
+
 [R1CS GKR](/r1cs_gkr)
 
 [Circom GKR](/circom-gkr) - CLI wrapper for circom+gkr prover / verifier.
