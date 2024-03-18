@@ -1,5 +1,5 @@
 use clap::{command, Arg, ArgMatches, Command};
-use protocols::r1cs_gkr::adapters::circom::cli_functions::CLIFunctions;
+use r1cs_gkr::adapters::circom::cli_functions::CLIFunctions;
 use std::path::PathBuf;
 
 const SOURCE: &str = "source_file";
