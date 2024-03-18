@@ -3,5 +3,9 @@ resolver = "2"
 
 members = [
     "circom-gkr",
-    "protocols",
+    "gkr",
+    "polynomial",
+    "r1cs_gkr",
+    "sumcheck",
+    "transcript",
 ]
