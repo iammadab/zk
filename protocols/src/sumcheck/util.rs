@@ -1,7 +1,7 @@
-use crate::polynomial::multilinear_poly::selector_from_position;
-use crate::polynomial::Polynomial;
 use crate::sumcheck::boolean_hypercube::BooleanHyperCube;
 use ark_ff::PrimeField;
+use polynomial::multilinear_poly::selector_from_position;
+use polynomial::Polynomial;
 use std::ops::Add;
 
 // TODO: there is an optimization that prevents you from having to do this all the rounds
@@ -54,9 +54,9 @@ pub fn partial_evaluation_points<'a, F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use ark_ff::{Fp64, MontBackend, MontConfig};
+    use polynomial::multilinear_poly::MultiLinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]

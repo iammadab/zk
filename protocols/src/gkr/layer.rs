@@ -1,7 +1,7 @@
 use crate::gkr::gate::Gate;
-use crate::polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolynomial};
-use crate::polynomial::Polynomial;
 use ark_ff::PrimeField;
+use polynomial::multilinear_poly::{bit_count_for_n_elem, MultiLinearPolynomial};
+use polynomial::Polynomial;
 
 /// Holds the add and mul gates in a given layer
 #[derive(Clone, Debug, PartialEq)]

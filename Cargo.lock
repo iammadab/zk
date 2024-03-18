@@ -1873,6 +1873,7 @@ dependencies = [
  "criterion 0.5.1",
  "hex",
  "num-bigint",
+ "polynomial",
  "rand",
  "serde",
  "serde_json",

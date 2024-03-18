@@ -1,7 +1,7 @@
-use crate::polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
-use crate::polynomial::univariate_poly::UnivariatePolynomial;
-use crate::polynomial::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
+use polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
+use polynomial::univariate_poly::UnivariatePolynomial;
+use polynomial::Polynomial;
 use std::ops::Add;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -305,10 +305,10 @@ mod test {
     use crate::gkr::circuit::tests::test_circuit;
     use crate::gkr::circuit::Circuit;
     use crate::gkr::gate_eval_extension::GateEvalExtension;
-    use crate::polynomial::Polynomial;
     use crate::sumcheck::util::sum_over_boolean_hyper_cube;
     use crate::sumcheck::Sumcheck;
     use ark_bls12_381::Fr;
+    use polynomial::Polynomial;
 
     fn evaluated_circuit() -> (Circuit, Vec<Vec<Fr>>) {
         // construct and evaluate circuit

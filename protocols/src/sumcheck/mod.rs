@@ -1,11 +1,11 @@
-use crate::polynomial::univariate_poly::UnivariatePolynomial;
-use crate::polynomial::Polynomial;
 use crate::sumcheck::util::{
     partial_evaluation_points, skip_first_var_then_sum_over_boolean_hypercube,
 };
 use crate::transcript::Transcript;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use polynomial::univariate_poly::UnivariatePolynomial;
+use polynomial::Polynomial;
 use std::ops::Add;
 
 pub mod boolean_hypercube;
@@ -212,9 +212,9 @@ impl Sumcheck {
 
 #[cfg(test)]
 mod tests {
-    use crate::polynomial::multilinear_poly::MultiLinearPolynomial;
     use crate::sumcheck::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig};
+    use polynomial::multilinear_poly::MultiLinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
