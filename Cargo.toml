@@ -5,7 +5,7 @@ members = [
     "circom-gkr",
     "gkr",
     "polynomial",
-    "r1cs_gkr",
+    "r1cs_gkr", "stark",
     "sumcheck",
     "transcript",
 ]
