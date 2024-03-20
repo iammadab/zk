@@ -15,6 +15,11 @@ impl<H: Hasher> MerkleTree<H> {
         Self { tree }
     }
 
+    /// Return the root hash of the tree
+    fn root_hash(&self) -> &H::Digest {
+        &self.tree[0]
+    }
+
     /// Builds a Merkle tree from a list of leave values
     fn build(input: &[H::Item]) -> Self {
         // input cannot be empty
@@ -41,6 +46,52 @@ impl<H: Hasher> MerkleTree<H> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-// }
+#[cfg(test)]
+mod tests {
+    use crate::hasher::sha3_hasher::Sha3Hasher;
+    use crate::merkle::MerkleTree;
+    use crate::util::extra_hash_count;
+    use sha3::{Digest, Sha3_256};
+
+    #[test]
+    fn test_build_merkle_tree() {
+        let values = vec![
+            1_u8.to_be_bytes().to_vec(),
+            2_u8.to_be_bytes().to_vec(),
+            3_u8.to_be_bytes().to_vec(),
+        ];
+        let tree = MerkleTree::<Sha3Hasher>::build(&values);
+        assert_eq!(tree.tree.len(), 7);
+
+        // hash the input leaves
+        let mut hasher = Sha3_256::new();
+        let values_hash = values
+            .into_iter()
+            .map(|val| {
+                hasher.update(&val);
+                let mut hash = [0; 32];
+                hash.copy_from_slice(&hasher.finalize_reset());
+                hash
+            })
+            .collect::<Vec<_>>();
+
+        hasher.update(&values_hash[2]);
+        hasher.update(&[0; 32]);
+        let mut expected_hash = [0; 32];
+        expected_hash.copy_from_slice(&hasher.finalize_reset());
+        assert_eq!(expected_hash, tree.tree[2]);
+
+        hasher.update(&values_hash[0]);
+        hasher.update(&values_hash[1]);
+        let mut expected_hash = [0; 32];
+        expected_hash.copy_from_slice(&hasher.finalize_reset());
+        assert_eq!(expected_hash, tree.tree[1]);
+
+        hasher.update(&tree.tree[1]);
+        hasher.update(&tree.tree[2]);
+        let mut expected_hash = [0; 32];
+        expected_hash.copy_from_slice(&hasher.finalize_reset());
+        assert_eq!(expected_hash, tree.tree[0]);
+        assert_eq!(&expected_hash, tree.root_hash());
+    }
+}

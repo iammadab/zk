@@ -1,7 +1,7 @@
-use sha3::{Digest, Sha3_256};
 use crate::hasher::Hasher;
+use sha3::{Digest, Sha3_256};
 
-struct Sha3Hasher {}
+pub struct Sha3Hasher {}
 
 impl Hasher for Sha3Hasher {
     type Item = Vec<u8>;
