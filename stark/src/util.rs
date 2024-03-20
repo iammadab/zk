@@ -38,8 +38,13 @@ fn next_power_of_2(mut value: usize) -> usize {
     value
 }
 
-// TODO
-// fn make_power_of_two<T: Clone>(input: &mut [T]) -> &[T] {}
+/// Takes a slice of n elements, returns a slice of m elements
+/// where m is a power of 2.
+fn extend_to_power_of_two<T: Clone>(input: &mut Vec<T>, default_value: T) {
+    let padding_count = next_power_of_2(input.len()) - input.len();
+    let padding = vec![default_value.clone(); padding_count];
+    input.extend(padding);
+}
 
 #[cfg(test)]
 mod tests {
@@ -76,5 +81,14 @@ mod tests {
         assert_eq!(next_power_of_2(2), 2);
         assert_eq!(next_power_of_2(3), 4);
         assert_eq!(next_power_of_2(12), 16);
+    }
+
+    #[test]
+    fn test_extend_to_power_of_two() {
+        // 5 elements, next values of 2 is 8
+        let mut set1 = vec![5, 6, 7, 8, 9];
+        extend_to_power_of_two(&mut set1, 0);
+        assert_eq!(set1.len(), 8);
+        assert_eq!(set1, vec![5, 6, 7, 8, 9, 0, 0, 0]);
     }
 }
