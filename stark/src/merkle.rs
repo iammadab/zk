@@ -1,5 +1,5 @@
 use crate::hasher::Hasher;
-use crate::util::{extend_to_power_of_two, extra_hash_count, parent, is_power_of_2, sibling};
+use crate::util::{extend_to_power_of_two, extra_hash_count, is_power_of_2, parent, sibling};
 
 // TODO: add documentation
 struct MerkleTree<H: Hasher> {
@@ -12,9 +12,7 @@ impl<H: Hasher> MerkleTree<H> {
         // tree len + 1 should be a power of 2, asserts that a valid
         // binary tree can be built from it.
         assert!(is_power_of_2(tree.len() + 1));
-        Self {
-            tree
-        }
+        Self { tree }
     }
 
     /// Builds a Merkle tree from a list of leave values
@@ -36,8 +34,7 @@ impl<H: Hasher> MerkleTree<H> {
             let parent_index = parent(right_index);
 
             // hash left and right leaves, store in parent
-            tree[parent_index] =
-                H::hash_digest_slice(&[&tree[left_index], &tree[right_index]]);
+            tree[parent_index] = H::hash_digest_slice(&[&tree[left_index], &tree[right_index]]);
         }
 
         MerkleTree::new(tree)

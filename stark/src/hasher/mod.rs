@@ -1,3 +1,6 @@
+pub mod sha3_hasher;
+
+/// Hasher Trait
 pub(crate) trait Hasher {
     type Item;
     type Digest: Clone + Default;
