@@ -31,7 +31,7 @@ pub fn is_power_of_2(value: usize) -> bool {
 /// Returns the next power of 2 from a number
 pub fn next_power_of_2(mut value: usize) -> usize {
     // TODO: there has to be a better way to do this
-    // with bitwise operations most likely
+    //  with bitwise operations most likely
     while !is_power_of_2(value) {
         value += 1;
     }
