@@ -1,14 +1,17 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+/// Starts a timer and stores the timer description
+#[macro_export]
+macro_rules! start_timer {
+    ($str:literal) => {
+        let timer_description = $str;
+        let start_time = std::time::Instant::now();
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+/// End the timer and print the elapsed time
+#[macro_export]
+macro_rules! end_timer {
+    () => {
+        let elapsed_time = start_time.elapsed();
+        println!("{}: {:?}", timer_description, elapsed_time);
     }
 }
