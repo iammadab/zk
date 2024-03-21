@@ -46,6 +46,11 @@ pub fn extend_to_power_of_two<T: Clone>(input: &mut Vec<T>, default_value: T) {
     input.extend(padding);
 }
 
+/// Return the number of leaves in a tree
+pub fn number_of_leaves(tree_len: usize) -> usize {
+    (tree_len + 1) / 2
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +95,13 @@ mod tests {
         extend_to_power_of_two(&mut set1, 0);
         assert_eq!(set1.len(), 8);
         assert_eq!(set1, vec![5, 6, 7, 8, 9, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_number_of_leaves() {
+        // leaves = 5 tree_len = 9
+        assert_eq!(number_of_leaves(9), 5);
+        // leaves = 10 tree_len = 19
+        assert_eq!(number_of_leaves(20), 10);
     }
 }
