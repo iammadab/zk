@@ -1138,6 +1138,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "polynomial",
+ "stat",
  "sumcheck",
  "transcript",
 ]
