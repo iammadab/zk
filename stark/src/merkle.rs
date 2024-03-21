@@ -3,7 +3,11 @@ use crate::util::{
     extend_to_power_of_two, extra_hash_count, is_power_of_2, number_of_leaves, parent, sibling,
 };
 
-type MerkleProof<T> = Vec<T>;
+// TODO: add documentation
+struct MerkleProof<T> {
+    hashes: Vec<T>,
+    node_index: usize
+}
 
 // TODO: add documentation
 struct MerkleTree<H: Hasher> {
@@ -67,7 +71,34 @@ impl<H: Hasher> MerkleTree<H> {
             proof_node_index = sibling(parent(proof_node_index));
         }
 
-        Ok(proof)
+        Ok(MerkleProof {
+            hashes: proof,
+            node_index: leaf_index
+        })
+    }
+
+    /// Verify the merkle proof for a given leaf element
+    fn verify(
+        input: H::Item,
+        proof: MerkleProof<H::Digest>,
+        expected_root_hash: H::Digest,
+    ) -> bool {
+        let input_hash = H::hash_item(&input);
+
+        // this represents the node index of the current running hash
+        let mut known_hash_index = proof.node_index;
+
+        let root_hash = proof.hashes.iter().fold(input_hash, |acc, proof_hash| {
+            let next_known_hash = if known_hash_index % 2 == 0 {
+                H::hash_digest_slice(&[proof_hash, &acc])
+            } else {
+                H::hash_digest_slice(&[&acc, proof_hash])
+            };
+            known_hash_index = parent(known_hash_index);
+            next_known_hash
+        });
+
+        root_hash == expected_root_hash
     }
 }
 
@@ -132,17 +163,19 @@ mod tests {
     }
 
     #[test]
-    fn test_prove_index() {
+    fn test_prove_verify_index() {
         let tree = build_merkle_tree();
 
         let proof = tree.prove(0).unwrap();
-        assert_eq!(proof.len(), 2);
-        assert_eq!(proof[0], tree.tree[4]);
-        assert_eq!(proof[1], tree.tree[2]);
+        assert_eq!(proof.hashes.len(), 2);
+        assert_eq!(proof.node_index, 3);
+        assert_eq!(proof.hashes[0], tree.tree[4]);
+        assert_eq!(proof.hashes[1], tree.tree[2]);
 
-       let proof = tree.prove(3).unwrap();
-        assert_eq!(proof.len(), 2);
-        assert_eq!(proof[0], tree.tree[5]);
-        assert_eq!(proof[1], tree.tree[1]);
+        let proof = tree.prove(3).unwrap();
+        assert_eq!(proof.hashes.len(), 2);
+        assert_eq!(proof.node_index, 6);
+        assert_eq!(proof.hashes[0], tree.tree[5]);
+        assert_eq!(proof.hashes[1], tree.tree[1]);
     }
 }
