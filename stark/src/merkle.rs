@@ -79,11 +79,11 @@ impl<H: Hasher> MerkleTree<H> {
 
     /// Verify the merkle proof for a given leaf element
     fn verify(
-        input: H::Item,
+        input: &H::Item,
         proof: MerkleProof<H::Digest>,
-        expected_root_hash: H::Digest,
+        expected_root_hash: &H::Digest,
     ) -> bool {
-        let input_hash = H::hash_item(&input);
+        let input_hash = H::hash_item(input);
 
         // this represents the node index of the current running hash
         let mut known_hash_index = proof.node_index;
@@ -98,7 +98,7 @@ impl<H: Hasher> MerkleTree<H> {
             next_known_hash
         });
 
-        root_hash == expected_root_hash
+        root_hash == *expected_root_hash
     }
 }
 
@@ -167,6 +167,12 @@ mod tests {
 
     #[test]
     fn test_prove_verify_index() {
+        let values = vec![
+            1_u8.to_be_bytes().to_vec(),
+            2_u8.to_be_bytes().to_vec(),
+            3_u8.to_be_bytes().to_vec(),
+            vec![],
+        ];
         let tree = build_merkle_tree();
 
         let proof = tree.prove(0).unwrap();
@@ -174,11 +180,21 @@ mod tests {
         assert_eq!(proof.node_index, 3);
         assert_eq!(proof.hashes[0], tree.tree[4]);
         assert_eq!(proof.hashes[1], tree.tree[2]);
+        assert!(MerkleTree::<Sha3Hasher>::verify(
+            &values[0],
+            proof,
+            tree.root_hash()
+        ));
 
         let proof = tree.prove(3).unwrap();
         assert_eq!(proof.hashes.len(), 2);
         assert_eq!(proof.node_index, 6);
         assert_eq!(proof.hashes[0], tree.tree[5]);
         assert_eq!(proof.hashes[1], tree.tree[1]);
+        assert!(MerkleTree::<Sha3Hasher>::verify(
+            &values[3],
+            proof,
+            tree.root_hash()
+        ));
     }
 }
