@@ -2,7 +2,7 @@ pub mod sha3_hasher;
 
 /// Hasher Trait
 pub(crate) trait Hasher {
-    type Item;
+    type Item: Default;
     type Digest: Clone + Default + PartialEq;
 
     fn hash_item(input: &Self::Item) -> Self::Digest;

@@ -6,7 +6,7 @@ use crate::util::{
 // TODO: add documentation
 struct MerkleProof<T> {
     hashes: Vec<T>,
-    node_index: usize
+    node_index: usize,
 }
 
 // TODO: add documentation
@@ -35,7 +35,7 @@ impl<H: Hasher> MerkleTree<H> {
 
         // hash the input items and extend to a power of 2 if needed
         let mut hashed_leaves = H::hash_items(input);
-        extend_to_power_of_two(&mut hashed_leaves, H::Digest::default());
+        extend_to_power_of_two(&mut hashed_leaves, H::hash_item(&H::Item::default()));
 
         // build empty slots for parent hashes, store the leaf hashes at the end of the vector
         let mut tree = vec![H::Digest::default(); extra_hash_count(hashed_leaves.len())];
@@ -73,7 +73,7 @@ impl<H: Hasher> MerkleTree<H> {
 
         Ok(MerkleProof {
             hashes: proof,
-            node_index: leaf_index
+            node_index: leaf_index,
         })
     }
 
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_build_merkle_tree() {
-        let values = vec![
+        let mut values = vec![
             1_u8.to_be_bytes().to_vec(),
             2_u8.to_be_bytes().to_vec(),
             3_u8.to_be_bytes().to_vec(),
@@ -129,6 +129,9 @@ mod tests {
 
         let tree = build_merkle_tree();
         assert_eq!(tree.tree.len(), 7);
+
+        // extend values by the empty vector (for default0
+        values.push(vec![]);
 
         // hash the input leaves
         let mut hasher = Sha3_256::new();
@@ -143,7 +146,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         hasher.update(&values_hash[2]);
-        hasher.update(&[0; 32]);
+        hasher.update(&values_hash[3]);
         let mut expected_hash = [0; 32];
         expected_hash.copy_from_slice(&hasher.finalize_reset());
         assert_eq!(expected_hash, tree.tree[2]);
