@@ -3,13 +3,13 @@ use crate::util::{
     extend_to_power_of_two, extra_hash_count, is_power_of_2, number_of_leaves, parent, sibling,
 };
 
-// TODO: add documentation
+/// Represents a merkle proof, keep track of the proved node as hint to verifier
 struct MerkleProof<T> {
     hashes: Vec<T>,
     node_index: usize,
 }
 
-// TODO: add documentation
+/// Merkle Tree Struct
 struct MerkleTree<H: Hasher> {
     tree: Vec<H::Digest>,
 }
