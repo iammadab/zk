@@ -1,5 +1,9 @@
 use crate::hasher::Hasher;
-use crate::util::{extend_to_power_of_two, extra_hash_count, is_power_of_2, parent, sibling};
+use crate::util::{
+    extend_to_power_of_two, extra_hash_count, is_power_of_2, number_of_leaves, parent, sibling,
+};
+
+type MerkleProof<T> = Vec<T>;
 
 // TODO: add documentation
 struct MerkleTree<H: Hasher> {
@@ -44,6 +48,27 @@ impl<H: Hasher> MerkleTree<H> {
 
         MerkleTree::new(tree)
     }
+
+    /// Generate a merkle proof for the element at a given index
+    fn prove(&self, index: usize) -> Result<MerkleProof<H::Digest>, &'static str> {
+        let mut proof = vec![];
+
+        let number_of_leaves = number_of_leaves(self.tree.len());
+        if index >= number_of_leaves {
+            return Err("no element at given proving index");
+        }
+
+        // need to offset the provided index as the leaves are at the end of the tree array
+        let leaf_index = index + number_of_leaves - 1;
+        let mut proof_node_index = sibling(leaf_index);
+
+        while proof_node_index != 0 {
+            proof.push(self.tree[proof_node_index].clone());
+            proof_node_index = sibling(parent(proof_node_index));
+        }
+
+        Ok(proof)
+    }
 }
 
 #[cfg(test)]
@@ -53,6 +78,16 @@ mod tests {
     use crate::util::extra_hash_count;
     use sha3::{Digest, Sha3_256};
 
+    fn build_merkle_tree() -> MerkleTree<Sha3Hasher> {
+        let values = vec![
+            1_u8.to_be_bytes().to_vec(),
+            2_u8.to_be_bytes().to_vec(),
+            3_u8.to_be_bytes().to_vec(),
+        ];
+        let tree = MerkleTree::<Sha3Hasher>::build(&values);
+        tree
+    }
+
     #[test]
     fn test_build_merkle_tree() {
         let values = vec![
@@ -60,7 +95,8 @@ mod tests {
             2_u8.to_be_bytes().to_vec(),
             3_u8.to_be_bytes().to_vec(),
         ];
-        let tree = MerkleTree::<Sha3Hasher>::build(&values);
+
+        let tree = build_merkle_tree();
         assert_eq!(tree.tree.len(), 7);
 
         // hash the input leaves
@@ -93,5 +129,20 @@ mod tests {
         expected_hash.copy_from_slice(&hasher.finalize_reset());
         assert_eq!(expected_hash, tree.tree[0]);
         assert_eq!(&expected_hash, tree.root_hash());
+    }
+
+    #[test]
+    fn test_prove_index() {
+        let tree = build_merkle_tree();
+
+        let proof = tree.prove(0).unwrap();
+        assert_eq!(proof.len(), 2);
+        assert_eq!(proof[0], tree.tree[4]);
+        assert_eq!(proof[1], tree.tree[2]);
+
+       let proof = tree.prove(3).unwrap();
+        assert_eq!(proof.len(), 2);
+        assert_eq!(proof[0], tree.tree[5]);
+        assert_eq!(proof[1], tree.tree[1]);
     }
 }
