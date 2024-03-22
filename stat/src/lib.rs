@@ -1,15 +1,20 @@
 use std::cell::RefCell;
+use std::time::Instant;
+
+type TimedUnit = (&'static str, Instant);
 
 thread_local! {
-    pub static DESCRIPTIONS: RefCell<Vec<&'static str>> = RefCell::new(vec![]);
+    pub static BLOCKS: RefCell<Vec<TimedUnit>> = RefCell::new(vec![]);
 }
 
 /// Starts a timer and stores the timer description
 #[macro_export]
 macro_rules! start_timer {
     ($str:literal) => {
-        $crate::DESCRIPTIONS.with(|descriptions| {
-            descriptions.borrow_mut().push($str);
+        $crate::BLOCKS.with(|blocks| {
+            println!("");
+            println!("{} (begin)", $str);
+            blocks.borrow_mut().push(($str, std::time::Instant::now()))
         });
     }
 }
@@ -18,8 +23,9 @@ macro_rules! start_timer {
 #[macro_export]
 macro_rules! end_timer {
     () => {
-        $crate::DESCRIPTIONS.with(|descriptions| {
-            println!("{}", descriptions.borrow_mut().pop().unwrap());
+        $crate::BLOCKS.with(|blocks| {
+            let (description, start_time) = blocks.borrow_mut().pop().unwrap();
+            println!("{} (end): {:?}", description, start_time.elapsed());
         });
     }
 }
