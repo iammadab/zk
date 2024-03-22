@@ -1,12 +1,16 @@
+use std::cell::RefCell;
+
 thread_local! {
-    static DESCRIPTIONS: Vec<&'static str> = vec![];
+    pub static DESCRIPTIONS: RefCell<Vec<&'static str>> = RefCell::new(vec![]);
 }
 
 /// Starts a timer and stores the timer description
 #[macro_export]
 macro_rules! start_timer {
     ($str:literal) => {
-        DESCRIPTIONS.push(&str);
+        $crate::DESCRIPTIONS.with(|descriptions| {
+            descriptions.borrow_mut().push($str);
+        });
     }
 }
 
@@ -14,6 +18,8 @@ macro_rules! start_timer {
 #[macro_export]
 macro_rules! end_timer {
     () => {
-        println!("{}", DESCRIPTIONS[0]);
+        $crate::DESCRIPTIONS.with(|descriptions| {
+            println!("{}", descriptions.borrow_mut().pop().unwrap());
+        });
     }
 }
