@@ -11,6 +11,7 @@ struct MerkleProof<T> {
 
 /// Merkle Tree Struct
 struct MerkleTree<H: Hasher> {
+    // TODO: seems it's possible to use the not have to padd the tree, gets unwidely when the next power of 2 is really far.
     tree: Vec<H::Digest>,
 }
 
