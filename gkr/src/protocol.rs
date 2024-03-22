@@ -161,7 +161,6 @@ mod test {
     use ark_bls12_381::Fr;
     use ark_ff::{Fp64, MontBackend, MontConfig};
     use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-    use stat::{end_timer, start_timer};
     use std::io::Cursor;
 
     #[derive(MontConfig)]
@@ -200,8 +199,6 @@ mod test {
 
     #[test]
     fn test_gkr() {
-        start_timer!("gkr protocol");
-        start_timer!("prove gkr");
         let circuit = test_circuit();
         let input = vec![
             Fr::from(1),
@@ -215,13 +212,9 @@ mod test {
         ];
         let circut_eval = circuit.evaluate(input.clone()).unwrap();
         let gkr_proof = GKRProve(test_circuit(), circut_eval).unwrap();
-        end_timer!();
 
-        start_timer!("verify gkr");
         let verification_result = GKRVerify(test_circuit(), input, gkr_proof).unwrap();
         assert!(verification_result);
-        end_timer!();
-        end_timer!();
     }
 
     #[test]
