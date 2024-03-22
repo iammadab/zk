@@ -47,9 +47,3 @@ macro_rules! end_timer {
         })
     };
 }
-
-// /// Prints a string with n spaces in front
-// pub fn printer(string: &str, space_count: usize) {
-//     let spaces = " ".repeat(space_count);
-//     println!("{}{}", spaces, string);
-// }
