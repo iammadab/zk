@@ -32,6 +32,13 @@ pub fn layer_counts(mut leaf_count: usize) -> Vec<usize> {
     counts
 }
 
+/// Return the extra hash values needed to build the tree
+pub fn extra_hash_count(leaf_count: usize) -> usize {
+    let layer_counts = layer_counts(leaf_count);
+    let total_count = layer_counts.into_iter().sum::<usize>();
+    total_count - leaf_count
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,5 +55,11 @@ mod tests {
         assert_eq!(layer_counts(6), vec![6, 4, 2, 1]);
         assert_eq!(layer_counts(10), vec![10, 6, 4, 2, 1]);
         assert_eq!(layer_counts(26), vec![26, 14, 8, 4, 2, 1]);
+    }
+
+    #[test]
+    fn test_extra_hash_count() {
+        assert_eq!(extra_hash_count(6), 7);
+        assert_eq!(extra_hash_count(10), 13);
     }
 }
