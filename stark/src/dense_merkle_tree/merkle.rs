@@ -10,6 +10,7 @@ struct DenseMerkleProof<T> {
 }
 
 /// Merkle Tree Struct
+/// Pads the tree leaves to the next power of 2 by repeatedly adding empty bytes
 struct DenseMerkleTree<H: Hasher> {
     tree: Vec<H::Digest>,
 }
