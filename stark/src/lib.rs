@@ -1,3 +1,3 @@
+mod dense_merkle_tree;
 mod hasher;
-mod merkle;
-mod util;
+mod sparse_merkle_tree;
