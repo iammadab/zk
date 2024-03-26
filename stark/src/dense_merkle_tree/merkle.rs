@@ -3,13 +3,13 @@ use crate::dense_merkle_tree::util::{
 };
 use crate::hasher::Hasher;
 
-/// Represents a merkle proof, keep track of the proved node as hint to verifier
+/// Represents a dense merkle proof, keep track of the proved node as hint to verifier
 struct DenseMerkleProof<T> {
     hashes: Vec<T>,
     node_index: usize,
 }
 
-/// Merkle Tree Struct
+/// Dense Merkle Tree Struct
 /// Pads the tree leaves to the next power of 2 by repeatedly adding empty bytes
 struct DenseMerkleTree<H: Hasher> {
     tree: Vec<H::Digest>,
