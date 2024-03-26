@@ -29,7 +29,7 @@ impl<H: Hasher> DenseMerkleTree<H> {
         &self.tree[0]
     }
 
-    /// Builds a Merkle tree from a list of leave values
+    /// Builds a Merkle tree from a list of leaf values
     fn build(input: &[H::Item]) -> Self {
         // input cannot be empty
         assert!(input.len() > 0);
