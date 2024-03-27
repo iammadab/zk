@@ -47,7 +47,9 @@ impl<H: Hasher> SparseMerkleTree<H> {
 #[cfg(test)]
 mod tests {
     use crate::hasher::sha3_hasher::Sha3Hasher;
+    use crate::hasher::Hasher;
     use crate::sparse_merkle_tree::merkle::SparseMerkleTree;
+    use sha3::{Digest, Sha3_256};
 
     fn build_merkle_tree() -> SparseMerkleTree<Sha3Hasher> {
         let values = vec![
@@ -63,12 +65,57 @@ mod tests {
 
     #[test]
     fn test_build_sparse_merkle_tree() {
-        // what is the best way to test this?
-        // need to ensure it's building what's expected at all levels
-        // hence verification of the entire tree might be needed
-        // first will need to verify the length of the tree
+        let mut values = vec![
+            2_u8.to_be_bytes().to_vec(),
+            4_u8.to_be_bytes().to_vec(),
+            6_u8.to_be_bytes().to_vec(),
+            2_u8.to_be_bytes().to_vec(),
+            4_u8.to_be_bytes().to_vec(),
+        ];
+        // extend to an even number of elements
+        values.push(vec![]);
 
         let tree = build_merkle_tree();
-        assert_eq!(tree.tree.len(), 12);
+        assert_eq!(tree.tree.len(), 13);
+
+        // hash the input leaves
+        let mut hasher = Sha3_256::new();
+        let value_hashes = values
+            .into_iter()
+            .map(|val| {
+                hasher.update(&val);
+                let mut hash = [0; 32];
+                hash.copy_from_slice(&hasher.finalize_reset());
+                hash
+            })
+            .collect::<Vec<_>>();
+
+        // assert the leaf nodes (4th layer)
+        assert_eq!(tree.tree[12], value_hashes[5]);
+        assert_eq!(tree.tree[11], value_hashes[4]);
+        assert_eq!(tree.tree[10], value_hashes[3]);
+        assert_eq!(tree.tree[9], value_hashes[2]);
+        assert_eq!(tree.tree[8], value_hashes[1]);
+        assert_eq!(tree.tree[7], value_hashes[0]);
+
+        // assert 3rd layer
+        assert_eq!(tree.tree[6], [0; 32]);
+        let hash_4_empty = Sha3Hasher::hash_digest_slice(&[&tree.tree[11], &tree.tree[12]]);
+        assert_eq!(tree.tree[5], hash_4_empty);
+        let hash_6_2 = Sha3Hasher::hash_digest_slice(&[&tree.tree[9], &tree.tree[10]]);
+        assert_eq!(tree.tree[4], hash_6_2);
+        let hash_2_4 = Sha3Hasher::hash_digest_slice(&[&tree.tree[7], &tree.tree[8]]);
+        assert_eq!(tree.tree[3], hash_2_4);
+
+        // assert 2nd layer
+        let hash_4_empty_default = Sha3Hasher::hash_digest_slice(&[&hash_4_empty, &[0; 32]]);
+        assert_eq!(tree.tree[2], hash_4_empty_default);
+        let hash_2_4_6_2 = Sha3Hasher::hash_digest_slice(&[&hash_2_4, &hash_6_2]);
+        assert_eq!(tree.tree[1], hash_2_4_6_2);
+
+        // assert root layer (1st layer)
+        let hash_root = Sha3Hasher::hash_digest_slice(&[&hash_2_4_6_2, &hash_4_empty_default]);
+        assert_eq!(tree.tree[0], hash_root);
+        assert_eq!(tree.root_hash(), &hash_root);
     }
 }
