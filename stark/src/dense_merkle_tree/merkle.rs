@@ -1,5 +1,5 @@
 use crate::dense_merkle_tree::util::{
-    extend_to_power_of_two, extra_hash_count, is_power_of_2, number_of_leaves, parent, sibling,
+    extend_to_power_of_two, extra_hash_count, number_of_leaves, parent, sibling,
 };
 use crate::hasher::Hasher;
 
@@ -20,7 +20,7 @@ impl<H: Hasher> DenseMerkleTree<H> {
     fn new(tree: Vec<H::Digest>) -> Self {
         // tree len + 1 should be a power of 2, asserts that a valid
         // binary tree can be built from it.
-        assert!(is_power_of_2(tree.len() + 1));
+        assert!((tree.len() + 1).is_power_of_two());
         Self { tree }
     }
 
@@ -131,7 +131,7 @@ mod tests {
         let tree = build_merkle_tree();
         assert_eq!(tree.tree.len(), 7);
 
-        // extend values by the empty vector (for default0
+        // extend values by the empty vector (for default)
         values.push(vec![]);
 
         // hash the input leaves

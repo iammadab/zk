@@ -43,3 +43,32 @@ impl<H: Hasher> SparseMerkleTree<H> {
         SparseMerkleTree { tree, no_of_leaves }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::hasher::sha3_hasher::Sha3Hasher;
+    use crate::sparse_merkle_tree::merkle::SparseMerkleTree;
+
+    fn build_merkle_tree() -> SparseMerkleTree<Sha3Hasher> {
+        let values = vec![
+            2_u8.to_be_bytes().to_vec(),
+            4_u8.to_be_bytes().to_vec(),
+            6_u8.to_be_bytes().to_vec(),
+            2_u8.to_be_bytes().to_vec(),
+            4_u8.to_be_bytes().to_vec(),
+        ];
+        let tree = SparseMerkleTree::<Sha3Hasher>::build(&values);
+        tree
+    }
+
+    #[test]
+    fn test_build_sparse_merkle_tree() {
+        // what is the best way to test this?
+        // need to ensure it's building what's expected at all levels
+        // hence verification of the entire tree might be needed
+        // first will need to verify the length of the tree
+
+        let tree = build_merkle_tree();
+        assert_eq!(tree.tree.len(), 12);
+    }
+}

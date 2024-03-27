@@ -71,7 +71,7 @@ pub fn parent(index: usize, layer_counts: Vec<usize>) -> usize {
 }
 
 /// Computes and returns the running sum given an array of values
-/// e.g. [1, 2, 3] -> [1, 3, 6]
+/// e.g. [1, 2, 3] -> [0, 1, 3, 6]
 pub fn running_sum(mut values: impl Iterator<Item = usize>) -> Vec<usize> {
     let mut sum_array = vec![0];
     for value in values {
