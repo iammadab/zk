@@ -1,26 +1,26 @@
-use crate::hasher::Hasher;
-use crate::util::{
-    extend_to_power_of_two, extra_hash_count, is_power_of_2, number_of_leaves, parent, sibling,
+use crate::dense_merkle_tree::util::{
+    extend_to_power_of_two, extra_hash_count, number_of_leaves, parent, sibling,
 };
+use crate::hasher::Hasher;
 
-/// Represents a merkle proof, keep track of the proved node as hint to verifier
-struct MerkleProof<T> {
+/// Represents a dense merkle proof, keep track of the proved node as hint to verifier
+struct DenseMerkleProof<T> {
     hashes: Vec<T>,
     node_index: usize,
 }
 
-/// Merkle Tree Struct
-struct MerkleTree<H: Hasher> {
-    // TODO: seems it's possible to use the not have to padd the tree, gets unwidely when the next power of 2 is really far.
+/// Dense Merkle Tree Struct
+/// Pads the tree leaves to the next power of 2 by repeatedly adding empty bytes
+struct DenseMerkleTree<H: Hasher> {
     tree: Vec<H::Digest>,
 }
 
-impl<H: Hasher> MerkleTree<H> {
+impl<H: Hasher> DenseMerkleTree<H> {
     /// Instantiate a new merkle tree
     fn new(tree: Vec<H::Digest>) -> Self {
         // tree len + 1 should be a power of 2, asserts that a valid
         // binary tree can be built from it.
-        assert!(is_power_of_2(tree.len() + 1));
+        assert!((tree.len() + 1).is_power_of_two());
         Self { tree }
     }
 
@@ -29,7 +29,7 @@ impl<H: Hasher> MerkleTree<H> {
         &self.tree[0]
     }
 
-    /// Builds a Merkle tree from a list of leave values
+    /// Builds a Merkle tree from a list of leaf values
     fn build(input: &[H::Item]) -> Self {
         // input cannot be empty
         assert!(input.len() > 0);
@@ -51,11 +51,11 @@ impl<H: Hasher> MerkleTree<H> {
             tree[parent_index] = H::hash_digest_slice(&[&tree[left_index], &tree[right_index]]);
         }
 
-        MerkleTree::new(tree)
+        DenseMerkleTree::new(tree)
     }
 
     /// Generate a merkle proof for the element at a given index
-    fn prove(&self, index: usize) -> Result<MerkleProof<H::Digest>, &'static str> {
+    fn prove(&self, index: usize) -> Result<DenseMerkleProof<H::Digest>, &'static str> {
         let mut proof = vec![];
 
         let number_of_leaves = number_of_leaves(self.tree.len());
@@ -72,7 +72,7 @@ impl<H: Hasher> MerkleTree<H> {
             proof_node_index = sibling(parent(proof_node_index));
         }
 
-        Ok(MerkleProof {
+        Ok(DenseMerkleProof {
             hashes: proof,
             node_index: leaf_index,
         })
@@ -81,7 +81,7 @@ impl<H: Hasher> MerkleTree<H> {
     /// Verify the merkle proof for a given leaf element
     fn verify(
         input: &H::Item,
-        proof: MerkleProof<H::Digest>,
+        proof: DenseMerkleProof<H::Digest>,
         expected_root_hash: &H::Digest,
     ) -> bool {
         let input_hash = H::hash_item(input);
@@ -105,18 +105,18 @@ impl<H: Hasher> MerkleTree<H> {
 
 #[cfg(test)]
 mod tests {
+    use crate::dense_merkle_tree::merkle::DenseMerkleTree;
+    use crate::dense_merkle_tree::util::extra_hash_count;
     use crate::hasher::sha3_hasher::Sha3Hasher;
-    use crate::merkle::MerkleTree;
-    use crate::util::extra_hash_count;
     use sha3::{Digest, Sha3_256};
 
-    fn build_merkle_tree() -> MerkleTree<Sha3Hasher> {
+    fn build_merkle_tree() -> DenseMerkleTree<Sha3Hasher> {
         let values = vec![
             1_u8.to_be_bytes().to_vec(),
             2_u8.to_be_bytes().to_vec(),
             3_u8.to_be_bytes().to_vec(),
         ];
-        let tree = MerkleTree::<Sha3Hasher>::build(&values);
+        let tree = DenseMerkleTree::<Sha3Hasher>::build(&values);
         tree
     }
 
@@ -131,7 +131,7 @@ mod tests {
         let tree = build_merkle_tree();
         assert_eq!(tree.tree.len(), 7);
 
-        // extend values by the empty vector (for default0
+        // extend values by the empty vector (for default)
         values.push(vec![]);
 
         // hash the input leaves
@@ -181,7 +181,7 @@ mod tests {
         assert_eq!(proof.node_index, 3);
         assert_eq!(proof.hashes[0], tree.tree[4]);
         assert_eq!(proof.hashes[1], tree.tree[2]);
-        assert!(MerkleTree::<Sha3Hasher>::verify(
+        assert!(DenseMerkleTree::<Sha3Hasher>::verify(
             &values[0],
             proof,
             tree.root_hash()
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(proof.node_index, 6);
         assert_eq!(proof.hashes[0], tree.tree[5]);
         assert_eq!(proof.hashes[1], tree.tree[1]);
-        assert!(MerkleTree::<Sha3Hasher>::verify(
+        assert!(DenseMerkleTree::<Sha3Hasher>::verify(
             &values[3],
             proof,
             tree.root_hash()
