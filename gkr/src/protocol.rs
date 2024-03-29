@@ -6,6 +6,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use polynomial::multilinear_poly::MultiLinearPolynomial;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
+use stat::{end_timer, start_timer};
 use sumcheck::{PartialSumcheckProof, Sumcheck};
 use transcript::Transcript;
 
@@ -29,27 +30,50 @@ pub fn prove<F: PrimeField>(
     let mut sumcheck_proofs = vec![];
     let mut q_functions = vec![];
 
+    start_timer!("get output mle and append to transcript");
     // get the mle of the output evaluation layer and add to transcript
     let w_0 = Circuit::w(evaluations.as_slice(), 0)?;
     transcript.append(w_0.to_bytes().as_slice());
+    end_timer!();
 
+    start_timer!("sample field elements from transcript to evaluate the output mle on");
     // sample k random field elements to make r
     let mut r = transcript.sample_n_field_elements::<F>(w_0.n_vars());
+    end_timer!();
 
+    start_timer!("evaluate output mle at random points");
     // evaluate w_0(r) to get m
     let mut m = w_0.evaluate_slice(r.as_slice())?;
+    end_timer!();
 
+    start_timer!("prove intermediate layers");
     // f(b, c) = add(r, b, c)(w_i(b) + w_i(c)) + mul(r, b, c)(w_i(b) * w_i(c))
     // each gkr round show that m = sum of f(b, c) over the boolean hypercube
     for layer_index in 1..evaluations.len() {
-        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
-        let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
-        let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
+        start_timer!("prove layer");
 
+        start_timer!("generate add and mul mle for current layer");
+        let [add_mle, mul_mle] = circuit.add_mul_mle(layer_index - 1)?;
+        end_timer!();
+
+        start_timer!("generate w_mle for the current layer");
+        let w_i = Circuit::w(evaluations.as_slice(), layer_index)?;
+        end_timer!();
+
+        start_timer!("generate f(b, c) for the current layer");
+        let f_b_c = GateEvalExtension::new(r.clone(), add_mle, mul_mle, w_i.clone())?;
+        end_timer!();
+
+        start_timer!("prove partial sumcheck");
         let (partial_sumcheck_proof, challenges) = Sumcheck::prove_partial(f_b_c, m);
+        end_timer!();
+
+        start_timer!("append sumcheck proof to transcript and output struct");
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
         sumcheck_proofs.push(partial_sumcheck_proof);
+        end_timer!();
 
+        start_timer!("generate l and q functions");
         // since the verifier doesn't have access the w_i
         // we need to create a new polynomial q, which restricts w_i to a straight line l
         // i.e q(x) = w(l(x))
@@ -57,14 +81,28 @@ pub fn prove<F: PrimeField>(
         let (b, c) = challenges.split_at(challenges.len() / 2);
         let l_function = l(b, c)?;
         let q_function = q(l_function.as_slice(), w_i.clone())?;
+        end_timer!();
 
+        start_timer!("append q function to transcript and output struct");
         transcript.append(q_function.to_bytes().as_slice());
         q_functions.push(q_function);
+        end_timer!();
 
+        start_timer!("sample a random field element from the transcript");
         let r_star = transcript.sample_field_element();
+        end_timer!();
+
+        start_timer!("evaluate the l function at r");
         r = evaluate_l_function(l_function.as_slice(), &r_star);
+        end_timer!();
+
+        start_timer!("evaluate the layer w mle at l function output to get sum for next layer");
         m = w_i.evaluate_slice(r.as_slice())?;
+        end_timer!();
+
+        end_timer!();
     }
+    end_timer!();
 
     Ok(Proof {
         output_mle: w_0,
