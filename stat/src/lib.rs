@@ -35,9 +35,8 @@ macro_rules! end_timer {
     () => {
         // guard should only run when PERF_LOG is set to true
         if std::env::var("PERF_LOG") == Ok(String::from("true")) {
-            let (description, start_time) = $crate::BLOCKS.with(|blocks| {
-                blocks.borrow_mut().pop().unwrap()
-            });
+            let (description, start_time) =
+                $crate::BLOCKS.with(|blocks| blocks.borrow_mut().pop().unwrap());
             $crate::TAB_COUNT.with(|tab_count| {
                 // update the tab count
                 *tab_count.borrow_mut() -= 1;

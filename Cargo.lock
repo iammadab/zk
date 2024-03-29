@@ -2244,7 +2244,9 @@ name = "stat_runner"
 version = "0.1.0"
 dependencies = [
  "ark-bls12-381",
+ "ark-std",
  "gkr",
+ "r1cs_gkr",
  "stat",
 ]
 

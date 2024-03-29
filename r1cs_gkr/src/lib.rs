@@ -1,5 +1,5 @@
 pub mod adapters;
 mod circuit;
-mod constraint;
-mod program;
-mod proof;
+pub mod constraint;
+pub mod program;
+pub mod proof;

@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 stat = { path = "../stat"}
 gkr = { path = "../gkr" }
+r1cs_gkr = { path = "../r1cs_gkr" }
 ark-bls12-381 = "0.4.0"
+ark-std = "0.4.0"

@@ -33,7 +33,7 @@ pub fn verify_circom_gkr<F: PrimeField>(
 
 /// Compile the R1CSProgram into a circuit and add circuit dependent constants / intermediate values
 /// to the witness vector
-fn compile_program_and_constrain_witness<F: PrimeField>(
+pub fn compile_program_and_constrain_witness<F: PrimeField>(
     program: R1CSProgram<F>,
     witness: Vec<F>,
 ) -> Result<(Circuit, Vec<F>), &'static str> {
