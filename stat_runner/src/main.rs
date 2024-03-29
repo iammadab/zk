@@ -2,6 +2,7 @@ use crate::gkr::gkr_prove_small_input;
 use stat::{end_timer, start_timer};
 
 mod gkr;
+mod circom_gkr;
 
 fn run<F: Fn() -> ()>(label: &'static str, to_run: F) {
     start_timer!(label);
