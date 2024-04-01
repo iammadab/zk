@@ -1,11 +1,10 @@
 use ark_ff::PrimeField;
 use polynomial::univariate_poly::UnivariatePolynomial;
 
+#[derive(Debug, PartialEq)]
 struct Domain<F> {
     generator: F,
 }
-
-// TODO: look into moving the domain halving logic here
 
 impl<F: PrimeField> Domain<F> {
     /// Create a new domain for field F that enumerates the nth roots of F
@@ -27,13 +26,24 @@ impl<F: PrimeField> Domain<F> {
         evaluations.push(poly.evaluate(&current_element));
         evaluations
     }
+
+    /// Generate a new domain with evaluation points half the size of the current domain
+    fn halve_domain(&self) -> Result<Self, &'static str> {
+        if self.generator == F::one() {
+            return Err("cannot halve domain of size 1");
+        }
+
+        Ok(Self {
+            generator: self.generator.pow(&[2]),
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::domain::Domain;
     use crate::Fq;
-    use ark_ff::{FftField, Field};
+    use ark_ff::Field;
     use polynomial::univariate_poly::UnivariatePolynomial;
 
     #[test]
@@ -49,5 +59,23 @@ mod tests {
         assert_eq!(domain_32.generator.pow(&[32]), Fq::from(1));
         let evaluations = domain_32.evaluate_poly_at_domain(&p);
         assert_eq!(evaluations.len(), 32);
+    }
+
+    #[test]
+    fn domain_of_half_size() {
+        let domain_32 = Domain::<Fq>::instantiate_from_nth_root(32);
+        assert_eq!(domain_32.generator.pow(&[32]), Fq::from(1));
+        let domain_16 = domain_32.halve_domain().unwrap();
+        assert_eq!(domain_16, Domain::<Fq>::instantiate_from_nth_root(16));
+        let domain_8 = domain_16.halve_domain().unwrap();
+        assert_eq!(domain_8, Domain::<Fq>::instantiate_from_nth_root(8));
+        let domain_4 = domain_8.halve_domain().unwrap();
+        assert_eq!(domain_4, Domain::<Fq>::instantiate_from_nth_root(4));
+        let domain_2 = domain_4.halve_domain().unwrap();
+        assert_eq!(domain_2, Domain::<Fq>::instantiate_from_nth_root(2));
+        let domain_1 = domain_2.halve_domain().unwrap();
+        assert_eq!(domain_1, Domain::<Fq>::instantiate_from_nth_root(1));
+        let undefined_domain = domain_1.halve_domain();
+        assert!(undefined_domain.is_err());
     }
 }
