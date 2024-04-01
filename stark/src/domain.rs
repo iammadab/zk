@@ -42,14 +42,12 @@ mod tests {
         assert_eq!(domain_64.generator.pow(&[64]), Fq::from(1));
     }
 
-    // #[test]
-    // fn blam() {
-    //     // 2x^2 + 3x + 4
-    //     let p = UnivariatePolynomial::<Fq>::new(vec![Fq::from(4), Fq::from(3), Fq::from(2)]);
-    //
-    //     let m = Fq::get_root_of_unity(4).unwrap();
-    //
-    //     let evaluations = evaluate_poly_at_domain(m, &p);
-    //     dbg!(evaluations);
-    // }
+    #[test]
+    fn evaluate_poly_at_domain() {
+        let p = UnivariatePolynomial::<Fq>::new(vec![Fq::from(4), Fq::from(3), Fq::from(2)]);
+        let domain_32 = Domain::<Fq>::instantiate_from_nth_root(32);
+        assert_eq!(domain_32.generator.pow(&[32]), Fq::from(1));
+        let evaluations = domain_32.evaluate_poly_at_domain(&p);
+        assert_eq!(evaluations.len(), 32);
+    }
 }
