@@ -1,5 +1,6 @@
 /// Returns the sibling index of a node
 pub fn sibling(index: usize) -> usize {
+    // TODO: use xor for this operation
     if index == 0 {
         0
     } else if index % 2 == 0 {
