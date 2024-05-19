@@ -39,19 +39,26 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
         // finally reassign to the top part
         // return the truncated version
 
-        let shift_value = self.evaluations.len() / 2;
-        // TODO: look into the uninitialized optimization (does it actually optimize anything?)
-        let mut new_evaluations = vec![F::zero(); shift_value];
-        let value = assignments[0];
+        let mut new_evaluations = self.evaluations.clone();
+        let pairing_index = Self::compute_paring_index(self.n_vars, initial_var)?;
 
-        // iterate from half the eval length
-        for i in 0..shift_value {
-            let left = self.evaluations[i];
-            let right = self.evaluations[i + shift_value];
-            // linear interpolation
-            new_evaluations[i] = (F::ONE - value) * left + value * right;
+        // TODO: what checks do I have to make?
+
+        for i in 0..assignments.len() {
+            // how do we truncate the index, going to be based on the shift value
+            // shift value changes with every iteration right??
+            let current_evaluation_length = 1 << (self.n_vars - i);
+            let shift_value = current_evaluation_length / (1 << (initial_var + 1));
+
+            for j in 0..shift_value {
+                // here we do the interpolation right
+                let left = self.evaluations[pairing_index[j]];
+                let right = self.evaluations[pairing_index[j] + shift_value];
+                new_evaluations[j] = (F::ONE - assignments[i]) * left + assignments[i] * right;
+            }
         }
 
+        // TODO: truncate the new_evaluations length
         Ok(Self::new(self.n_vars - 1, new_evaluations)?)
     }
 
@@ -62,9 +69,6 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
 
     // TODO: add documentation and add assumptions made
     //  pairing var is 0 indexed
-    // interpolating set
-    // given the number of variables and the starting variable count
-    // we should be able to figure out the index values
     fn compute_paring_index(n_vars: usize, pairing_var: usize) -> Result<Vec<usize>, &'static str> {
         // TODO: clean up
 
