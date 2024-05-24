@@ -4,14 +4,14 @@ use ark_ff::PrimeField;
 
 // TODO: add documentation
 struct MultilinearPolynomial<F: PrimeField> {
-    n_vars: u32,
+    n_vars: usize,
     evaluations: Vec<F>,
 }
 
 impl<F: PrimeField> MultilinearPolynomial<F> {
     /// Instantiates a new `MultilinearPolynomial` after ensuring variable count
     /// aligns with evaluation len
-    fn new(n_vars: u32, evaluations: Vec<F>) -> Result<Self, &'static str> {
+    fn new(n_vars: usize, evaluations: Vec<F>) -> Result<Self, &'static str> {
         // the evaluation vec length must exactly be equal to 2^n_vars
         // this is because we might not always be able to assume the appropriate
         // element to pad the vector with.
@@ -40,17 +40,20 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
         // return the truncated version
 
         let mut new_evaluations = self.evaluations.clone();
-        let pairing_index = Self::compute_paring_index(self.n_vars, initial_var)?;
+        let pairing_index = Self::compute_paring_index(self.n_vars as usize, initial_var)?;
 
         // TODO: what checks do I have to make?
 
         for i in 0..assignments.len() {
             // how do we truncate the index, going to be based on the shift value
             // shift value changes with every iteration right??
-            let current_evaluation_length = 1 << (self.n_vars - i);
+            let current_evaluation_length = 1 << (self.n_vars as usize - i);
+            dbg!(current_evaluation_length);
             let shift_value = current_evaluation_length / (1 << (initial_var + 1));
 
-            for j in 0..shift_value {
+            dbg!("hello");
+            for j in 0..current_evaluation_length / 2 {
+                dbg!(pairing_index[j]);
                 // here we do the interpolation right
                 let left = self.evaluations[pairing_index[j]];
                 let right = self.evaluations[pairing_index[j] + shift_value];
@@ -58,8 +61,14 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
             }
         }
 
+        dbg!(1 << (self.n_vars as usize - assignments.len()));
+
+        let new_n_vars = self.n_vars as usize - assignments.len();
         // TODO: truncate the new_evaluations length
-        Ok(Self::new(self.n_vars - 1, new_evaluations)?)
+        Ok(Self::new(
+            new_n_vars,
+            new_evaluations[..(1 << new_n_vars)].to_vec(),
+        )?)
     }
 
     // next thing is partial evaluation but for multiple variables
@@ -123,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn test_partial_evaluate() {
+    fn test_partial_evaluate_single_variable() {
         let poly =
             MultilinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)])
                 .unwrap();
@@ -133,6 +142,32 @@ mod tests {
                 .evaluations,
             vec![Fr::from(-2), Fr::from(21)]
         );
+    }
+
+    #[test]
+    fn test_partial_evaluate_consecutive_variables() {
+        // f(a, b, c) = 2ab + 3bc
+        let poly = MultilinearPolynomial::new(
+            3,
+            vec![
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(3),
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(2),
+                Fr::from(5),
+            ],
+        )
+        .unwrap();
+
+        let f_of_a_evaluations = poly
+            .partial_evaluate(1, &[Fr::from(2), Fr::from(3)])
+            .unwrap()
+            .evaluations;
+        assert_eq!(f_of_a_evaluations.len(), 2);
+        assert_eq!(f_of_a_evaluations, &[Fr::from(18), Fr::from(22)]);
     }
 
     #[test]
