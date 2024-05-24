@@ -3,7 +3,8 @@
 use crate::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
 
-// TODO: add documentation
+/// `MultilinearPolynomial` (Dense Evaluation Representation)
+/// holds all evaluations over the boolean hypercube of an n_var multilinear polynomial
 struct MultilinearPolynomial<F: PrimeField> {
     n_vars: usize,
     evaluations: Vec<F>,
@@ -26,17 +27,26 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
         })
     }
 
-    // TODO: add documentation
-    // TODO: add reasoning behind decision to go this route
+    /// Partially evaluate the `MultilinearPolynomial` at n consecutive variables
+    /// e.g. f(a, b, c, d, e, f)
+    /// we can pick a starting variable and supply n evaluation points
+    /// f.partial_evaluate(1, [2, 3, 4])
+    /// this partially evaluates 3 variables, starting at var b
+    /// so b = 2, c = 3 and d = 4
     fn partial_evaluate(
         &self,
         initial_var: usize,
         assignments: &[F],
     ) -> Result<Self, &'static str> {
-        // TODO: add comments
+        // decided to go the consecutive partial evaluation route as opposed to the random access
+        // evaluation route because consecutive partial eval is all that's needed for sumcheck and
+        // gkr, and it seems random access partial evaluation will introduce additional cost (when
+        // detecting duplicate assignments)
         let mut new_evaluations = self.evaluations.clone();
 
-        // for each assignment, get the pairing index
+        // for each assignment
+        // pull the evaluation pairs from the boolean hypercube
+        // interpolate and evaluate the straight line given by each pair at the assignment
         for (i, assignment) in assignments.iter().enumerate() {
             let pairing_iterator = PairingIndex::new(self.n_vars - i, initial_var)?;
             let shift_value = pairing_iterator.shift_value();
