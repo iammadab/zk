@@ -33,6 +33,7 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
         initial_var: usize,
         assignments: &[F],
     ) -> Result<Self, &'static str> {
+        // TODO: add comments
         let mut new_evaluations = self.evaluations.clone();
 
         // for each assignment, get the pairing index
