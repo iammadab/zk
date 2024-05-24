@@ -5,6 +5,7 @@ use self::univariate_poly::UnivariatePolynomial;
 // pub mod multilinear_extension;
 pub mod multilinear_poly;
 mod multilinear_poly_2;
+mod pairing_index;
 pub mod univariate_poly;
 
 pub trait Polynomial<F: PrimeField>: Clone {

@@ -1,5 +1,6 @@
 // TODO: delete old multilinear file
 
+use crate::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
 
 // TODO: add documentation
@@ -27,86 +28,31 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
 
     // TODO: add documentation
     // TODO: add reasoning behind decision to go this route
-    // TODO: implement partial evaluation for random index values
-    // this assumes you only want to partially evaluate the first variable
     fn partial_evaluate(
         &self,
         initial_var: usize,
         assignments: &[F],
     ) -> Result<Self, &'static str> {
-        // we need an algo to do matching
-        // then do linear interpolation on the left and right
-        // finally reassign to the top part
-        // return the truncated version
-
         let mut new_evaluations = self.evaluations.clone();
-        let pairing_index = Self::compute_paring_index(self.n_vars as usize, initial_var)?;
 
-        // TODO: what checks do I have to make?
-
-        for i in 0..assignments.len() {
-            // how do we truncate the index, going to be based on the shift value
-            // shift value changes with every iteration right??
-            let current_evaluation_length = 1 << (self.n_vars as usize - i);
-            dbg!(current_evaluation_length);
-            let shift_value = current_evaluation_length / (1 << (initial_var + 1));
-
-            dbg!("hello");
-            for j in 0..current_evaluation_length / 2 {
-                dbg!(pairing_index[j]);
-                // here we do the interpolation right
-                let left = self.evaluations[pairing_index[j]];
-                let right = self.evaluations[pairing_index[j] + shift_value];
-                new_evaluations[j] = (F::ONE - assignments[i]) * left + assignments[i] * right;
+        // for each assignment, get the pairing index
+        for (i, assignment) in assignments.iter().enumerate() {
+            let pairing_iterator = PairingIndex::new(self.n_vars - i, initial_var)?;
+            let shift_value = pairing_iterator.shift_value();
+            for (i, index) in pairing_iterator.enumerate() {
+                let left = new_evaluations[index];
+                let right = new_evaluations[index + shift_value];
+                // linear interpolation
+                new_evaluations[i] = ((F::ONE - assignment) * left) + (*assignment * right);
             }
         }
 
-        dbg!(1 << (self.n_vars as usize - assignments.len()));
-
-        let new_n_vars = self.n_vars as usize - assignments.len();
-        // TODO: truncate the new_evaluations length
+        // truncate and return new polynomial
+        let new_n_vars = self.n_vars - assignments.len();
         Ok(Self::new(
             new_n_vars,
             new_evaluations[..(1 << new_n_vars)].to_vec(),
         )?)
-    }
-
-    // next thing is partial evaluation but for multiple variables
-    // to do this I need a way to get the shift value
-    // and a way to get the indexes
-    // shift value = 2^n_vars / 2^i
-
-    // TODO: add documentation and add assumptions made
-    //  pairing var is 0 indexed
-    fn compute_paring_index(n_vars: usize, pairing_var: usize) -> Result<Vec<usize>, &'static str> {
-        // TODO: clean up
-
-        if pairing_var >= n_vars {
-            return Err("pairing variable must exist in the polynomial");
-        }
-
-        let evaluation_len = 1 << n_vars;
-
-        let mut result = vec![];
-        let shift_value = evaluation_len / (1 << (pairing_var + 1));
-
-        // take shift value number of elements
-
-        // we know how many elements we'd need
-        let mut to_push = 0;
-
-        for i in 0..(evaluation_len / 2) {
-            result.push(to_push);
-            to_push += 1;
-
-            // what do we want here?
-            // hmm, multiple?
-            if (i + 1) % shift_value == 0 {
-                to_push += shift_value;
-            }
-        }
-
-        Ok(result)
     }
 }
 
@@ -168,29 +114,5 @@ mod tests {
             .evaluations;
         assert_eq!(f_of_a_evaluations.len(), 2);
         assert_eq!(f_of_a_evaluations, &[Fr::from(18), Fr::from(22)]);
-    }
-
-    #[test]
-    fn test_compute_pairing_index() {
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(3, 0).unwrap();
-        assert_eq!(pairing_index, vec![0, 1, 2, 3]);
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(3, 1).unwrap();
-        assert_eq!(pairing_index, vec![0, 1, 4, 5]);
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(3, 2).unwrap();
-        assert_eq!(pairing_index, vec![0, 2, 4, 6]);
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(3, 3);
-        assert!(pairing_index.is_err());
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(4, 0).unwrap();
-        assert_eq!(pairing_index, vec![0, 1, 2, 3, 4, 5, 6, 7]);
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(4, 1).unwrap();
-        assert_eq!(pairing_index, vec![0, 1, 2, 3, 8, 9, 10, 11]);
-
-        let pairing_index = MultilinearPolynomial::<Fr>::compute_paring_index(4, 2).unwrap();
-        assert_eq!(pairing_index, vec![0, 1, 4, 5, 8, 9, 12, 13]);
     }
 }
