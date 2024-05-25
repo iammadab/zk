@@ -1,4 +1,4 @@
-// TODO: delete old multilinear file
+// TODO: restructure multilinear files
 
 use crate::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
@@ -65,6 +65,15 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
             new_evaluations[..(1 << new_n_vars)].to_vec(),
         )?)
     }
+
+    /// Evaluate the `MultilinearPolynomial` at n points
+    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+        if assignments.len() != self.n_vars {
+            return Err("evaluate must assign to all variables");
+        }
+
+        Ok(self.partial_evaluate(0, assignments)?.evaluations[0])
+    }
 }
 
 #[cfg(test)]
@@ -125,5 +134,35 @@ mod tests {
             .evaluations;
         assert_eq!(f_of_a_evaluations.len(), 2);
         assert_eq!(f_of_a_evaluations, &[Fr::from(18), Fr::from(22)]);
+
+        // TODO: add more tests, test out edge cases e.g. starting variable last var???
+        // what are the edge cases
+        // evaluation from the middle?
+        // what part of the code might make this wrong??
+        // TODO: use the other polynomial representation to generate the evaluations
+    }
+
+    #[test]
+    fn test_full_evaluation() {
+        // f(a, b, c) = 2ab + 3bc
+        let poly = MultilinearPolynomial::new(
+            3,
+            vec![
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(3),
+                Fr::from(0),
+                Fr::from(0),
+                Fr::from(2),
+                Fr::from(5),
+            ],
+        )
+        .unwrap();
+
+        let evaluation_result = poly
+            .evaluate(&[Fr::from(2), Fr::from(3), Fr::from(4)])
+            .unwrap();
+        assert_eq!(evaluation_result, Fr::from(48));
     }
 }
