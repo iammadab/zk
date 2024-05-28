@@ -1,5 +1,5 @@
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::multilinear_poly::{selector_from_position, MultiLinearPolynomial};
+use polynomial::multilinear::coefficient_form::{selector_from_position, MultiLinearPolynomial};
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use std::ops::Add;

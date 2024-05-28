@@ -1,6 +1,6 @@
 use crate::layer::Layer;
 use ark_ff::PrimeField;
-use polynomial::multilinear_poly::MultiLinearPolynomial;
+use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
 use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers
@@ -135,7 +135,7 @@ pub mod tests {
     use crate::circuit::{Circuit, Layer};
     use crate::gate::Gate;
     use ark_bls12_381::Fr;
-    use polynomial::multilinear_poly::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
     use polynomial::Polynomial;
     use sumcheck::util::sum_over_boolean_hyper_cube;
 

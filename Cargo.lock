@@ -1699,6 +1699,7 @@ dependencies = [
 name = "polynomial"
 version = "0.1.0"
 dependencies = [
+ "ark-bls12-381",
  "ark-ff",
  "ark-serialize",
 ]

@@ -2,8 +2,7 @@ use ark_ff::PrimeField;
 
 use self::univariate_poly::UnivariatePolynomial;
 
-// pub mod multilinear_extension;
-pub mod multilinear_poly;
+pub mod multilinear;
 pub mod univariate_poly;
 
 pub trait Polynomial<F: PrimeField>: Clone {

@@ -1,5 +1,5 @@
 use ark_ff::PrimeField;
-use polynomial::multilinear_poly::{selector_from_usize, MultiLinearPolynomial};
+use polynomial::multilinear::coefficient_form::{selector_from_usize, MultiLinearPolynomial};
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 

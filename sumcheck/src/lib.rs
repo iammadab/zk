@@ -212,7 +212,7 @@ impl Sumcheck {
 mod tests {
     use crate::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use polynomial::multilinear_poly::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]

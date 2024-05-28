@@ -1,6 +1,6 @@
 use crate::boolean_hypercube::BooleanHyperCube;
 use ark_ff::PrimeField;
-use polynomial::multilinear_poly::selector_from_position;
+use polynomial::multilinear::coefficient_form::selector_from_position;
 use polynomial::Polynomial;
 use std::ops::Add;
 
@@ -56,7 +56,7 @@ pub fn partial_evaluation_points<'a, F: PrimeField>(
 mod test {
     use crate::util::sum_over_boolean_hyper_cube;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use polynomial::multilinear_poly::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
