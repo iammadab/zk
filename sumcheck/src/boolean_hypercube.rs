@@ -1,5 +1,5 @@
 use ark_ff::PrimeField;
-use polynomial::multilinear_poly::binary_string;
+use polynomial::multilinear::coefficient_form::binary_string;
 use std::marker::PhantomData;
 
 /// Structure for point iteration over boolean hypercube

@@ -88,7 +88,7 @@ impl Iterator for PairingIndex {
 
 #[cfg(test)]
 mod tests {
-    use crate::pairing_index::PairingIndex;
+    use crate::multilinear::pairing_index::PairingIndex;
 
     #[test]
     fn test_pairing_index_creation() {

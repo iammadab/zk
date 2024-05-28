@@ -3,7 +3,7 @@ use crate::gate_eval_extension::GateEvalExtension;
 use crate::util::{evaluate_l_function, l, q};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use polynomial::multilinear_poly::MultiLinearPolynomial;
+use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use sumcheck::{PartialSumcheckProof, Sumcheck};

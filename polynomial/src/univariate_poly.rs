@@ -1,4 +1,4 @@
-use crate::multilinear_poly::MultiLinearPolynomial;
+use crate::multilinear::coefficient_form::MultiLinearPolynomial;
 use crate::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -229,7 +229,7 @@ impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F
 #[cfg(test)]
 mod tests {
     use super::UnivariatePolynomial;
-    use crate::multilinear_poly::MultiLinearPolynomial;
+    use crate::multilinear::coefficient_form::MultiLinearPolynomial;
     use crate::Polynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend};

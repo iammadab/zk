@@ -1,6 +1,4 @@
-// TODO: restructure multilinear files
-
-use crate::pairing_index::PairingIndex;
+use crate::multilinear::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
 
 /// `MultilinearPolynomial` (Dense Evaluation Representation)
@@ -78,7 +76,7 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear_poly_2::MultilinearPolynomial;
+    use crate::multilinear::evaluation_form::MultilinearPolynomial;
     use ark_bls12_381::Fr;
 
     #[test]
