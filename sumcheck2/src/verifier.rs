@@ -6,12 +6,13 @@ use polynomial::Polynomial;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
+/// Sumcheck Verifier
 pub struct SumcheckVerifier<F: PrimeField> {
     _marker: PhantomData<F>,
 }
 
 impl<F: PrimeField> SumcheckVerifier<F> {
-    // TODO: add documentation
+    /// Verify a `Sumcheck` proof (verifier has access to the initial poly or its commitment)
     pub fn verify(poly: ProductPoly<F>, proof: SumcheckProof<F>) -> Result<bool, &'static str> {
         // number of round_poly in the proof should match n_vars
         if proof.round_polys.len() != poly.n_vars() {
@@ -35,8 +36,9 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         Ok(initial_poly_eval == subclaim.sum)
     }
 
-    // TODO: add documentation
-    // TODO: explain return type
+    /// Verify a `Sumcheck` proof (when the veifier doesn't have access to the initial poly or its commitment)
+    /// in such a case, the verifier performs all checks other than the last check.
+    /// Returns a subclaim that can later be used for that final check verification.
     pub fn verify_partial(
         poly: ProductPoly<F>,
         proof: SumcheckProof<F>,
@@ -45,13 +47,12 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         Self::verify_internal(poly, proof, &mut transcript)
     }
 
-    // TODO: add documentation
+    /// Main `Sumcheck` verification logic.
     fn verify_internal(
         poly: ProductPoly<F>,
         proof: SumcheckProof<F>,
         transcript: &mut Transcript,
     ) -> Result<SubClaim<F>, &'static str> {
-        // TODO: document section
         let mut challenges = vec![];
 
         transcript.append(proof.sum.into_bigint().to_bytes_be().as_slice());
