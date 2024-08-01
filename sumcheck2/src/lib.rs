@@ -1,18 +1,30 @@
 pub mod prover;
 pub mod verifier;
 
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 
-// TODO: add documentation
+/// Holds the round polys and the initial prover claimed sum for sumcheck
 pub struct SumcheckProof<F: PrimeField> {
     sum: F,
     round_polys: Vec<Vec<F>>,
 }
 
-// TODO: add documentation
+/// Sometimes the verifier doesn't want to perform the final check
+/// in such cases, a subclaim is returned, this subclaim has all information
+/// needed to verify the last check
+/// sum = initial_poly(challenges)
 pub struct SubClaim<F: PrimeField> {
     sum: F,
     challenges: Vec<F>,
+}
+
+/// Helper method for converting field elements to bytes
+fn field_elements_to_bytes<F: PrimeField>(field_elements: &[F]) -> Vec<u8> {
+    field_elements
+        .iter()
+        .map(|elem| elem.into_bigint().to_bytes_be())
+        .collect::<Vec<Vec<u8>>>()
+        .concat()
 }
 
 #[cfg(test)]

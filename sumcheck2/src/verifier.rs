@@ -1,4 +1,4 @@
-use crate::{SubClaim, SumcheckProof};
+use crate::{field_elements_to_bytes, SubClaim, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
 use polynomial::product_poly::ProductPoly;
 use polynomial::univariate_poly::UnivariatePolynomial;
@@ -45,7 +45,8 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         Self::verify_internal(poly, proof, &mut transcript)
     }
 
-    pub fn verify_internal(
+    // TODO: add documentation
+    fn verify_internal(
         poly: ProductPoly<F>,
         proof: SumcheckProof<F>,
         transcript: &mut Transcript,
@@ -58,16 +59,8 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         let mut claimed_sum = proof.sum;
 
         for round_poly in proof.round_polys {
-            // TODO: abstract this functionality
             // append the round poly to the transcript
-            transcript.append(
-                round_poly
-                    .iter()
-                    .map(|elem| elem.into_bigint().to_bytes_be())
-                    .collect::<Vec<Vec<u8>>>()
-                    .concat()
-                    .as_slice(),
-            );
+            transcript.append(field_elements_to_bytes(&round_poly).as_slice());
 
             let round_univariate_poly = UnivariatePolynomial::interpolate(round_poly);
 

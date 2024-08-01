@@ -1,10 +1,11 @@
-use crate::SumcheckProof;
+use crate::{field_elements_to_bytes, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
 use polynomial::product_poly::ProductPoly;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
-// TODO: add documentation
+/// `SumcheckProver`, initialized with the max_var_degree of the polynomial
+/// this is used to determine how many points to evaluate the round polynomials
 pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>> {
     _marker: PhantomData<F>,
 }
@@ -12,8 +13,7 @@ pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert
 impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
     SumcheckProver<MAX_VAR_DEGREE, F>
 {
-    // TODO: add documentation
-    // TODO: explain why we are passing the max variable degree
+    /// Generates the `Sumcheck` proof (appends the initial poly to the transcript)
     pub fn prove(poly: ProductPoly<F>, sum: F) -> Result<SumcheckProof<F>, &'static str> {
         let mut transcript = Transcript::new();
         transcript.append(poly.to_bytes().as_slice());
@@ -21,8 +21,8 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
         Ok(Self::prove_internal(poly, sum, &mut transcript)?.0)
     }
 
-    // TODO: add documentation
-    // TODO: explain why we are passing the max variable degree
+    /// Generates the `Sumcheck` proof, but doesn't append the initial poly to the transcript.
+    /// This is used when the verifier doesn't have access to the initial poly or its commitment
     pub fn prove_partial(
         poly: ProductPoly<F>,
         sum: F,
@@ -31,21 +31,22 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
         Self::prove_internal(poly, sum, &mut transcript)
     }
 
-    // TODO: add documentation
-    // TODO: explain why we are passing the max variable degree
-    pub fn prove_internal(
+    /// Main `Sumcheck` proof generation logic.
+    fn prove_internal(
         mut poly: ProductPoly<F>,
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
-        // TODO: comment this section
         let mut round_polys = vec![];
         let mut challenges = vec![];
 
+        // append the sum to the transcript
         transcript.append(sum.into_bigint().to_bytes_be().as_slice());
 
         for _ in 0..poly.n_vars() {
             // calculate round_poly
+            // for a round poly of a certain degree d (denoted by MAX_VAR_DEGREE)
+            // we evaluate the polynomial at d + 1 points
             let mut round_poly = vec![];
             for i in 0..=MAX_VAR_DEGREE {
                 round_poly.push(
@@ -57,14 +58,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
             }
 
             // add round_poly to transcript
-            transcript.append(
-                round_poly
-                    .iter()
-                    .map(|elem| elem.into_bigint().to_bytes_be())
-                    .collect::<Vec<Vec<u8>>>()
-                    .concat()
-                    .as_slice(),
-            );
+            transcript.append(field_elements_to_bytes(&round_poly).as_slice());
 
             // generate challenge
             let challenge = transcript.sample_field_element::<F>();
