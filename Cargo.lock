@@ -2291,6 +2291,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sumcheck2"
+version = "0.1.0"
+dependencies = [
+ "ark-ff",
+ "polynomial",
+ "transcript",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"

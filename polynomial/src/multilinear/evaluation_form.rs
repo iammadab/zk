@@ -1,5 +1,5 @@
 use crate::multilinear::pairing_index::PairingIndex;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 
 #[derive(Clone, Debug, PartialEq)]
 /// `MultilinearPolynomial` (Dense Evaluation Representation)
@@ -92,6 +92,15 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Returns the evaluations of the `MultilinearPolynomial` as a slice
     pub fn evaluation_slice(&self) -> &[F] {
         &self.evaluations
+    }
+
+    /// Serialize the `MultilinearPolynomial`
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.evaluations
+            .iter()
+            .map(|elem| elem.into_bigint().to_bytes_be())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 }
 

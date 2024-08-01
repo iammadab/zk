@@ -5,7 +5,7 @@ use ark_ff::PrimeField;
 /// Represents the product of one or more `Multilinear` polynomials
 /// P(x) = A(x).B(x).C(x)
 #[derive(Debug, PartialEq)]
-struct ProductPoly<F: PrimeField> {
+pub struct ProductPoly<F: PrimeField> {
     n_vars: usize,
     polynomials: Vec<MultiLinearPolynomial<F>>,
 }
@@ -72,6 +72,15 @@ impl<F: PrimeField> ProductPoly<F> {
             }
         }
         result
+    }
+
+    /// Serialize the ProductPoly
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.polynomials
+            .iter()
+            .map(|poly| poly.to_bytes())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 }
 
