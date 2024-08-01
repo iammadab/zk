@@ -1,17 +1,18 @@
 use crate::multilinear::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
 
+#[derive(Debug)]
 /// `MultilinearPolynomial` (Dense Evaluation Representation)
 /// holds all evaluations over the boolean hypercube of an n_var multilinear polynomial
-struct MultilinearPolynomial<F: PrimeField> {
+pub struct MultiLinearPolynomial<F: PrimeField> {
     n_vars: usize,
     evaluations: Vec<F>,
 }
 
-impl<F: PrimeField> MultilinearPolynomial<F> {
+impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Instantiates a new `MultilinearPolynomial` after ensuring variable count
     /// aligns with evaluation len
-    fn new(n_vars: usize, evaluations: Vec<F>) -> Result<Self, &'static str> {
+    pub fn new(n_vars: usize, evaluations: Vec<F>) -> Result<Self, &'static str> {
         // the evaluation vec length must exactly be equal to 2^n_vars
         // this is because we might not always be able to assume the appropriate
         // element to pad the vector with.
@@ -25,13 +26,18 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
         })
     }
 
+    /// Returns the number of variables
+    pub(crate) fn n_vars(&self) -> usize {
+        self.n_vars
+    }
+
     /// Partially evaluate the `MultilinearPolynomial` at n consecutive variables
     /// e.g. f(a, b, c, d, e, f)
     /// we can pick a starting variable and supply n evaluation points
     /// f.partial_evaluate(1, [2, 3, 4])
     /// this partially evaluates 3 variables, starting at var b
     /// so b = 2, c = 3 and d = 4
-    fn partial_evaluate(
+    pub fn partial_evaluate(
         &self,
         initial_var: usize,
         assignments: &[F],
@@ -65,7 +71,7 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
     }
 
     /// Evaluate the `MultilinearPolynomial` at n points
-    fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
+    pub fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
         if assignments.len() != self.n_vars {
             return Err("evaluate must assign to all variables");
         }
@@ -76,29 +82,29 @@ impl<F: PrimeField> MultilinearPolynomial<F> {
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear::evaluation_form::MultilinearPolynomial;
+    use crate::multilinear::evaluation_form::MultiLinearPolynomial;
     use ark_bls12_381::Fr;
 
     #[test]
     fn test_new_multilinear_poly() {
         // should not allow n_vars / evaluation count mismatch
-        let poly = MultilinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2)]);
+        let poly = MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2)]);
         assert_eq!(poly.is_err(), true);
-        let poly = MultilinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1)]);
+        let poly = MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1)]);
         assert_eq!(poly.is_err(), true);
 
         // correct inputs
-        let poly = MultilinearPolynomial::new(1, vec![Fr::from(3), Fr::from(1)]);
+        let poly = MultiLinearPolynomial::new(1, vec![Fr::from(3), Fr::from(1)]);
         assert_eq!(poly.is_err(), false);
         let poly =
-            MultilinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)]);
+            MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)]);
         assert_eq!(poly.is_err(), false);
     }
 
     #[test]
     fn test_partial_evaluate_single_variable() {
         let poly =
-            MultilinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)])
+            MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)])
                 .unwrap();
         assert_eq!(
             poly.partial_evaluate(0, &[Fr::from(5)])
@@ -111,7 +117,7 @@ mod tests {
     #[test]
     fn test_partial_evaluate_consecutive_variables() {
         // f(a, b, c) = 2ab + 3bc
-        let poly = MultilinearPolynomial::new(
+        let poly = MultiLinearPolynomial::new(
             3,
             vec![
                 Fr::from(0),
@@ -143,7 +149,7 @@ mod tests {
     #[test]
     fn test_full_evaluation() {
         // f(a, b, c) = 2ab + 3bc
-        let poly = MultilinearPolynomial::new(
+        let poly = MultiLinearPolynomial::new(
             3,
             vec![
                 Fr::from(0),
