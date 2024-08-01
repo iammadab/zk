@@ -4,7 +4,7 @@ use ark_ff::PrimeField;
 // TODO: should be able to generalize this over the operation ie. not just product
 /// Represents the product of one or more `Multilinear` polynomials
 /// P(x) = A(x).B(x).C(x)
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProductPoly<F: PrimeField> {
     n_vars: usize,
     polynomials: Vec<MultiLinearPolynomial<F>>,

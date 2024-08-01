@@ -4,6 +4,7 @@ use polynomial::product_poly::ProductPoly;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
+// TODO: add documentation
 pub struct SumcheckProver<const MAX_VAR_DEGREE: usize, F: PrimeField + std::convert::From<usize>> {
     _marker: PhantomData<F>,
 }
