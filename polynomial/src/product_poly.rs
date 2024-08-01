@@ -1,6 +1,5 @@
 use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
-use std::io::stdout;
 
 // TODO: add documentation
 // TODO: can be generalized further (more operations, not just mles too)

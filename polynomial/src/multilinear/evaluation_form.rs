@@ -57,8 +57,18 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             for (i, index) in pairing_iterator.enumerate() {
                 let left = new_evaluations[index];
                 let right = new_evaluations[index + shift_value];
-                // linear interpolation
-                new_evaluations[i] = ((F::ONE - assignment) * left) + (*assignment * right);
+
+                new_evaluations[i] = match assignment {
+                    a if a.is_zero() => left,
+                    a if a.is_one() => right,
+                    _ => {
+                        // linear interpolation
+                        // (1-r) * left + r * right
+                        // left - r.left + r.right
+                        // left - r (left - right)
+                        left - *assignment * (left - right)
+                    },
+                };
             }
         }
 
@@ -116,6 +126,14 @@ mod tests {
                 .unwrap()
                 .evaluations,
             vec![Fr::from(-2), Fr::from(21)]
+        );
+
+        // get first half of evaluations by partially evaluating at 0
+        assert_eq!(
+            poly.partial_evaluate(0, &[Fr::from(0)])
+                .unwrap()
+                .evaluations,
+            vec![Fr::from(3), Fr::from(1)]
         );
     }
 
