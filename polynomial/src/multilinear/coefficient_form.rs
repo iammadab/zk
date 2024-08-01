@@ -1,3 +1,4 @@
+use crate::multilinear::boolean_hypercube::BooleanHyperCube;
 use crate::univariate_poly::UnivariatePolynomial;
 use crate::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
@@ -333,6 +334,16 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Multiplicative identity poly
     fn multiplicative_identity() -> Self {
         Self::new(0, vec![(F::one(), vec![])]).unwrap()
+    }
+
+    /// Converts a polynomial in co-efficient form to evaluation form
+    pub fn to_evaluation_form(&self) -> Vec<F> {
+        let mut evaluations = vec![];
+        let hypercube = BooleanHyperCube::new(self.n_vars());
+        for eval_point in hypercube {
+            evaluations.push(self.evaluate_slice(eval_point.as_slice()).unwrap());
+        }
+        evaluations
     }
 }
 
@@ -1296,5 +1307,33 @@ mod tests {
         let p = poly_5ab_7bc_8d();
         let p_univariate = p.to_univariate();
         assert!(p_univariate.is_err());
+    }
+
+    #[test]
+    fn test_to_evaluation_form() {
+        // p = 2ab + 3bc
+        // 000 - 0
+        // 001 - 0
+        // 010 - 0
+        // 011 - 3
+        // 100 - 0
+        // 101 - 0
+        // 110 - 2
+        // 111 - 5
+        let p = MultiLinearPolynomial::<Fq>::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            p.to_evaluation_form(),
+            vec![0, 0, 0, 3, 0, 0, 2, 5]
+                .into_iter()
+                .map(|v| Fq::from(v))
+                .collect::<Vec<_>>()
+        );
     }
 }

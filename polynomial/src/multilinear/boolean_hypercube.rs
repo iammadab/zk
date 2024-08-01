@@ -1,6 +1,6 @@
+use crate::multilinear::coefficient_form::binary_string;
 use ark_ff::PrimeField;
 use std::marker::PhantomData;
-use crate::multilinear::coefficient_form::binary_string;
 
 /// Structure for point iteration over boolean hypercube
 /// e.g. BooleanHyperCube 2 variables
@@ -46,9 +46,9 @@ impl<F: PrimeField> Iterator for BooleanHyperCube<F> {
 
 #[cfg(test)]
 mod tests {
+    use crate::multilinear::boolean_hypercube::BooleanHyperCube;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
     use std::iter::Iterator;
-    use crate::multilinear::boolean_hypercube::BooleanHyperCube;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
