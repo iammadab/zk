@@ -111,4 +111,13 @@ mod tests {
         let expected_sum = prod_poly.evaluate(subclaim.challenges.as_slice()).unwrap();
         assert_eq!(expected_sum, subclaim.sum);
     }
+
+    #[test]
+    fn test_invalid_sum() {
+        // p = 2ab + 3bc
+        let p = p_2ab_3bc();
+        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12)).unwrap();
+        assert!(SumcheckVerifier::verify(prod_poly, proof).is_err());
+    }
 }
