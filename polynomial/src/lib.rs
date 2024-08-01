@@ -6,6 +6,7 @@ pub mod multilinear;
 pub mod product_poly;
 pub mod univariate_poly;
 
+// TODO: get rid of this trait
 pub trait Polynomial<F: PrimeField>: Clone {
     /// Returns the number of variables in the extension
     fn n_vars(&self) -> usize;
