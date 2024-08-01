@@ -45,7 +45,8 @@ impl<F: PrimeField> ProductPoly<F> {
         })
     }
 
-    /// Partially evaluate each component polynomial on the same input
+    /// Partially evaluate each component polynomial on the same input, returns a new product_poly
+    /// with the partial polynomials
     pub fn partial_evaluate(
         &self,
         initial_var: usize,
@@ -61,6 +62,17 @@ impl<F: PrimeField> ProductPoly<F> {
             n_vars: partial_polynomials[0].n_vars(),
             polynomials: partial_polynomials,
         })
+    }
+
+    /// Converts the internal polynomials to evaluations and returns their element wise product
+    pub fn prod_reduce(&self) -> Vec<F> {
+        let mut result = self.polynomials[0].evaluation_slice().to_vec();
+        for polynomial in self.polynomials.iter().skip(1) {
+            for (i, eval) in polynomial.evaluation_slice().iter().enumerate() {
+                result[i] *= eval
+            }
+        }
+        result
     }
 }
 
@@ -148,6 +160,26 @@ mod tests {
         assert_eq!(
             prod_poly.partial_evaluate(1, &[Fr::from(10)]).unwrap(),
             prod_poly_expected_partial
+        );
+    }
+
+    #[test]
+    fn test_prod_reduce() {
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.clone(), mle_b.clone()]).unwrap();
+
+        assert_eq!(
+            prod_poly.prod_reduce(),
+            vec![Fr::from(4), Fr::from(64), Fr::from(100), Fr::from(308)]
         );
     }
 }

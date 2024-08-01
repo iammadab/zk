@@ -78,6 +78,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
         Ok(self.partial_evaluate(0, assignments)?.evaluations[0])
     }
+
+    /// Returns the evaluations of the `MultilinearPolynomial` as a slice
+    pub fn evaluation_slice(&self) -> &[F] {
+        &self.evaluations
+    }
 }
 
 #[cfg(test)]
