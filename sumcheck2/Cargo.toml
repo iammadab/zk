@@ -9,3 +9,4 @@ edition = "2021"
 polynomial = { path = "../polynomial" }
 transcript = { path = "../transcript" }
 ark-ff = "0.4.1"
+ark-bls12-381 = "0.4.0"

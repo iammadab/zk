@@ -3,7 +3,7 @@ use crate::gate_eval_extension::GateEvalExtension;
 use crate::util::{evaluate_l_function, l, q};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use sumcheck::{PartialSumcheckProof, Sumcheck};
@@ -14,7 +14,7 @@ pub struct Proof<F: PrimeField> {
     // TODO: seems it might be better to return the output points directly i.e. Vec<F>
     //  feels like it will constrain the prover better. Don't make this change if you haven't
     //  figured out a way to break it!!!!
-    output_mle: MultiLinearPolynomial<F>,
+    output_mle: CoeffMultilinearPolynomial<F>,
     pub sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
 }
@@ -146,7 +146,7 @@ pub fn verify<F: PrimeField>(
     // since the verifier has access to the input layer
     // the verifier can check for the correctness of last m itself
     // by evaluating the input_mle at r and comparing that to the claimed m
-    let input_mle = MultiLinearPolynomial::<F>::interpolate(input.as_slice());
+    let input_mle = CoeffMultilinearPolynomial::<F>::interpolate(input.as_slice());
     let actual_m = input_mle.evaluate_slice(r.as_slice())?;
     Ok(actual_m == m)
 }

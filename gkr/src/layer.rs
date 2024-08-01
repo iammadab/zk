@@ -1,6 +1,6 @@
 use crate::gate::Gate;
 use ark_ff::PrimeField;
-use polynomial::multilinear::coefficient_form::{bit_count_for_n_elem, MultiLinearPolynomial};
+use polynomial::multilinear::coefficient_form::{bit_count_for_n_elem, CoeffMultilinearPolynomial};
 use polynomial::Polynomial;
 
 /// Holds the add and mul gates in a given layer
@@ -48,25 +48,27 @@ impl Layer {
     pub fn add_mul_mle<F: PrimeField>(
         &self,
         next_layer_count: usize,
-    ) -> [MultiLinearPolynomial<F>; 2] {
+    ) -> [CoeffMultilinearPolynomial<F>; 2] {
         let layer_var_count = bit_count_for_n_elem(self.len);
         let next_layer_count = bit_count_for_n_elem(next_layer_count);
 
         let add_mle = self.add_gates.iter().fold(
-            MultiLinearPolynomial::<F>::additive_identity(),
+            CoeffMultilinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
                 let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
-                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
+                let gate_bit_checker =
+                    CoeffMultilinearPolynomial::<F>::bit_string_checker(gate_bits);
 
                 (&acc + &gate_bit_checker).unwrap()
             },
         );
 
         let mult_mle = self.mul_gates.iter().fold(
-            MultiLinearPolynomial::<F>::additive_identity(),
+            CoeffMultilinearPolynomial::<F>::additive_identity(),
             |acc, gate| {
                 let gate_bits = gate.to_bit_string(layer_var_count, next_layer_count);
-                let gate_bit_checker = MultiLinearPolynomial::<F>::bit_string_checker(gate_bits);
+                let gate_bit_checker =
+                    CoeffMultilinearPolynomial::<F>::bit_string_checker(gate_bits);
 
                 (&acc + &gate_bit_checker).unwrap()
             },

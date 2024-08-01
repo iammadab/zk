@@ -5,11 +5,11 @@ use std::marker::PhantomData;
 use transcript::Transcript;
 
 // TODO: add documentation
-pub struct SumcheckProver<const MAX_VAR_DEGREE: usize, F: PrimeField + std::convert::From<usize>> {
+pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>> {
     _marker: PhantomData<F>,
 }
 
-impl<const MAX_VAR_DEGREE: usize, F: PrimeField + std::convert::From<usize>>
+impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
     SumcheckProver<MAX_VAR_DEGREE, F>
 {
     // TODO: add documentation

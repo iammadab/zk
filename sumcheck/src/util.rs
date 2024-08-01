@@ -56,7 +56,7 @@ pub fn partial_evaluation_points<'a, F: PrimeField>(
 mod test {
     use crate::util::sum_over_boolean_hyper_cube;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
@@ -66,7 +66,7 @@ mod test {
 
     #[test]
     fn test_sum_over_boolean_hypercube() {
-        let poly = MultiLinearPolynomial::new(
+        let poly = CoeffMultilinearPolynomial::new(
             3,
             vec![
                 (Fq::from(2), vec![true, true, false]),

@@ -212,7 +212,7 @@ impl Sumcheck {
 mod tests {
     use crate::Sumcheck;
     use ark_ff::{Fp64, MontBackend, MontConfig};
-    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 
     #[derive(MontConfig)]
     #[modulus = "17"]
@@ -220,8 +220,8 @@ mod tests {
     struct FqConfig;
     type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
-    fn p_2ab_3bc() -> MultiLinearPolynomial<Fq> {
-        MultiLinearPolynomial::new(
+    fn p_2ab_3bc() -> CoeffMultilinearPolynomial<Fq> {
+        CoeffMultilinearPolynomial::new(
             3,
             vec![
                 (Fq::from(2), vec![true, true, false]),
