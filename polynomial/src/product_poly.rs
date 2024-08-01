@@ -82,6 +82,11 @@ impl<F: PrimeField> ProductPoly<F> {
             .collect::<Vec<Vec<u8>>>()
             .concat()
     }
+
+    /// Return the number of variables
+    pub fn n_vars(&self) -> usize {
+        self.n_vars
+    }
 }
 
 #[cfg(test)]
