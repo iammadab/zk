@@ -1,4 +1,4 @@
-use crate::multilinear::coefficient_form::MultiLinearPolynomial;
+use crate::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 use crate::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -208,10 +208,10 @@ impl<F: PrimeField> ops::Mul for &UnivariatePolynomial<F> {
     }
 }
 
-impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F> {
+impl<F: PrimeField> TryFrom<CoeffMultilinearPolynomial<F>> for UnivariatePolynomial<F> {
     type Error = &'static str;
 
-    fn try_from(value: MultiLinearPolynomial<F>) -> Result<Self, Self::Error> {
+    fn try_from(value: CoeffMultilinearPolynomial<F>) -> Result<Self, Self::Error> {
         if value.n_vars() > 1 {
             return Err("cannot convert multilinear polynomial with more than one variable to univariate poly");
         }
@@ -229,7 +229,7 @@ impl<F: PrimeField> TryFrom<MultiLinearPolynomial<F>> for UnivariatePolynomial<F
 #[cfg(test)]
 mod tests {
     use super::UnivariatePolynomial;
-    use crate::multilinear::coefficient_form::MultiLinearPolynomial;
+    use crate::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use crate::Polynomial;
     use ark_ff::MontConfig;
     use ark_ff::{Fp64, MontBackend};
@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn test_from_multilinear() {
         // p = 2ab + 3bc
-        let p = MultiLinearPolynomial::<Fq>::new(
+        let p = CoeffMultilinearPolynomial::<Fq>::new(
             3,
             vec![
                 (Fq::from(2), vec![true, true, false]),

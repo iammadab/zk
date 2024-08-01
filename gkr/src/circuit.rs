@@ -1,6 +1,6 @@
 use crate::layer::Layer;
 use ark_ff::PrimeField;
-use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 use std::ops::Add;
 
 /// A circuit is just a stacked collection of layers
@@ -62,12 +62,12 @@ impl Circuit {
     pub fn w<F: PrimeField>(
         evaluations: &[Vec<F>],
         layer_index: usize,
-    ) -> Result<MultiLinearPolynomial<F>, &'static str> {
+    ) -> Result<CoeffMultilinearPolynomial<F>, &'static str> {
         if layer_index >= evaluations.len() {
             return Err("invalid layer index");
         }
 
-        Ok(MultiLinearPolynomial::<F>::interpolate(
+        Ok(CoeffMultilinearPolynomial::<F>::interpolate(
             &evaluations[layer_index],
         ))
     }
@@ -77,7 +77,7 @@ impl Circuit {
     pub fn add_mul_mle<F: PrimeField>(
         &self,
         layer_index: usize,
-    ) -> Result<[MultiLinearPolynomial<F>; 2], &'static str> {
+    ) -> Result<[CoeffMultilinearPolynomial<F>; 2], &'static str> {
         if layer_index >= self.layers.len() {
             return Err("invalid layer index");
         }
@@ -135,7 +135,7 @@ pub mod tests {
     use crate::circuit::{Circuit, Layer};
     use crate::gate::Gate;
     use ark_bls12_381::Fr;
-    use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+    use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use polynomial::Polynomial;
     use sumcheck::util::sum_over_boolean_hyper_cube;
 
@@ -261,7 +261,7 @@ pub mod tests {
         // circuit has 3 layers
 
         // layer 0 - output layer
-        let [add_0, mult_0]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(0).unwrap();
+        let [add_0, mult_0]: [CoeffMultilinearPolynomial<Fr>; 2] = circuit.add_mul_mle(0).unwrap();
         // the number of variables for the add function should be 3
         assert_eq!(add_0.n_vars(), 3);
         // the number of variables for the mul function should be 0
@@ -280,7 +280,7 @@ pub mod tests {
         assert_eq!(sum_over_boolean_hyper_cube(&mult_0), Fr::from(0));
 
         // layer 1
-        let [add_1, mult_1]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(1).unwrap();
+        let [add_1, mult_1]: [CoeffMultilinearPolynomial<Fr>; 2] = circuit.add_mul_mle(1).unwrap();
         // number of variables for add should be 5 (1 for current layer, then 2 each for next layer)
         assert_eq!(add_1.n_vars(), 5);
         // number of variables for mul should also be 5
@@ -317,7 +317,7 @@ pub mod tests {
         );
 
         // layer 2
-        let [add_2, mult_2]: [MultiLinearPolynomial<Fr>; 2] = circuit.add_mul_mle(2).unwrap();
+        let [add_2, mult_2]: [CoeffMultilinearPolynomial<Fr>; 2] = circuit.add_mul_mle(2).unwrap();
         // number of variables for add should be 8 (2 for current layer, then 3 each for next layer)
         assert_eq!(add_2.n_vars(), 8);
         // number of variables for mul should also be 8
@@ -402,7 +402,7 @@ pub mod tests {
         // normally it's assumed that the next layer is 2 * previous layer length
         // layer just above input is of length 8
         // so input would be of length 16 in a uniform circuit
-        let [add_last, mul_last]: [MultiLinearPolynomial<Fr>; 2] =
+        let [add_last, mul_last]: [CoeffMultilinearPolynomial<Fr>; 2] =
             circuit.add_mul_mle(circuit.layers.len() - 1).unwrap();
         // number of variables for add_i and mul_i is given by the following equation
         // no_of_vars_for_i + (2 * no_of_vars_for_i+1)
@@ -420,7 +420,7 @@ pub mod tests {
         assert!(Circuit::w(evaluations.as_slice(), 1).is_err(),);
         assert_eq!(
             Circuit::w(evaluations.as_slice(), 0).unwrap(),
-            MultiLinearPolynomial::<Fr>::interpolate(evaluations[0].as_slice())
+            CoeffMultilinearPolynomial::<Fr>::interpolate(evaluations[0].as_slice())
         );
     }
 

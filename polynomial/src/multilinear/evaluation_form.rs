@@ -1,5 +1,5 @@
 use crate::multilinear::pairing_index::PairingIndex;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 
 #[derive(Clone, Debug, PartialEq)]
 /// `MultilinearPolynomial` (Dense Evaluation Representation)
@@ -43,7 +43,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         assignments: &[F],
     ) -> Result<Self, &'static str> {
         // decided to go the consecutive partial evaluation route as opposed to the random access
-        // evaluation route because consecutive partial eval is all that's needed for sumcheck and
+        // evaluation route because consecutive partial eval is all that's needed for sumcheck_old and
         // gkr, and it seems random access partial evaluation will introduce additional cost (when
         // detecting duplicate assignments)
         let mut new_evaluations = self.evaluations.clone();
@@ -92,6 +92,15 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     /// Returns the evaluations of the `MultilinearPolynomial` as a slice
     pub fn evaluation_slice(&self) -> &[F] {
         &self.evaluations
+    }
+
+    /// Serialize the `MultilinearPolynomial`
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.evaluations
+            .iter()
+            .map(|elem| elem.into_bigint().to_bytes_be())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 }
 

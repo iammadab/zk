@@ -1,5 +1,5 @@
 use ark_ff::PrimeField;
-use polynomial::multilinear::coefficient_form::{selector_from_usize, MultiLinearPolynomial};
+use polynomial::multilinear::coefficient_form::{selector_from_usize, CoeffMultilinearPolynomial};
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 
@@ -30,7 +30,7 @@ pub fn evaluate_l_function<F: PrimeField>(polys: &[UnivariatePolynomial<F>], r: 
 /// i.e q(x) = w(l(x))
 pub fn q<F: PrimeField>(
     l_functions: &[UnivariatePolynomial<F>],
-    w: MultiLinearPolynomial<F>,
+    w: CoeffMultilinearPolynomial<F>,
 ) -> Result<UnivariatePolynomial<F>, &'static str> {
     // there should be an l function for each variable in w
     if l_functions.len() != w.n_vars() {
@@ -85,7 +85,7 @@ mod test {
     #[test]
     fn test_q_poly() {
         // p = 2ab + 3bc
-        let p = MultiLinearPolynomial::new(
+        let p = CoeffMultilinearPolynomial::new(
             3,
             vec![
                 (Fr::from(2), vec![true, true, false]),

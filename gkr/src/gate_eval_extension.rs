@@ -1,5 +1,7 @@
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::multilinear::coefficient_form::{selector_from_position, MultiLinearPolynomial};
+use polynomial::multilinear::coefficient_form::{
+    selector_from_position, CoeffMultilinearPolynomial,
+};
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use std::ops::Add;
@@ -13,18 +15,18 @@ use std::ops::Add;
 /// boolean hypercube, a field element is returned.
 pub struct GateEvalExtension<F: PrimeField> {
     r: Vec<F>,
-    add_mle: Vec<MultiLinearPolynomial<F>>,
-    mul_mle: Vec<MultiLinearPolynomial<F>>,
-    w_b_mle: Vec<MultiLinearPolynomial<F>>,
-    w_c_mle: Vec<MultiLinearPolynomial<F>>,
+    add_mle: Vec<CoeffMultilinearPolynomial<F>>,
+    mul_mle: Vec<CoeffMultilinearPolynomial<F>>,
+    w_b_mle: Vec<CoeffMultilinearPolynomial<F>>,
+    w_c_mle: Vec<CoeffMultilinearPolynomial<F>>,
 }
 
 impl<F: PrimeField> GateEvalExtension<F> {
     pub fn new(
         r: Vec<F>,
-        add_mle: MultiLinearPolynomial<F>,
-        mul_mle: MultiLinearPolynomial<F>,
-        w_mle: MultiLinearPolynomial<F>,
+        add_mle: CoeffMultilinearPolynomial<F>,
+        mul_mle: CoeffMultilinearPolynomial<F>,
+        w_mle: CoeffMultilinearPolynomial<F>,
     ) -> Result<Self, &'static str> {
         // add_mle and mul_mle must have the same variable length
         // proxy signal that they come from the same layer
@@ -450,11 +452,11 @@ mod test {
         // sum over boolean hypercube = 14
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
-        // generate false sumcheck proof
+        // generate false sumcheck_old proof
         let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));
         assert!(!Sumcheck::verify(false_proof));
 
-        // generate correct sumcheck proof
+        // generate correct sumcheck_old proof
         let correct_proof = Sumcheck::prove(gate_eval_ext, Fr::from(14));
         assert!(Sumcheck::verify(correct_proof));
     }

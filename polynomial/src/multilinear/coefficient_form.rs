@@ -1,3 +1,4 @@
+use crate::multilinear::boolean_hypercube::BooleanHyperCube;
 use crate::univariate_poly::UnivariatePolynomial;
 use crate::Polynomial;
 use ark_ff::{BigInteger, PrimeField};
@@ -23,12 +24,12 @@ type PolynomialTerm<F> = (F, Vec<bool>);
 /// now to index any combination of variables, just sum the individual ids
 /// e.g. ab = 1 + 2 = index 3
 ///     or bc = 2 + 4 = index 6
-pub struct MultiLinearPolynomial<F: PrimeField> {
+pub struct CoeffMultilinearPolynomial<F: PrimeField> {
     n_vars: u32,
     coefficients: BTreeMap<usize, F>,
 }
 
-impl<F: PrimeField> Polynomial<F> for MultiLinearPolynomial<F> {
+impl<F: PrimeField> Polynomial<F> for CoeffMultilinearPolynomial<F> {
     /// Return the number of variables in the poly
     fn n_vars(&self) -> usize {
         self.n_vars as usize
@@ -152,7 +153,7 @@ impl<F: PrimeField> Polynomial<F> for MultiLinearPolynomial<F> {
     }
 }
 
-impl<F: PrimeField> MultiLinearPolynomial<F> {
+impl<F: PrimeField> CoeffMultilinearPolynomial<F> {
     /// Instantiate a new Multilinear polynomial, from polynomial terms
     pub fn new(
         number_of_variables: u32,
@@ -334,10 +335,20 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     fn multiplicative_identity() -> Self {
         Self::new(0, vec![(F::one(), vec![])]).unwrap()
     }
+
+    /// Converts a polynomial in co-efficient form to evaluation form
+    pub fn to_evaluation_form(&self) -> Vec<F> {
+        let mut evaluations = vec![];
+        let hypercube = BooleanHyperCube::new(self.n_vars());
+        for eval_point in hypercube {
+            evaluations.push(self.evaluate_slice(eval_point.as_slice()).unwrap());
+        }
+        evaluations
+    }
 }
 
-impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
-    type Output = Result<MultiLinearPolynomial<F>, &'static str>;
+impl<F: PrimeField> Add for &CoeffMultilinearPolynomial<F> {
+    type Output = Result<CoeffMultilinearPolynomial<F>, &'static str>;
 
     fn add(self, rhs: Self) -> Self::Output {
         // Addition doesn't require that the number of coefficient should match
@@ -357,12 +368,12 @@ impl<F: PrimeField> Add for &MultiLinearPolynomial<F> {
             *longer_coeff.entry(*index).or_insert(F::zero()) += coeff;
         }
 
-        MultiLinearPolynomial::new_with_coefficient(n_vars, longer_coeff)
+        CoeffMultilinearPolynomial::new_with_coefficient(n_vars, longer_coeff)
     }
 }
 
-impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
-    type Output = MultiLinearPolynomial<F>;
+impl<F: PrimeField> Mul for &CoeffMultilinearPolynomial<F> {
+    type Output = CoeffMultilinearPolynomial<F>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         // if any of the poly is a scalar poly (having no variable) we just perform scalar multiplication
@@ -395,8 +406,11 @@ impl<F: PrimeField> Mul for &MultiLinearPolynomial<F> {
             }
         }
 
-        MultiLinearPolynomial::new_with_coefficient(self.n_vars + rhs.n_vars, new_poly_coefficients)
-            .unwrap()
+        CoeffMultilinearPolynomial::new_with_coefficient(
+            self.n_vars + rhs.n_vars,
+            new_poly_coefficients,
+        )
+        .unwrap()
     }
 }
 
@@ -479,12 +493,12 @@ fn to_power_of_two(instruction: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
 /// Use remapping instructions to remap a polynomial coefficients
 fn remap_coefficient_keys<F: PrimeField>(
     n_vars: u32,
-    mut poly: MultiLinearPolynomial<F>,
+    mut poly: CoeffMultilinearPolynomial<F>,
     mapping_instructions: Vec<(usize, usize)>,
-) -> MultiLinearPolynomial<F> {
+) -> CoeffMultilinearPolynomial<F> {
     let mapping_instruction_as_powers_of_2 = to_power_of_two(mapping_instructions);
     for (old_var, new_var) in mapping_instruction_as_powers_of_2 {
-        let old_var_indexes = MultiLinearPolynomial::<F>::get_variable_indexes(
+        let old_var_indexes = CoeffMultilinearPolynomial::<F>::get_variable_indexes(
             n_vars,
             &selector_from_usize(old_var, n_vars as usize),
         )
@@ -512,7 +526,7 @@ pub fn bit_count_for_n_elem(size: usize) -> usize {
 mod tests {
     use crate::multilinear::coefficient_form::{
         mapping_instruction_from_variable_presence, selector_to_index, to_power_of_two,
-        MultiLinearPolynomial,
+        CoeffMultilinearPolynomial,
     };
     use crate::Polynomial;
     use ark_ff::{Fp64, MontBackend, MontConfig, One, Zero};
@@ -549,7 +563,7 @@ mod tests {
         // Poly = 2ab
         // expected dense form = [0, 0, 0, 2]
         assert_eq!(
-            MultiLinearPolynomial::new(2, vec![(Fq::from(2), vec![true, true])])
+            CoeffMultilinearPolynomial::new(2, vec![(Fq::from(2), vec![true, true])])
                 .unwrap()
                 .coefficients,
             BTreeMap::from([(3, Fq::from(2))]) // vec![Fq::from(0), Fq::from(0), Fq::from(0), Fq::from(2)]
@@ -558,7 +572,7 @@ mod tests {
         // Poly = 2a + 3b + 5ab
         // expected dense form = [0, 2, 3, 5]
         assert_eq!(
-            MultiLinearPolynomial::new(
+            CoeffMultilinearPolynomial::new(
                 2,
                 vec![
                     (Fq::from(2), vec![true, false]),
@@ -574,7 +588,7 @@ mod tests {
         // constant = 5
         // expected dense form = [5, 0, 0, 0]
         assert_eq!(
-            MultiLinearPolynomial::new(2, vec![(Fq::from(5), vec![false, false])])
+            CoeffMultilinearPolynomial::new(2, vec![(Fq::from(5), vec![false, false])])
                 .unwrap()
                 .coefficients,
             BTreeMap::from([(0, Fq::from(5))])
@@ -585,7 +599,7 @@ mod tests {
         // simplified = 5ab + 4b
         // expected dense form = [0, 0, 4, 5]
         assert_eq!(
-            MultiLinearPolynomial::new(
+            CoeffMultilinearPolynomial::new(
                 2,
                 vec![
                     (Fq::from(2), vec![true, true]),
@@ -603,7 +617,7 @@ mod tests {
     fn test_polynomial_instantiation_invalid_variables() {
         // polynomial expects 3 variables by passed a term with just 2 variables
         assert_eq!(
-            MultiLinearPolynomial::new(3, vec![(Fq::from(2), vec![true, true])]).is_err(),
+            CoeffMultilinearPolynomial::new(3, vec![(Fq::from(2), vec![true, true])]).is_err(),
             true
         );
     }
@@ -635,45 +649,48 @@ mod tests {
 
         // you cannot get indexes for const or multiple variables
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, false, false])
-                .is_err(),
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(
+                4,
+                &[false, false, false, false]
+            )
+            .is_err(),
             true
         );
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, true, false])
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, true, false])
                 .is_err(),
             true
         );
 
         // get all a indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, false, false])
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(4, &[true, false, false, false])
                 .unwrap(),
             vec![1, 3, 5, 7, 9, 11, 13, 15]
         );
         // get all b indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, true, false, false])
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(4, &[false, true, false, false])
                 .unwrap(),
             vec![2, 3, 6, 7, 10, 11, 14, 15]
         );
         // get all c indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, true, false])
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, true, false])
                 .unwrap(),
             vec![4, 5, 6, 7, 12, 13, 14, 15]
         );
         // get all d indexes
         assert_eq!(
-            MultiLinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, false, true])
+            CoeffMultilinearPolynomial::<Fq>::get_variable_indexes(4, &[false, false, false, true])
                 .unwrap(),
             vec![8, 9, 10, 11, 12, 13, 14, 15]
         );
     }
 
-    fn poly_5ab_7bc_8d() -> MultiLinearPolynomial<Fq> {
+    fn poly_5ab_7bc_8d() -> CoeffMultilinearPolynomial<Fq> {
         // p = 5ab + 7bc + 8d
-        MultiLinearPolynomial::new(
+        CoeffMultilinearPolynomial::new(
             4,
             vec![
                 (Fq::from(5), vec![true, true, false, false]),
@@ -855,7 +872,7 @@ mod tests {
 
         // scalar mul with two polynomials
         let p = poly_5ab_7bc_8d();
-        let scalar_poly = MultiLinearPolynomial::new(0, vec![(Fq::from(2), vec![])]).unwrap();
+        let scalar_poly = CoeffMultilinearPolynomial::new(0, vec![(Fq::from(2), vec![])]).unwrap();
         let two_p = &p * &scalar_poly;
         assert_eq!(
             two_p.coefficients,
@@ -870,8 +887,8 @@ mod tests {
         // pq = 30abc
         // dense form:
         // [0, 0, 0, 0, 0, 0, 0, 30]
-        let p = MultiLinearPolynomial::new(2, vec![(Fq::from(5), vec![true, true])]).unwrap();
-        let q = MultiLinearPolynomial::new(1, vec![(Fq::from(6), vec![true])]).unwrap();
+        let p = CoeffMultilinearPolynomial::new(2, vec![(Fq::from(5), vec![true, true])]).unwrap();
+        let q = CoeffMultilinearPolynomial::new(1, vec![(Fq::from(6), vec![true])]).unwrap();
         let pq = &p * &q;
         assert_eq!(pq.n_vars, 3);
         assert_eq!(
@@ -882,7 +899,7 @@ mod tests {
         // p = 3ac + 2ab
         // q = 7de
         // pq = 21acde + 14abde
-        let p = MultiLinearPolynomial::new(
+        let p = CoeffMultilinearPolynomial::new(
             3,
             vec![
                 (Fq::from(3), vec![true, false, true]),
@@ -890,7 +907,7 @@ mod tests {
             ],
         )
         .unwrap();
-        let q = MultiLinearPolynomial::new(2, vec![(Fq::from(7), vec![true, true])]).unwrap();
+        let q = CoeffMultilinearPolynomial::new(2, vec![(Fq::from(7), vec![true, true])]).unwrap();
         let pq = &p * &q;
         assert_eq!(pq.n_vars, 5);
 
@@ -922,7 +939,7 @@ mod tests {
         // 30dfg = 8 + 32 + 64 = 104
         // 12dh = 8 + 128 = 136
 
-        let p = MultiLinearPolynomial::new(
+        let p = CoeffMultilinearPolynomial::new(
             4,
             vec![
                 (Fq::from(2), vec![true, false, false, false]),
@@ -932,7 +949,7 @@ mod tests {
         )
         .unwrap();
 
-        let q = MultiLinearPolynomial::new(
+        let q = CoeffMultilinearPolynomial::new(
             4,
             vec![
                 (Fq::from(4), vec![true, false, false, false]),
@@ -962,7 +979,7 @@ mod tests {
     #[test]
     fn test_3_multilinear_multiplication() {
         // (2a + 3b) * 4c * 5d
-        let p = MultiLinearPolynomial::new(
+        let p = CoeffMultilinearPolynomial::new(
             2,
             vec![
                 (Fq::from(2), vec![true, false]),
@@ -970,8 +987,8 @@ mod tests {
             ],
         )
         .unwrap();
-        let q = MultiLinearPolynomial::new(1, vec![(Fq::from(4), vec![true])]).unwrap();
-        let r = MultiLinearPolynomial::new(1, vec![(Fq::from(5), vec![true])]).unwrap();
+        let q = CoeffMultilinearPolynomial::new(1, vec![(Fq::from(4), vec![true])]).unwrap();
+        let r = CoeffMultilinearPolynomial::new(1, vec![(Fq::from(5), vec![true])]).unwrap();
 
         let result = &(&p * &q) * &r;
 
@@ -984,7 +1001,7 @@ mod tests {
     #[test]
     fn test_multiplicative_identity() {
         let p = poly_5ab_7bc_8d();
-        let mult_identity = MultiLinearPolynomial::<Fq>::multiplicative_identity();
+        let mult_identity = CoeffMultilinearPolynomial::<Fq>::multiplicative_identity();
         let r = &p * &mult_identity;
         assert_eq!(p, r);
     }
@@ -992,14 +1009,14 @@ mod tests {
     #[test]
     fn test_additive_identity() {
         let p = poly_5ab_7bc_8d();
-        let add_identity = MultiLinearPolynomial::<Fq>::additive_identity();
+        let add_identity = CoeffMultilinearPolynomial::<Fq>::additive_identity();
         let r = (&p + &add_identity).unwrap();
         assert_eq!(p, r);
     }
 
     #[test]
     fn test_check_zero() {
-        let zero_checker = MultiLinearPolynomial::<Fq>::check_zero();
+        let zero_checker = CoeffMultilinearPolynomial::<Fq>::check_zero();
         assert_eq!(
             zero_checker.evaluate_slice(&[Fq::zero()]).unwrap(),
             Fq::one()
@@ -1016,7 +1033,7 @@ mod tests {
 
     #[test]
     fn test_check_one() {
-        let one_checker = MultiLinearPolynomial::<Fq>::check_one();
+        let one_checker = CoeffMultilinearPolynomial::<Fq>::check_one();
         assert_eq!(
             one_checker.evaluate_slice(&[Fq::zero()]).unwrap(),
             Fq::zero()
@@ -1032,7 +1049,7 @@ mod tests {
     fn test_lagrange_basis_polynomial() {
         // generate a poly that checks for 101 (5)
         // number of variables = 3
-        let five_checker = MultiLinearPolynomial::<Fq>::lagrange_basis_poly(5, 3);
+        let five_checker = CoeffMultilinearPolynomial::<Fq>::lagrange_basis_poly(5, 3);
         assert_eq!(five_checker.n_vars, 3);
         assert_eq!(
             five_checker
@@ -1089,7 +1106,7 @@ mod tests {
         // y = [2, 4, 8, 3]
         // p(a, b) = 2 + 6a + 2b - 7ab
         // [a, b] = [1, 2]
-        let poly = MultiLinearPolynomial::<Fq>::interpolate(&fq_from_vec(vec![2, 4, 8, 3]));
+        let poly = CoeffMultilinearPolynomial::<Fq>::interpolate(&fq_from_vec(vec![2, 4, 8, 3]));
         assert_eq!(poly.n_vars, 2);
 
         let mut expected_coefficients = vec![0; 4];
@@ -1124,7 +1141,7 @@ mod tests {
         // p = 3a + 2c
         // number of variables at creation = 3
         // actual number of variables is 2 as b is not represented
-        let poly = MultiLinearPolynomial::new(
+        let poly = CoeffMultilinearPolynomial::new(
             3,
             vec![
                 (Fq::from(3), vec![true, false, false]),
@@ -1181,7 +1198,7 @@ mod tests {
         // after relabelling (d -> b)
         // q = 2a + 9b + 5ab
 
-        let p = MultiLinearPolynomial::new(
+        let p = CoeffMultilinearPolynomial::new(
             4,
             vec![
                 (Fq::from(2), vec![true, true, false, false]),
@@ -1219,15 +1236,18 @@ mod tests {
 
         // constant polynomial
         // relabel should have no effect
-        let poly = MultiLinearPolynomial::<Fq>::multiplicative_identity();
+        let poly = CoeffMultilinearPolynomial::<Fq>::multiplicative_identity();
         let poly = poly.relabel();
-        assert_eq!(poly, MultiLinearPolynomial::<Fq>::multiplicative_identity());
+        assert_eq!(
+            poly,
+            CoeffMultilinearPolynomial::<Fq>::multiplicative_identity()
+        );
     }
 
     #[test]
     fn test_bit_string_checker() {
         // poly to check 001
-        let checker = MultiLinearPolynomial::<Fq>::bit_string_checker("001".to_string());
+        let checker = CoeffMultilinearPolynomial::<Fq>::bit_string_checker("001".to_string());
         assert_eq!(
             checker.evaluate_slice(&fq_from_vec(vec![0, 0, 0])).unwrap(),
             Fq::from(0)
@@ -1264,21 +1284,21 @@ mod tests {
 
     #[test]
     fn test_evaluate_zero_poly() {
-        let zero_poly = MultiLinearPolynomial::<Fq>::additive_identity();
+        let zero_poly = CoeffMultilinearPolynomial::<Fq>::additive_identity();
         assert_eq!(zero_poly.evaluate_slice(&[]).unwrap(), Fq::from(0));
     }
 
     #[test]
     fn test_to_univariate() {
         // p = 2a
-        let p = MultiLinearPolynomial::<Fq>::new(1, vec![(Fq::from(2), vec![true])]).unwrap();
+        let p = CoeffMultilinearPolynomial::<Fq>::new(1, vec![(Fq::from(2), vec![true])]).unwrap();
         // p(2) = 4
         assert_eq!(p.evaluate_slice(&[Fq::from(2)]).unwrap(), Fq::from(4));
         let p_univariate = p.to_univariate().unwrap();
         assert_eq!(p_univariate.evaluate(&Fq::from(2)), Fq::from(4));
 
         // p = 3a + 4
-        let p = MultiLinearPolynomial::<Fq>::new(
+        let p = CoeffMultilinearPolynomial::<Fq>::new(
             1,
             vec![(Fq::from(3), vec![true]), (Fq::from(4), vec![false])],
         )
@@ -1288,7 +1308,7 @@ mod tests {
         assert_eq!(p_univariate.evaluate(&Fq::from(3)), Fq::from(13));
 
         // p = 0
-        let p = MultiLinearPolynomial::<Fq>::additive_identity();
+        let p = CoeffMultilinearPolynomial::<Fq>::additive_identity();
         assert_eq!(p.evaluate_slice(&[Fq::from(3)]).unwrap(), Fq::from(0));
         let p_univariate = p.to_univariate().unwrap();
         assert_eq!(p_univariate.evaluate(&Fq::from(25)), Fq::from(0));
@@ -1296,5 +1316,33 @@ mod tests {
         let p = poly_5ab_7bc_8d();
         let p_univariate = p.to_univariate();
         assert!(p_univariate.is_err());
+    }
+
+    #[test]
+    fn test_to_evaluation_form() {
+        // p = 2ab + 3bc
+        // 000 - 0
+        // 001 - 0
+        // 010 - 0
+        // 011 - 3
+        // 100 - 0
+        // 101 - 0
+        // 110 - 2
+        // 111 - 5
+        let p = CoeffMultilinearPolynomial::<Fq>::new(
+            3,
+            vec![
+                (Fq::from(2), vec![true, true, false]),
+                (Fq::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            p.to_evaluation_form(),
+            vec![0, 0, 0, 3, 0, 0, 2, 5]
+                .into_iter()
+                .map(|v| Fq::from(v))
+                .collect::<Vec<_>>()
+        );
     }
 }

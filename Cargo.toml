@@ -6,6 +6,6 @@ members = [
     "gkr",
     "polynomial",
     "r1cs_gkr", "stat",
-    "sumcheck",
+    "sumcheck_old", "sumcheck",
     "transcript",
 ]

@@ -3,7 +3,7 @@ use crate::gate_eval_extension::GateEvalExtension;
 use crate::util::{evaluate_l_function, l, q};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use polynomial::multilinear::coefficient_form::MultiLinearPolynomial;
+use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use polynomial::Polynomial;
 use sumcheck::{PartialSumcheckProof, Sumcheck};
@@ -14,7 +14,7 @@ pub struct Proof<F: PrimeField> {
     // TODO: seems it might be better to return the output points directly i.e. Vec<F>
     //  feels like it will constrain the prover better. Don't make this change if you haven't
     //  figured out a way to break it!!!!
-    output_mle: MultiLinearPolynomial<F>,
+    output_mle: CoeffMultilinearPolynomial<F>,
     pub sumcheck_proofs: Vec<PartialSumcheckProof<F>>,
     q_functions: Vec<UnivariatePolynomial<F>>,
 }
@@ -95,19 +95,19 @@ pub fn verify<F: PrimeField>(
         .into_iter()
         .zip(proof.q_functions);
 
-    // Verify each sumcheck proof and update next round parameters
+    // Verify each sumcheck_old proof and update next round parameters
     for (layer_index, (partial_sumcheck_proof, q_function)) in sumcheck_and_q_functions.enumerate()
     {
-        // here we ensure that the sumcheck proof proves the correct sum
+        // here we ensure that the sumcheck_old proof proves the correct sum
         if partial_sumcheck_proof.sum != m {
-            return Err("invalid sumcheck proof");
+            return Err("invalid sumcheck_old proof");
         }
 
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
         transcript.append(q_function.to_bytes().as_slice());
 
         let subclaim = Sumcheck::verify_partial(partial_sumcheck_proof)
-            .ok_or("failed to verify partial sumcheck proof")?;
+            .ok_or("failed to verify partial sumcheck_old proof")?;
 
         // we need to perform the last check ourselves
         // basically evaluate f(b, c) at the challenge points
@@ -131,7 +131,7 @@ pub fn verify<F: PrimeField>(
         let mul_result = mul_mle.evaluate_slice(rbc.as_slice())? * (w_b * w_c);
         let f_b_c_eval = add_result + mul_result;
 
-        // final sumcheck verifier check
+        // final sumcheck_old verifier check
         if f_b_c_eval != subclaim.sum {
             return Ok(false);
         }
@@ -146,7 +146,7 @@ pub fn verify<F: PrimeField>(
     // since the verifier has access to the input layer
     // the verifier can check for the correctness of last m itself
     // by evaluating the input_mle at r and comparing that to the claimed m
-    let input_mle = MultiLinearPolynomial::<F>::interpolate(input.as_slice());
+    let input_mle = CoeffMultilinearPolynomial::<F>::interpolate(input.as_slice());
     let actual_m = input_mle.evaluate_slice(r.as_slice())?;
     Ok(actual_m == m)
 }

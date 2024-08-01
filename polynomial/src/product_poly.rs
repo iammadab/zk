@@ -4,8 +4,8 @@ use ark_ff::PrimeField;
 // TODO: should be able to generalize this over the operation ie. not just product
 /// Represents the product of one or more `Multilinear` polynomials
 /// P(x) = A(x).B(x).C(x)
-#[derive(Debug, PartialEq)]
-struct ProductPoly<F: PrimeField> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProductPoly<F: PrimeField> {
     n_vars: usize,
     polynomials: Vec<MultiLinearPolynomial<F>>,
 }
@@ -73,6 +73,20 @@ impl<F: PrimeField> ProductPoly<F> {
         }
         result
     }
+
+    /// Serialize the ProductPoly
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.polynomials
+            .iter()
+            .map(|poly| poly.to_bytes())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
+    }
+
+    /// Return the number of variables
+    pub fn n_vars(&self) -> usize {
+        self.n_vars
+    }
 }
 
 #[cfg(test)]
@@ -94,7 +108,7 @@ mod tests {
             vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
         )
         .unwrap();
-        let prod_poly = ProductPoly::new(vec![mle_a, mle_b]).unwrap();
+        ProductPoly::new(vec![mle_a, mle_b]).unwrap();
 
         // create prod_poly from mle's with different number of variables
         let mle_a = MultiLinearPolynomial::new(1, vec![Fr::from(2), Fr::from(8)]).unwrap();
