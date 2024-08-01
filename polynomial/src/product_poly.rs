@@ -1,8 +1,8 @@
 use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
-// TODO: add documentation
-// TODO: can be generalized further (more operations, not just mles too)
+// TODO: should be able to generalize this over the operation ie. not just product
+/// Represents the product of one or more `Multilinear` polynomials
 /// P(x) = A(x).B(x).C(x)
 #[derive(Debug, PartialEq)]
 struct ProductPoly<F: PrimeField> {

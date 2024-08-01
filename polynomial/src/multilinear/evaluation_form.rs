@@ -67,7 +67,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
                         // left - r.left + r.right
                         // left - r (left - right)
                         left - *assignment * (left - right)
-                    },
+                    }
                 };
             }
         }
