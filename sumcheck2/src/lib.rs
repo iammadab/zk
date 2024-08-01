@@ -100,4 +100,15 @@ mod tests {
         let verification_result = SumcheckVerifier::verify(p, proof).expect("proof is invalid");
         assert!(verification_result);
     }
+
+    #[test]
+    fn test_correct_sum_prove_partial() {
+        let p = p_2ab_3bc();
+        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let (proof, _) =
+            SumcheckProver::<1, Fr>::prove_partial(prod_poly.clone(), Fr::from(10)).unwrap();
+        let subclaim = SumcheckVerifier::verify_partial(proof).expect("proof is invalid");
+        let expected_sum = prod_poly.evaluate(subclaim.challenges.as_slice()).unwrap();
+        assert_eq!(expected_sum, subclaim.sum);
+    }
 }
