@@ -1,10 +1,11 @@
 use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
+use std::io::stdout;
 
 // TODO: add documentation
 // TODO: can be generalized further (more operations, not just mles too)
 /// P(x) = A(x).B(x).C(x)
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ProductPoly<F: PrimeField> {
     n_vars: usize,
     polynomials: Vec<MultiLinearPolynomial<F>>,
@@ -43,6 +44,24 @@ impl<F: PrimeField> ProductPoly<F> {
             poly.evaluate(assignments).map(|value| product * value)
         })
     }
+
+    /// Partially evaluate each component polynomial on the same input
+    pub fn partial_evaluate(
+        &self,
+        initial_var: usize,
+        assignments: &[F],
+    ) -> Result<Self, &'static str> {
+        let partial_polynomials = self
+            .polynomials
+            .iter()
+            .map(|polynomial| polynomial.partial_evaluate(initial_var, assignments))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self {
+            n_vars: partial_polynomials[0].n_vars(),
+            polynomials: partial_polynomials,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -79,7 +98,6 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        // create prod_poly from mle's with the same number of variables
         let mle_a = MultiLinearPolynomial::new(
             2,
             vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
@@ -105,6 +123,31 @@ mod tests {
         assert_eq!(
             prod_poly.evaluate(&[Fr::from(1), Fr::from(10)]).unwrap(),
             direct_product
+        );
+    }
+
+    #[test]
+    fn test_partial_evaluate() {
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.clone(), mle_b.clone()]).unwrap();
+
+        let mle_a_partial = mle_a.partial_evaluate(1, &[Fr::from(10)]).unwrap();
+        let mle_b_partial = mle_b.partial_evaluate(1, &[Fr::from(10)]).unwrap();
+        let prod_poly_expected_partial =
+            ProductPoly::new(vec![mle_a_partial, mle_b_partial]).unwrap();
+
+        assert_eq!(
+            prod_poly.partial_evaluate(1, &[Fr::from(10)]).unwrap(),
+            prod_poly_expected_partial
         );
     }
 }

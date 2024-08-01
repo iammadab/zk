@@ -1,7 +1,7 @@
 use crate::multilinear::pairing_index::PairingIndex;
 use ark_ff::PrimeField;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 /// `MultilinearPolynomial` (Dense Evaluation Representation)
 /// holds all evaluations over the boolean hypercube of an n_var multilinear polynomial
 pub struct MultiLinearPolynomial<F: PrimeField> {
