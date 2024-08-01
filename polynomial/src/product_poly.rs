@@ -108,7 +108,7 @@ mod tests {
             vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
         )
         .unwrap();
-        let prod_poly = ProductPoly::new(vec![mle_a, mle_b]).unwrap();
+        ProductPoly::new(vec![mle_a, mle_b]).unwrap();
 
         // create prod_poly from mle's with different number of variables
         let mle_a = MultiLinearPolynomial::new(1, vec![Fr::from(2), Fr::from(8)]).unwrap();

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 polynomial = { path = "../polynomial" }
 transcript = { path = "../transcript" }
-sumcheck = { path = "../sumcheck" }
+sumcheck = { path = "../sumcheck_old" }
 stat = { path = "../stat" }
 ark-serialize = { version = "0.4.1", features = ["derive"] }
 ark-ff = "0.4.1"

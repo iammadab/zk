@@ -452,11 +452,11 @@ mod test {
         // sum over boolean hypercube = 14
         assert_eq!(sum_over_boolean_hyper_cube(&gate_eval_ext), Fr::from(14));
 
-        // generate false sumcheck proof
+        // generate false sumcheck_old proof
         let false_proof = Sumcheck::prove(gate_eval_ext.clone(), Fr::from(20));
         assert!(!Sumcheck::verify(false_proof));
 
-        // generate correct sumcheck proof
+        // generate correct sumcheck_old proof
         let correct_proof = Sumcheck::prove(gate_eval_ext, Fr::from(14));
         assert!(Sumcheck::verify(correct_proof));
     }

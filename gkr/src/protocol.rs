@@ -95,19 +95,19 @@ pub fn verify<F: PrimeField>(
         .into_iter()
         .zip(proof.q_functions);
 
-    // Verify each sumcheck proof and update next round parameters
+    // Verify each sumcheck_old proof and update next round parameters
     for (layer_index, (partial_sumcheck_proof, q_function)) in sumcheck_and_q_functions.enumerate()
     {
-        // here we ensure that the sumcheck proof proves the correct sum
+        // here we ensure that the sumcheck_old proof proves the correct sum
         if partial_sumcheck_proof.sum != m {
-            return Err("invalid sumcheck proof");
+            return Err("invalid sumcheck_old proof");
         }
 
         transcript.append(partial_sumcheck_proof.to_bytes().as_slice());
         transcript.append(q_function.to_bytes().as_slice());
 
         let subclaim = Sumcheck::verify_partial(partial_sumcheck_proof)
-            .ok_or("failed to verify partial sumcheck proof")?;
+            .ok_or("failed to verify partial sumcheck_old proof")?;
 
         // we need to perform the last check ourselves
         // basically evaluate f(b, c) at the challenge points
@@ -131,7 +131,7 @@ pub fn verify<F: PrimeField>(
         let mul_result = mul_mle.evaluate_slice(rbc.as_slice())? * (w_b * w_c);
         let f_b_c_eval = add_result + mul_result;
 
-        // final sumcheck verifier check
+        // final sumcheck_old verifier check
         if f_b_c_eval != subclaim.sum {
             return Ok(false);
         }
