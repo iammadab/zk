@@ -62,11 +62,11 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
 
             // generate challenge
             let challenge = transcript.sample_field_element::<F>();
-
             // partially evaluate the poly at the challenge
             poly = poly.partial_evaluate(0, &[challenge])?;
 
-            round_polys.push(round_poly)
+            round_polys.push(round_poly);
+            challenges.push(challenge);
         }
 
         let proof = SumcheckProof { sum, round_polys };

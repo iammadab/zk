@@ -2,7 +2,6 @@ use crate::{field_elements_to_bytes, SubClaim, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
 use polynomial::product_poly::ProductPoly;
 use polynomial::univariate_poly::UnivariatePolynomial;
-use polynomial::Polynomial;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
@@ -22,14 +21,11 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         let mut transcript = Transcript::new();
         transcript.append(poly.to_bytes().as_slice());
 
-        // TODO: is this clone needed?
-        let initial_poly = poly.clone();
-
-        let subclaim = Self::verify_internal(poly, proof, &mut transcript)?;
+        let subclaim = Self::verify_internal(proof, &mut transcript)?;
 
         // final verifier check
         // p_v(r_v) = p(r_1, r_2, ..., r_v)
-        let initial_poly_eval = initial_poly
+        let initial_poly_eval = poly
             .evaluate(subclaim.challenges.as_slice())
             .map_err(|_| "couldn't evaluate initial poly")?;
         // ensure the oracle evaluation equals the claimed sum
@@ -39,17 +35,13 @@ impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (when the veifier doesn't have access to the initial poly or its commitment)
     /// in such a case, the verifier performs all checks other than the last check.
     /// Returns a subclaim that can later be used for that final check verification.
-    pub fn verify_partial(
-        poly: ProductPoly<F>,
-        proof: SumcheckProof<F>,
-    ) -> Result<SubClaim<F>, &'static str> {
+    pub fn verify_partial(proof: SumcheckProof<F>) -> Result<SubClaim<F>, &'static str> {
         let mut transcript = Transcript::new();
-        Self::verify_internal(poly, proof, &mut transcript)
+        Self::verify_internal(proof, &mut transcript)
     }
 
     /// Main `Sumcheck` verification logic.
     fn verify_internal(
-        poly: ProductPoly<F>,
         proof: SumcheckProof<F>,
         transcript: &mut Transcript,
     ) -> Result<SubClaim<F>, &'static str> {
