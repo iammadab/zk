@@ -99,14 +99,14 @@ mod tests {
     #[test]
     fn test_product_poly_creation() {
         // create prod_poly from mle's with the same number of variables
-        let mle_a = ComposedPolynomial::unit_poly(
+        let mle_a = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
             )
             .unwrap(),
         );
-        let mle_b = ComposedPolynomial::unit_poly(
+        let mle_b = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
@@ -116,10 +116,10 @@ mod tests {
         ProductPoly::new(vec![mle_a, mle_b]).unwrap();
 
         // create prod_poly from mle's with different number of variables
-        let mle_a = ComposedPolynomial::unit_poly(
+        let mle_a = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(1, vec![Fr::from(2), Fr::from(8)]).unwrap(),
         );
-        let mle_b = ComposedPolynomial::unit_poly(
+        let mle_b = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
@@ -132,21 +132,21 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        let mle_a = ComposedPolynomial::unit_poly(
+        let mle_a = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
             )
             .unwrap(),
         );
-        let mle_b = ComposedPolynomial::unit_poly(
+        let mle_b = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
             )
             .unwrap(),
         );
-        let mle_c = ComposedPolynomial::unit_poly(
+        let mle_c = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
@@ -168,14 +168,14 @@ mod tests {
 
     #[test]
     fn test_partial_evaluate() {
-        let mle_a = ComposedPolynomial::unit_poly(
+        let mle_a = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
             )
             .unwrap(),
         );
-        let mle_b = ComposedPolynomial::unit_poly(
+        let mle_b = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
@@ -197,14 +197,14 @@ mod tests {
 
     #[test]
     fn test_prod_reduce() {
-        let mle_a = ComposedPolynomial::unit_poly(
+        let mle_a = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
             )
             .unwrap(),
         );
-        let mle_b = ComposedPolynomial::unit_poly(
+        let mle_b = ComposedPolynomial::unit(
             MultiLinearPolynomial::new(
                 2,
                 vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
