@@ -54,7 +54,7 @@ mod tests {
     fn test_sumcheck_correct_sum_multilinear() {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
         let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(10)).unwrap();
         let verification_result =
             SumcheckVerifier::verify(prod_poly, proof).expect("proof is invalid");
@@ -94,7 +94,7 @@ mod tests {
         )
         .unwrap();
 
-        let p = ProductPoly::new(vec![p1, p2]).unwrap();
+        let p = ProductPoly::new(vec![p1.into(), p2.into()]).unwrap();
 
         let proof = SumcheckProver::<2, Fr>::prove(p.clone(), Fr::from(5)).unwrap();
         let verification_result = SumcheckVerifier::verify(p, proof).expect("proof is invalid");
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn test_correct_sum_prove_partial() {
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
         let (proof, _) =
             SumcheckProver::<1, Fr>::prove_partial(prod_poly.clone(), Fr::from(10)).unwrap();
         let subclaim = SumcheckVerifier::verify_partial(proof).expect("proof is invalid");
