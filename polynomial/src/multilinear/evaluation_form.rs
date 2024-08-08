@@ -32,7 +32,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Return the max variable degree
-    pub fn deg(&self) -> usize {
+    pub fn max_variable_degree(&self) -> usize {
         1
     }
 

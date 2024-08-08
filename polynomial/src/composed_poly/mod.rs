@@ -71,4 +71,26 @@ impl<F: PrimeField> ComposedPolynomial<F> {
             ComposedPolynomial::Product(poly) => poly.n_vars(),
         }
     }
+
+    // TODO: add documentation
+    pub fn max_variable_degree(&self) -> usize {
+        match &self {
+            ComposedPolynomial::Unit(poly) => poly.max_variable_degree(),
+            ComposedPolynomial::Product(poly) => poly.max_variable_degree(),
+        }
+    }
+}
+
+// TODO: add documentation
+impl<F: PrimeField> From<MultiLinearPolynomial<F>> for ComposedPolynomial<F> {
+    fn from(poly: MultiLinearPolynomial<F>) -> Self {
+        Self::Unit(poly)
+    }
+}
+
+// TODO: add documentation
+impl<F: PrimeField> From<ProductPoly<F>> for ComposedPolynomial<F> {
+    fn from(poly: ProductPoly<F>) -> Self {
+        Self::Product(poly)
+    }
 }

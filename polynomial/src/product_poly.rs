@@ -87,78 +87,92 @@ impl<F: PrimeField> ProductPoly<F> {
     pub fn n_vars(&self) -> usize {
         self.n_vars
     }
+
+    /// Return the max variable degree
+    pub fn max_variable_degree(&self) -> usize {
+        // the max variable degree for a product poly is the sum of the
+        // max variable degree of each component poly
+        // e.g. 2a^2b * 3ab = 2a^3b^2 (2 + 1 = 3)
+        // obviously this represents the max possible degree (which might deviate from the
+        // true max variable degree).
+        // TODO: is it possible to accurately determine the variable degree
+        //  (what is the time complexity for this?)
+        self.polynomials
+            .iter()
+            .map(|poly| poly.max_variable_degree())
+            .sum()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::composed_poly::ComposedPolynomial;
+    use crate::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use crate::multilinear::evaluation_form::MultiLinearPolynomial;
     use crate::product_poly::ProductPoly;
     use ark_bls12_381::Fr;
 
+    fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {
+        let evaluations = CoeffMultilinearPolynomial::new(
+            3,
+            vec![
+                (Fr::from(2), vec![true, true, false]),
+                (Fr::from(3), vec![false, true, true]),
+            ],
+        )
+        .unwrap()
+        .to_evaluation_form();
+        MultiLinearPolynomial::new(3, evaluations).unwrap()
+    }
+
     #[test]
     fn test_product_poly_creation() {
         // create prod_poly from mle's with the same number of variables
-        let mle_a = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
-            )
-            .unwrap(),
-        );
-        let mle_b = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
-        ProductPoly::new(vec![mle_a, mle_b]).unwrap();
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        ProductPoly::new(vec![mle_a.into(), mle_b.into()]).unwrap();
 
         // create prod_poly from mle's with different number of variables
-        let mle_a = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(1, vec![Fr::from(2), Fr::from(8)]).unwrap(),
-        );
-        let mle_b = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
-        let prod_poly = ProductPoly::new(vec![mle_a, mle_b]);
+        let mle_a = MultiLinearPolynomial::new(1, vec![Fr::from(2), Fr::from(8)]).unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.into(), mle_b.into()]);
         assert_eq!(prod_poly.is_err(), true);
     }
 
     #[test]
     fn test_evaluate() {
-        let mle_a = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
-            )
-            .unwrap(),
-        );
-        let mle_b = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
-        let mle_c = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let mle_c = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
 
         let direct_product = mle_a.evaluate(&[Fr::from(1), Fr::from(10)]).unwrap()
             * mle_b.evaluate(&[Fr::from(1), Fr::from(10)]).unwrap()
             * mle_c.evaluate(&[Fr::from(1), Fr::from(10)]).unwrap();
 
-        let prod_poly = ProductPoly::new(vec![mle_a, mle_b, mle_c]).unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.into(), mle_b.into(), mle_c.into()]).unwrap();
 
         assert_eq!(
             prod_poly.evaluate(&[Fr::from(1), Fr::from(10)]).unwrap(),
@@ -168,26 +182,22 @@ mod tests {
 
     #[test]
     fn test_partial_evaluate() {
-        let mle_a = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
-            )
-            .unwrap(),
-        );
-        let mle_b = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
-        let prod_poly = ProductPoly::new(vec![mle_a.clone(), mle_b.clone()]).unwrap();
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.clone().into(), mle_b.clone().into()]).unwrap();
 
         let mle_a_partial = mle_a.partial_evaluate(1, &[Fr::from(10)]).unwrap();
         let mle_b_partial = mle_b.partial_evaluate(1, &[Fr::from(10)]).unwrap();
         let prod_poly_expected_partial =
-            ProductPoly::new(vec![mle_a_partial, mle_b_partial]).unwrap();
+            ProductPoly::new(vec![mle_a_partial.into(), mle_b_partial.into()]).unwrap();
 
         assert_eq!(
             prod_poly.partial_evaluate(1, &[Fr::from(10)]).unwrap(),
@@ -197,25 +207,42 @@ mod tests {
 
     #[test]
     fn test_prod_reduce() {
-        let mle_a = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
-            )
-            .unwrap(),
-        );
-        let mle_b = ComposedPolynomial::unit(
-            MultiLinearPolynomial::new(
-                2,
-                vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
-            )
-            .unwrap(),
-        );
-        let prod_poly = ProductPoly::new(vec![mle_a.clone(), mle_b.clone()]).unwrap();
+        let mle_a = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(14)],
+        )
+        .unwrap();
+        let mle_b = MultiLinearPolynomial::new(
+            2,
+            vec![Fr::from(2), Fr::from(8), Fr::from(10), Fr::from(22)],
+        )
+        .unwrap();
+        let prod_poly = ProductPoly::new(vec![mle_a.into(), mle_b.into()]).unwrap();
 
         assert_eq!(
             prod_poly.prod_reduce(),
             vec![Fr::from(4), Fr::from(64), Fr::from(100), Fr::from(308)]
         );
+    }
+
+    #[test]
+    fn test_max_variable_degree() {
+        // p = 2ab + 3bc
+        // create a product polynomial with 3 copies of p
+        // P = p . p . p
+        // we expect a degree 3 polynomial
+
+        let p = p_2ab_3bc();
+
+        let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
+        assert_eq!(product_1.max_variable_degree(), 2);
+
+        let product_2 = ProductPoly::new(vec![product_1.into(), p.into()]).unwrap();
+        assert_eq!(product_2.max_variable_degree(), 3);
+
+        // TODO: ideally product 2 should collapse, into a vector of 3 elements
+        //  this won't be the case now but will fix this
+        //  failing test
+        assert_eq!(product_2.polynomials.len(), 3);
     }
 }
