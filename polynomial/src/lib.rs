@@ -2,10 +2,10 @@ use ark_ff::PrimeField;
 
 use self::univariate_poly::UnivariatePolynomial;
 
+mod composed_poly;
 pub mod multilinear;
 pub mod product_poly;
 pub mod univariate_poly;
-mod composed_poly;
 
 // TODO: get rid of this trait
 pub trait Polynomial<F: PrimeField>: Clone {
