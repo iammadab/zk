@@ -31,6 +31,11 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         self.n_vars
     }
 
+    /// Return the max variable degree
+    pub fn deg(&self) -> usize {
+        1
+    }
+
     /// Partially evaluate the `MultilinearPolynomial` at n consecutive variables
     /// e.g. f(a, b, c, d, e, f)
     /// we can pick a starting variable and supply n evaluation points
