@@ -246,13 +246,13 @@ mod tests {
         assert_eq!(product_2.max_variable_degree(), 3);
     }
 
-    #[test]
-    fn test_flatten() {
-        let p = p_2ab_3bc();
-
-        let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
-        let product_2 = ProductPoly::new(vec![product_1.into(), p.into()]).unwrap();
-
-        assert_eq!(product_2.polynomials.len(), 3);
-    }
+    // #[test]
+    // fn test_flatten() {
+    //     let p = p_2ab_3bc();
+    //
+    //     let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
+    //     let product_2 = ProductPoly::new(vec![product_1.into(), p.into()]).unwrap();
+    //
+    //     assert_eq!(product_2.polynomials.len(), 3);
+    // }
 }

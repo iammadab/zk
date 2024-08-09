@@ -1,6 +1,7 @@
 use crate::{field_elements_to_bytes, SubClaim, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
 use polynomial::composed_poly::product_poly::ProductPoly;
+use polynomial::composed_poly::ComposedPolynomial;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use std::marker::PhantomData;
 use transcript::Transcript;
@@ -12,7 +13,10 @@ pub struct SumcheckVerifier<F: PrimeField> {
 
 impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (verifier has access to the initial poly or its commitment)
-    pub fn verify(poly: ProductPoly<F>, proof: SumcheckProof<F>) -> Result<bool, &'static str> {
+    pub fn verify(
+        poly: ComposedPolynomial<F>,
+        proof: SumcheckProof<F>,
+    ) -> Result<bool, &'static str> {
         // number of round_poly in the proof should match n_vars
         if proof.round_polys.len() != poly.n_vars() {
             return Err("invalid proof: require 1 round poly for each variable in poly");

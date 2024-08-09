@@ -1,6 +1,7 @@
 use crate::{field_elements_to_bytes, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
 use polynomial::composed_poly::product_poly::ProductPoly;
+use polynomial::composed_poly::ComposedPolynomial;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
@@ -14,7 +15,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
     SumcheckProver<MAX_VAR_DEGREE, F>
 {
     /// Generates the `Sumcheck` proof (appends the initial poly to the transcript)
-    pub fn prove(poly: ProductPoly<F>, sum: F) -> Result<SumcheckProof<F>, &'static str> {
+    pub fn prove(poly: ComposedPolynomial<F>, sum: F) -> Result<SumcheckProof<F>, &'static str> {
         let mut transcript = Transcript::new();
         transcript.append(poly.to_bytes().as_slice());
 
@@ -24,7 +25,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
     /// Generates the `Sumcheck` proof, but doesn't append the initial poly to the transcript.
     /// This is used when the verifier doesn't have access to the initial poly or its commitment
     pub fn prove_partial(
-        poly: ProductPoly<F>,
+        poly: ComposedPolynomial<F>,
         sum: F,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
         let mut transcript = Transcript::new();
@@ -33,7 +34,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
 
     /// Main `Sumcheck` proof generation logic.
     fn prove_internal(
-        mut poly: ProductPoly<F>,
+        mut poly: ComposedPolynomial<F>,
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
@@ -51,7 +52,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
             for i in 0..=MAX_VAR_DEGREE {
                 round_poly.push(
                     poly.partial_evaluate(0, &[F::from(i)])?
-                        .prod_reduce()
+                        .reduce()
                         .iter()
                         .sum::<F>(),
                 )
