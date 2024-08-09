@@ -3,6 +3,7 @@ use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
 pub mod product_poly;
+mod sum_poly;
 
 #[derive(Clone, Debug, PartialEq)]
 // TODO: add documentation (also document each piece)

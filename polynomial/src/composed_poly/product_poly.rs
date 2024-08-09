@@ -3,7 +3,7 @@ use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
 /// Represents the product of one or more `Composed` polynomials
-/// P(x) = A(x).B(x).C(x)
+/// P(x) = A(x) x B(x) x ... x N(x)
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProductPoly<F: PrimeField> {
     n_vars: usize,
@@ -33,7 +33,7 @@ impl<F: PrimeField> ProductPoly<F> {
     }
 
     /// Evaluate the product poly using the following
-    /// P(x) = A(x).B(x).C(x)
+    /// P(x) = A(x) x B(x) x ... x N(x)
     pub fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
         if assignments.len() != self.n_vars {
             return Err("evaluate must assign to all variables");
@@ -122,6 +122,12 @@ mod tests {
         .unwrap()
         .to_evaluation_form();
         MultiLinearPolynomial::new(3, evaluations).unwrap()
+    }
+
+    #[should_panic]
+    #[test]
+    fn test_cannot_create_empty_product_poly() {
+        ProductPoly::<Fr>::new(vec![]).unwrap();
     }
 
     #[test]
@@ -232,6 +238,17 @@ mod tests {
         // P = p . p . p
         // we expect a degree 3 polynomial
 
+        let p = p_2ab_3bc();
+
+        let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
+        assert_eq!(product_1.max_variable_degree(), 2);
+
+        let product_2 = ProductPoly::new(vec![product_1.into(), p.into()]).unwrap();
+        assert_eq!(product_2.max_variable_degree(), 3);
+    }
+
+    #[test]
+    fn test_flatten() {
         let p = p_2ab_3bc();
 
         let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
