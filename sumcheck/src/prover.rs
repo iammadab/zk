@@ -1,6 +1,6 @@
 use crate::{field_elements_to_bytes, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::product_poly::ProductPoly;
+use polynomial::composed_poly::product_poly::ProductPoly;
 use std::marker::PhantomData;
 use transcript::Transcript;
 

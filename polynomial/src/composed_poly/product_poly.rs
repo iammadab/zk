@@ -106,9 +106,9 @@ impl<F: PrimeField> ProductPoly<F> {
 
 #[cfg(test)]
 mod tests {
+    use crate::composed_poly::product_poly::ProductPoly;
     use crate::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use crate::multilinear::evaluation_form::MultiLinearPolynomial;
-    use crate::product_poly::ProductPoly;
     use ark_bls12_381::Fr;
 
     fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {

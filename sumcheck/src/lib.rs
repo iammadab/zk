@@ -33,9 +33,9 @@ mod tests {
     use crate::prover::SumcheckProver;
     use crate::verifier::SumcheckVerifier;
     use ark_bls12_381::Fr;
+    use polynomial::composed_poly::product_poly::ProductPoly;
     use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
-    use polynomial::product_poly::ProductPoly;
 
     fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {
         let evaluations = CoeffMultilinearPolynomial::new(
@@ -116,7 +116,7 @@ mod tests {
     fn test_invalid_sum() {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
         let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12)).unwrap();
         assert!(SumcheckVerifier::verify(prod_poly, proof).is_err());
     }
