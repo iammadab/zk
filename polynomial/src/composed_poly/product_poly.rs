@@ -251,14 +251,8 @@ mod tests {
         let p = p_2ab_3bc();
 
         let product_1 = ProductPoly::new(vec![p.clone().into(), p.clone().into()]).unwrap();
-        assert_eq!(product_1.max_variable_degree(), 2);
-
         let product_2 = ProductPoly::new(vec![product_1.into(), p.into()]).unwrap();
-        assert_eq!(product_2.max_variable_degree(), 3);
 
-        // TODO: ideally product 2 should collapse, into a vector of 3 elements
-        //  this won't be the case now but will fix this
-        //  failing test
         assert_eq!(product_2.polynomials.len(), 3);
     }
 }

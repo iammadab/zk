@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_sum_poly_creation() {
-        let sum_poly = SumPoly::new(vec![p_2ab_3bc().into(), p_2ab_3bc().into()]).unwrap();
+        SumPoly::new(vec![p_2ab_3bc().into(), p_2ab_3bc().into()]).unwrap();
     }
 
     #[test]
@@ -204,6 +204,8 @@ mod tests {
 
     #[test]
     fn test_flatten() {
-        panic!("write this test");
+        let sum_1 = SumPoly::new(vec![p_2ab_3bc().into(), p_2ab_3bc().into()]).unwrap();
+        let sum_2 = SumPoly::new(vec![p_2ab_3bc().into(), sum_1.into()]).unwrap();
+        assert_eq!(sum_2.polynomials.len(), 3);
     }
 }
