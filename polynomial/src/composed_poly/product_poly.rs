@@ -1,5 +1,4 @@
 use crate::composed_poly::ComposedPolynomial;
-use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
 /// Represents the product of one or more `Composed` polynomials

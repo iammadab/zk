@@ -3,7 +3,7 @@ use ark_ff::PrimeField;
 
 // TODO: we can merge product poly and sum poly into one polynomial
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 /// Represents the sum of one or more `Composed` polynomials
 /// P(x) = A(x) + B(x) + ...  + N(x)
 pub struct SumPoly<F: PrimeField> {
