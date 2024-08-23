@@ -27,7 +27,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
     }
 
     /// Returns the number of variables
-    pub(crate) fn n_vars(&self) -> usize {
+    pub fn n_vars(&self) -> usize {
         self.n_vars
     }
 
