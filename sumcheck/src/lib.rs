@@ -33,9 +33,9 @@ mod tests {
     use crate::prover::SumcheckProver;
     use crate::verifier::SumcheckVerifier;
     use ark_bls12_381::Fr;
+    use polynomial::composed_poly::product_poly::ProductPoly;
     use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
-    use polynomial::product_poly::ProductPoly;
 
     fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {
         let evaluations = CoeffMultilinearPolynomial::new(
@@ -54,10 +54,10 @@ mod tests {
     fn test_sumcheck_correct_sum_multilinear() {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
-        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(10)).unwrap();
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
+        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone().into(), Fr::from(10)).unwrap();
         let verification_result =
-            SumcheckVerifier::verify(prod_poly, proof).expect("proof is invalid");
+            SumcheckVerifier::verify(prod_poly.into(), proof).expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -94,19 +94,20 @@ mod tests {
         )
         .unwrap();
 
-        let p = ProductPoly::new(vec![p1, p2]).unwrap();
+        let p = ProductPoly::new(vec![p1.into(), p2.into()]).unwrap();
 
-        let proof = SumcheckProver::<2, Fr>::prove(p.clone(), Fr::from(5)).unwrap();
-        let verification_result = SumcheckVerifier::verify(p, proof).expect("proof is invalid");
+        let proof = SumcheckProver::<2, Fr>::prove(p.clone().into(), Fr::from(5)).unwrap();
+        let verification_result =
+            SumcheckVerifier::verify(p.into(), proof).expect("proof is invalid");
         assert!(verification_result);
     }
 
     #[test]
     fn test_correct_sum_prove_partial() {
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
         let (proof, _) =
-            SumcheckProver::<1, Fr>::prove_partial(prod_poly.clone(), Fr::from(10)).unwrap();
+            SumcheckProver::<1, Fr>::prove_partial(prod_poly.clone().into(), Fr::from(10)).unwrap();
         let subclaim = SumcheckVerifier::verify_partial(proof).expect("proof is invalid");
         let expected_sum = prod_poly.evaluate(subclaim.challenges.as_slice()).unwrap();
         assert_eq!(expected_sum, subclaim.sum);
@@ -116,8 +117,8 @@ mod tests {
     fn test_invalid_sum() {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
-        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12)).unwrap();
-        assert!(SumcheckVerifier::verify(prod_poly, proof).is_err());
+        let prod_poly = ProductPoly::new(vec![p.into()]).unwrap();
+        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone().into(), Fr::from(12)).unwrap();
+        assert!(SumcheckVerifier::verify(prod_poly.into(), proof).is_err());
     }
 }

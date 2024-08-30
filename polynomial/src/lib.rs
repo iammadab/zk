@@ -2,8 +2,8 @@ use ark_ff::PrimeField;
 
 use self::univariate_poly::UnivariatePolynomial;
 
+pub mod composed_poly;
 pub mod multilinear;
-pub mod product_poly;
 pub mod univariate_poly;
 
 // TODO: get rid of this trait
