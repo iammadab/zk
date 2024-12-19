@@ -1,7 +1,6 @@
 use crate::multilinear::evaluation_form::MultiLinearPolynomial;
 use ark_ff::PrimeField;
 
-// TODO: should be able to generalize this over the operation ie. not just product
 /// Represents the product of one or more `Multilinear` polynomials
 /// P(x) = A(x).B(x).C(x)
 #[derive(Clone, Debug, PartialEq)]
