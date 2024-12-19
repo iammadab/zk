@@ -262,20 +262,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gkr"
-version = "0.1.0"
-dependencies = [
- "ark-bls12-381",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "polynomial",
- "stat",
- "sumcheck",
- "transcript",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -423,16 +409,6 @@ dependencies = [
 [[package]]
 name = "stat"
 version = "0.1.0"
-
-[[package]]
-name = "sumcheck"
-version = "0.1.0"
-dependencies = [
- "ark-ff",
- "ark-serialize",
- "polynomial",
- "transcript",
-]
 
 [[package]]
 name = "sumcheck2"
