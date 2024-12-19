@@ -6,13 +6,11 @@ use transcript::Transcript;
 
 /// `SumcheckProver`, initialized with the max_var_degree of the polynomial
 /// this is used to determine how many points to evaluate the round polynomials
-pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>> {
+pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField> {
     _marker: PhantomData<F>,
 }
 
-impl<const MAX_VAR_DEGREE: u8, F: PrimeField + std::convert::From<u8>>
-    SumcheckProver<MAX_VAR_DEGREE, F>
-{
+impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> {
     /// Generates the `Sumcheck` proof (appends the initial poly to the transcript)
     pub fn prove(poly: ProductPoly<F>, sum: F) -> Result<SumcheckProof<F>, &'static str> {
         let mut transcript = Transcript::new();

@@ -12,7 +12,7 @@ pub struct SumcheckProof<F: PrimeField> {
 
 /// Sometimes the verifier doesn't want to perform the final check
 /// in such cases, a subclaim is returned, this subclaim has all information
-/// needed to verify the last check
+/// needed to verify the last check:
 /// sum = initial_poly(challenges)
 pub struct SubClaim<F: PrimeField> {
     sum: F,
