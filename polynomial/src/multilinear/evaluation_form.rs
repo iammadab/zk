@@ -43,8 +43,8 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         assignments: &[F],
     ) -> Result<Self, &'static str> {
         // decided to go the consecutive partial evaluation route as opposed to the random access
-        // evaluation route because consecutive partial eval is all that's needed for sumcheck_old and
-        // gkr, and it seems random access partial evaluation will introduce additional cost (when
+        // evaluation route because consecutive partial eval is all that's needed for sumcheck and
+        // gkr, and it seems random access partial evaluation will introduce additional cost (e.g. when
         // detecting duplicate assignments)
         let mut new_evaluations = self.evaluations.clone();
 

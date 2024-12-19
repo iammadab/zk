@@ -2,10 +2,8 @@
 resolver = "2"
 
 members = [
-    "gkr",
     "polynomial",
     "stat",
-    "sumcheck_old",
     "sumcheck",
     "transcript",
 ]
