@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ark-serialize = { version = "0.4.1", features = ["derive"] }
-ark-ff = "0.4.1"
-ark-bls12-381 = "0.4.0"
+ark-serialize = { version = "0.5.0", features = ["derive"] }
+ark-ff = "0.5.0"
+ark-bls12-381 = "0.5.0"

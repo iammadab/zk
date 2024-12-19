@@ -2,10 +2,10 @@
 resolver = "2"
 
 members = [
-    "circom-gkr",
     "gkr",
     "polynomial",
-    "r1cs_gkr", "stat",
-    "sumcheck_old", "sumcheck",
+    "stat",
+    "sumcheck_old",
+    "sumcheck",
     "transcript",
 ]
