@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 polynomial = { path = "../polynomial" }
 transcript = { path = "../transcript" }
-ark-ff = "0.4.1"
-ark-bls12-381 = "0.4.0"
+ark-ff = "0.5.0"
+ark-bls12-381 = "0.5.0"
