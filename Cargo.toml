@@ -7,3 +7,6 @@ members = [
     "sumcheck",
     "transcript",
 ]
+
+[workspace.dependencies]
+criterion = "0.5.1"

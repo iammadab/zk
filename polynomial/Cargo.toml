@@ -9,3 +9,12 @@ edition = "2021"
 ark-serialize = { version = "0.5.0", features = ["derive"] }
 ark-ff = "0.5.0"
 ark-bls12-381 = "0.5.0"
+
+[dev-dependencies]
+criterion.workspace = true
+ark-poly = "0.5.0"
+ark-std = "0.5.0"
+
+[[bench]]
+name = "polynomial_evaluation"
+harness = false
