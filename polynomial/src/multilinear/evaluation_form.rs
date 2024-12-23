@@ -1,4 +1,4 @@
-use crate::multilinear::pairing_index::PairingIndex;
+use crate::multilinear::pairing_index::index_pair;
 use ark_ff::{BigInteger, PrimeField};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -52,11 +52,10 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         // pull the evaluation pairs from the boolean hypercube
         // interpolate and evaluate the straight line given by each pair at the assignment
         for (i, assignment) in assignments.iter().enumerate() {
-            let pairing_iterator = PairingIndex::new(self.n_vars - i, initial_var)?;
-            let shift_value = pairing_iterator.shift_value();
-            for (i, index) in pairing_iterator.enumerate() {
-                let left = new_evaluations[index];
-                let right = new_evaluations[index + shift_value];
+            let pairing_iterator = index_pair((self.n_vars - i) as u8, initial_var as u8);
+            for (i, (left_pos, right_pos)) in pairing_iterator.enumerate() {
+                let left = new_evaluations[left_pos];
+                let right = new_evaluations[right_pos];
 
                 new_evaluations[i] = match assignment {
                     a if a.is_zero() => left,

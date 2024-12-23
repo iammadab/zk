@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use polynomial::multilinear::pairing_index_2::index_pair;
+use polynomial::multilinear::pairing_index::index_pair;
 
 fn generate_pair_vector(n_vars: u8, index: u8) -> Vec<(usize, usize)> {
     // f(a, b, c);

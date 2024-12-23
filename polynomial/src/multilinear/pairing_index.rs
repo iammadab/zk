@@ -1,122 +1,98 @@
-/// State for pairing index iterator
-/// Figures out the appropriate pairing of boolean hypercube entries
-/// based on some evaluation index
-/// Goal: Return the index such that the pair (index, index + shift_value)
-/// represents two boolean hypercube entries that are the same on every bit
-/// expect for the bit at a certain position.
-///
-/// Example:
-/// BooleanHypercube len = 3
-/// 000 - 0
-/// 001 - 1
-/// 010 - 2
-/// 011 - 3
-/// 100 - 4
-/// 101 - 5
-/// 110 - 6
-/// 111 - 7
-///
-/// if position = 0 then pairing is as follows
-/// 0 - 4
-/// 1 - 5
-/// 2 - 6
-/// 3 - 7
-/// this iterator should return [0, 1, 2, 3]
-///
-/// if position = 1 then pairing is as follows
-/// 0 - 2
-/// 1 - 3
-/// 4 - 6
-/// 5 - 7
-/// this iterator should return [0, 1, 4, ,5]
-pub struct PairingIndex {
-    evaluation_len: usize,
-    shift_value: usize,
-    current_index: usize,
-    counter: usize,
+/// Returns the nth pairing in some boolean hypercube direction
+pub fn index_pair(n_vars: u8, index: u8) -> impl Iterator<Item = (usize, usize)> {
+    let base_no_of_vars = n_vars - 1;
+    let no_of_pairs = 1 << base_no_of_vars;
+    (0..no_of_pairs).map(move |val| {
+        let insert_0 = insert_bit(val, base_no_of_vars - index, 0);
+        (insert_0, insert_0 | (1 << base_no_of_vars - index))
+    })
 }
 
-impl PairingIndex {
-    /// Instantiates a new pairing index iterator based on the number of variables and a given variable position
-    /// variable position is assumed to be 0 index
-    /// so a 3 variable system will be indexed at the following positions [0, 1, 2]
-    /// returns an error if indexing goes outside this bounds
-    pub fn new(n_vars: usize, position: usize) -> Result<Self, &'static str> {
-        if position >= n_vars {
-            return Err("pairing variable must be less than number of variables (zero indexed)");
-        }
-
-        let evaluation_len = 1 << n_vars;
-
-        Ok(Self {
-            evaluation_len,
-            // shift_value = 2^n_vars / 2^(var_index + 1)
-            shift_value: evaluation_len / (1 << (position + 1)),
-            counter: 0,
-            current_index: 0,
-        })
-    }
-
-    pub fn shift_value(&self) -> usize {
-        self.shift_value
-    }
+/// Inserts a bit at an arbitrary position in a bit sequence
+/// e.g. insert 1 at position 2 in this sequence 101 = 1101
+/// NOTE: position is counted from the back
+/// sequence: 1 1 0 1
+/// index   : 3 2 1 0
+fn insert_bit(val: usize, index: u8, bit: usize) -> usize {
+    let high = val >> index;
+    let low = val & mask(index);
+    high << (index + 1) | bit << index | low
 }
 
-impl Iterator for PairingIndex {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // termination condition
-        if self.current_index + self.shift_value >= self.evaluation_len {
-            return None;
-        }
-
-        let index = self.current_index;
-        self.current_index += 1;
-
-        // if we have return shift_value number of elements
-        // we make a jump based on the shift value
-        if (self.counter + 1) % self.shift_value == 0 {
-            self.current_index += self.shift_value;
-        }
-
-        self.counter += 1;
-
-        Some(index)
-    }
+/// Generates a bit sequence with n 1's
+/// e.g. mask(1) -> 1, mask(3) -> 111
+pub const fn mask(n: u8) -> usize {
+    (1 << n) - 1
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear::pairing_index::PairingIndex;
+    use crate::multilinear::pairing_index::{index_pair, insert_bit};
 
     #[test]
-    fn test_pairing_index_creation() {
-        let pairing_index = PairingIndex::new(3, 0).unwrap();
-        assert_eq!(pairing_index.shift_value, 4);
+    fn test_bit_insertion() {
+        let val: usize = 0b10101;
+        // insert 0 at the last position
+        assert_eq!(insert_bit(val, 0, 0), 0b101010);
+        // insert 1 at the last position
+        assert_eq!(insert_bit(val, 0, 1), 0b101011);
+        // insert 0 at the first position
+        assert_eq!(insert_bit(val, 5, 0), 0b010101);
+        // insert 1 at the first position
+        assert_eq!(insert_bit(val, 5, 1), 0b110101);
 
-        let pairing_index = PairingIndex::new(3, 1).unwrap();
-        assert_eq!(pairing_index.shift_value, 2);
+        assert_eq!(insert_bit(0b10, 1, 0), 0b100);
+        assert_eq!(insert_bit(0b10, 1, 1), 0b110);
     }
 
     #[test]
-    fn test_pairing_index_computation() {
-        let pairing_index = PairingIndex::new(3, 0).unwrap();
-        assert_eq!(pairing_index.collect::<Vec<usize>>(), vec![0, 1, 2, 3]);
+    fn test_index_pairing() {
+        // assuming f(a, b, c)
+        // 000 - 0
+        // 001 - 1
+        // 010 - 2
+        // 011 - 3
+        // 100 - 4
+        // 101 - 5
+        // 110 - 6
+        // 111 - 7
 
-        let pairing_index = PairingIndex::new(3, 1).unwrap();
-        assert_eq!(pairing_index.collect::<Vec<usize>>(), vec![0, 1, 4, 5]);
-
-        let pairing_index = PairingIndex::new(3, 2).unwrap();
-        assert_eq!(pairing_index.collect::<Vec<usize>>(), vec![0, 2, 4, 6]);
-
-        let pairing_index = PairingIndex::new(4, 2).unwrap();
+        // a pairing
+        let a_pairs = index_pair(3, 0);
         assert_eq!(
-            pairing_index.collect::<Vec<usize>>(),
-            vec![0, 1, 4, 5, 8, 9, 12, 13]
+            a_pairs.collect::<Vec<_>>(),
+            vec![(0, 4), (1, 5), (2, 6), (3, 7)]
         );
 
-        let pairing_index = PairingIndex::new(4, 4);
-        assert!(pairing_index.is_err());
+        // b pairing
+        let b_pairs = index_pair(3, 1);
+        assert_eq!(
+            b_pairs.collect::<Vec<_>>(),
+            vec![(0, 2), (1, 3), (4, 6), (5, 7)]
+        );
+
+        // c pairing
+        let c_pairs = index_pair(3, 2);
+        assert_eq!(
+            c_pairs.collect::<Vec<_>>(),
+            vec![(0, 1), (2, 3), (4, 5), (6, 7)]
+        );
+
+        // assuming f(a, b)
+        // 00 - 0
+        // 01 - 1
+        // 10 - 2
+        // 11 - 3
+
+        // a pairing
+        assert_eq!(index_pair(2, 0).collect::<Vec<_>>(), vec![(0, 2), (1, 3)]);
+
+        // b pairing
+        assert_eq!(index_pair(2, 1).collect::<Vec<_>>(), vec![(0, 1), (2, 3)]);
+
+        // assuming f(a)
+        // 0 - 0
+        // 1 - 1
+        assert_eq!(index_pair(1, 0).collect::<Vec<_>>(), vec![(0, 1)]);
     }
 }
