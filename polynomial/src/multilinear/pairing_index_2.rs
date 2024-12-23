@@ -3,10 +3,8 @@ pub fn index_pair(n_vars: u8, index: u8) -> impl Iterator<Item = (usize, usize)>
     let base_no_of_vars = n_vars - 1;
     let no_of_pairs = 1 << base_no_of_vars;
     (0..no_of_pairs).map(move |val| {
-        (
-            insert_bit(val, base_no_of_vars - index, 0),
-            insert_bit(val, base_no_of_vars - index, 1),
-        )
+        let insert_0 = insert_bit(val, base_no_of_vars - index, 0);
+        (insert_0, insert_0 | (1 << base_no_of_vars - index))
     })
 }
 

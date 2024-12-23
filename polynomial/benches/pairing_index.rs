@@ -45,14 +45,11 @@ pub fn bench_pair_bit_insert_algo(c: &mut Criterion) {
     c.bench_function("pair_index_21_var_12_index", |b| {
         b.iter(|| black_box(generate_pair_vector_2(21, 12)));
     });
-    c.bench_function("pair_index_22_var_12_index", |b| {
-        b.iter(|| black_box(generate_pair_vector_2(22, 12)));
-    });
 }
 
 criterion_group!(
     benches,
+    bench_pair_bit_insert_algo,
     bench_pair_shift_based_algo,
-    bench_pair_bit_insert_algo
 );
 criterion_main!(benches);
