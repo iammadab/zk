@@ -30,6 +30,7 @@ pub const fn mask(n: u8) -> usize {
 #[cfg(test)]
 mod tests {
     use crate::multilinear::pairing_index_2::{index_pair, insert_bit};
+    use std::ptr::write;
 
     #[test]
     fn test_bit_insertion() {
@@ -72,5 +73,29 @@ mod tests {
             b_pairs.collect::<Vec<_>>(),
             vec![(0, 2), (1, 3), (4, 6), (5, 7)]
         );
+
+        // c pairing
+        let c_pairs = index_pair(3, 2);
+        assert_eq!(
+            c_pairs.collect::<Vec<_>>(),
+            vec![(0, 1), (2, 3), (4, 5), (6, 7)]
+        );
+
+        // assuming f(a, b)
+        // 00 - 0
+        // 01 - 1
+        // 10 - 2
+        // 11 - 3
+
+        // a pairing
+        assert_eq!(index_pair(2, 0).collect::<Vec<_>>(), vec![(0, 2), (1, 3)]);
+
+        // b pairing
+        assert_eq!(index_pair(2, 1).collect::<Vec<_>>(), vec![(0, 1), (2, 3)]);
+
+        // assuming f(a)
+        // 0 - 0
+        // 1 - 1
+        assert_eq!(index_pair(1, 0).collect::<Vec<_>>(), vec![(0, 1)]);
     }
 }
