@@ -10,3 +10,4 @@ members = [
 
 [workspace.dependencies]
 criterion = "0.5.1"
+field-tracker = { git = "https://github.com/sublinearlabs/field-tracker" }
