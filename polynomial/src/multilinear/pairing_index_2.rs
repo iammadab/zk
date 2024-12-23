@@ -18,7 +18,7 @@ fn index_pair(n_vars: u8, index: u8) -> impl Iterator<Item = (usize, usize)> {
 fn insert_bit(val: usize, index: u8, bit: usize) -> usize {
     let high = val >> index;
     let low = val & mask(index);
-    high << 1 | bit << index | low
+    high << (index + 1) | bit << index | low
 }
 
 /// Generates a bit sequence with n 1's
@@ -42,6 +42,9 @@ mod tests {
         assert_eq!(insert_bit(val, 5, 0), 0b010101);
         // insert 1 at the first position
         assert_eq!(insert_bit(val, 5, 1), 0b110101);
+
+        assert_eq!(insert_bit(0b10, 1, 0), 0b100);
+        assert_eq!(insert_bit(0b10, 1, 1), 0b110);
     }
 
     #[test]
@@ -61,6 +64,13 @@ mod tests {
         assert_eq!(
             a_pairs.collect::<Vec<_>>(),
             vec![(0, 4), (1, 5), (2, 6), (3, 7)]
+        );
+
+        // b pairing
+        let b_pairs = index_pair(3, 1);
+        assert_eq!(
+            b_pairs.collect::<Vec<_>>(),
+            vec![(0, 2), (1, 3), (4, 6), (5, 7)]
         );
     }
 }
