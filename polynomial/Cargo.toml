@@ -16,9 +16,9 @@ ark-poly = "0.5.0"
 ark-std = "0.5.0"
 field-tracker.workspace = true
 
-[[bench]]
-name = "polynomial_evaluation"
-harness = false
+#[[bench]]
+#name = "polynomial_evaluation"
+#harness = false
 
 [[bench]]
 name = "pairing_index"
