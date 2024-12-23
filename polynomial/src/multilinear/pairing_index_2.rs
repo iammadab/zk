@@ -1,3 +1,15 @@
+/// Returns the nth pairing in some boolean hypercube direction
+fn index_pair(n_vars: u8, index: u8) -> impl Iterator<Item = (usize, usize)> {
+    let base_no_of_vars = n_vars - 1;
+    let no_of_pairs = 1 << base_no_of_vars;
+    (0..no_of_pairs).map(move |val| {
+        (
+            insert_bit(val, base_no_of_vars - index, 0),
+            insert_bit(val, base_no_of_vars - index, 1),
+        )
+    })
+}
+
 /// Inserts a bit at an arbitrary position in a bit sequence
 /// e.g. insert 1 at position 2 in this sequence 101 = 1101
 /// NOTE: position is counted from the back
@@ -17,7 +29,7 @@ pub const fn mask(n: u8) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::multilinear::pairing_index_2::insert_bit;
+    use crate::multilinear::pairing_index_2::{index_pair, insert_bit};
 
     #[test]
     fn test_bit_insertion() {
@@ -30,5 +42,25 @@ mod tests {
         assert_eq!(insert_bit(val, 5, 0), 0b010101);
         // insert 1 at the first position
         assert_eq!(insert_bit(val, 5, 1), 0b110101);
+    }
+
+    #[test]
+    fn test_index_pairing() {
+        // assuming f(a, b, c)
+        // 000 - 0
+        // 001 - 1
+        // 010 - 2
+        // 011 - 3
+        // 100 - 4
+        // 101 - 5
+        // 110 - 6
+        // 111 - 7
+
+        // a pairing
+        let a_pairs = index_pair(3, 0);
+        assert_eq!(
+            a_pairs.collect::<Vec<_>>(),
+            vec![(0, 4), (1, 5), (2, 6), (3, 7)]
+        );
     }
 }
