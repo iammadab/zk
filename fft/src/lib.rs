@@ -18,13 +18,14 @@ pub fn fft<F: FftField>(coefficients: Vec<F>) -> Vec<F> {
     let odd_evaluations = fft(odd);
 
     // n-th root of unity
-    let omega = F::get_root_of_unity(n as u64);
+    let omega = F::get_root_of_unity(n as u64).unwrap();
 
     // recombination step
     let mut evaluations = vec![F::ZERO; n];
     for i in 0..n / 2 {
-        evaluations[i] = even_evaluations[i] + odd_evaluations[i];
-        evaluations[i + n / 2] = even_evaluations[i] - odd_evaluations[i];
+        evaluations[i] = even_evaluations[i] + omega.pow([i as u64]) * odd_evaluations[i];
+        evaluations[i + n / 2] =
+            even_evaluations[i] + omega.pow([(i + n / 2) as u64]) * odd_evaluations[i];
     }
 
     evaluations
