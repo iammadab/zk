@@ -50,3 +50,22 @@ fn split_even_odd<T>(data: Vec<T>) -> (Vec<T>, Vec<T>) {
 
     (even, odd)
 }
+
+#[cfg(test)]
+mod tests {
+    use ark_ff::{Fp64, MontBackend, MontConfig};
+
+    use super::*;
+
+    #[derive(MontConfig)]
+    #[modulus = "97"]
+    #[generator = "5"]
+    pub struct FqConfig;
+    pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
+    #[test]
+    fn test_fft() {
+        let a = vec![Fq::from(0), Fq::from(2)];
+        dbg!(fft(a));
+    }
+}
