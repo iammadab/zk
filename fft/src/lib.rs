@@ -37,5 +37,16 @@ pub fn ifft<F: FftField>(evaluations: Vec<F>) -> Vec<F> {
 }
 
 fn split_even_odd<T>(data: Vec<T>) -> (Vec<T>, Vec<T>) {
-    todo!()
+    let mut even = Vec::with_capacity(data.len() / 2);
+    let mut odd = Vec::with_capacity(data.len() / 2);
+
+    for (i, val) in data.into_iter().enumerate() {
+        if i % 2 == 0 {
+            even.push(val)
+        } else {
+            odd.push(val);
+        }
+    }
+
+    (even, odd)
 }
