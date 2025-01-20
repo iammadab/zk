@@ -9,11 +9,12 @@ pub fn fft<F: FftField>(coefficients: Vec<F>) -> Vec<F> {
 
 // TODO: add documentation
 pub fn ifft<F: FftField>(evaluations: Vec<F>) -> Vec<F> {
+    let n = evaluations.len() as u64;
     // n-th root of unity
-    let omega = F::get_root_of_unity(evaluations.len() as u64).unwrap();
+    let omega = F::get_root_of_unity(n).unwrap().inverse().unwrap();
     fft_internal(evaluations, omega)
         .into_iter()
-        .map(|v| v * F::from(2u64).inverse().unwrap())
+        .map(|v| v * F::from(n).inverse().unwrap())
         .collect()
 }
 
@@ -65,15 +66,18 @@ mod tests {
 
     use super::*;
 
-    #[derive(MontConfig)]
-    #[modulus = "97"]
-    #[generator = "5"]
-    pub struct FqConfig;
-    pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+    //#[derive(MontConfig)]
+    //#[modulus = "97"]
+    //#[generator = "5"]
+    //pub struct FqConfig;
+    //pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
+
+    use ark_bls12_377::Fr;
+    type Fq = Fr;
 
     #[test]
     fn test_fft() {
-        let a = vec![Fq::from(0), Fq::from(2)];
+        let a = vec![Fq::from(0), Fq::from(2), Fq::from(34), Fq::from(3434)];
         assert_eq!(ifft(fft(a.clone())), a);
     }
 }
