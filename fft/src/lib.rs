@@ -2,38 +2,46 @@ use ark_ff::FftField;
 
 // TODO: add documentation
 pub fn fft<F: FftField>(coefficients: Vec<F>) -> Vec<F> {
-    if coefficients.len() == 1 {
-        return coefficients;
-    }
-
-    if !coefficients.len().is_power_of_two() {
-        panic!("coefficients should be a power of 2");
-    }
-
-    let n = coefficients.len();
-
-    let (even, odd) = split_even_odd(coefficients);
-
-    let even_evaluations = fft(even);
-    let odd_evaluations = fft(odd);
-
     // n-th root of unity
-    let omega = F::get_root_of_unity(n as u64).unwrap();
-
-    // recombination step
-    let mut evaluations = vec![F::ZERO; n];
-    for i in 0..n / 2 {
-        evaluations[i] = even_evaluations[i] + omega.pow([i as u64]) * odd_evaluations[i];
-        evaluations[i + n / 2] =
-            even_evaluations[i] + omega.pow([(i + n / 2) as u64]) * odd_evaluations[i];
-    }
-
-    evaluations
+    let omega = F::get_root_of_unity(coefficients.len() as u64).unwrap();
+    fft_internal(coefficients, omega)
 }
 
 // TODO: add documentation
 pub fn ifft<F: FftField>(evaluations: Vec<F>) -> Vec<F> {
-    todo!()
+    // n-th root of unity
+    let omega = F::get_root_of_unity(evaluations.len() as u64).unwrap();
+    fft_internal(evaluations, omega)
+        .into_iter()
+        .map(|v| v * F::from(2u64).inverse().unwrap())
+        .collect()
+}
+
+pub fn fft_internal<F: FftField>(values: Vec<F>, omega: F) -> Vec<F> {
+    if values.len() == 1 {
+        return values;
+    }
+
+    // TODO: can defer this check to the caller
+    // TODO: better help text
+    if !values.len().is_power_of_two() {
+        panic!("values must be a power of 2");
+    }
+
+    let n = values.len();
+
+    let (even, odd) = split_even_odd(values);
+
+    let even_evals = fft_internal(even, omega.square());
+    let odd_evals = fft_internal(odd, omega.square());
+
+    let mut evaluations = vec![F::ZERO; n];
+    for i in 0..n / 2 {
+        evaluations[i] = even_evals[i] + omega.pow([i as u64]) * odd_evals[i];
+        evaluations[i + n / 2] = even_evals[i] + omega.pow([(i + n / 2) as u64]) * odd_evals[i];
+    }
+
+    evaluations
 }
 
 fn split_even_odd<T>(data: Vec<T>) -> (Vec<T>, Vec<T>) {
@@ -66,6 +74,6 @@ mod tests {
     #[test]
     fn test_fft() {
         let a = vec![Fq::from(0), Fq::from(2)];
-        dbg!(fft(a));
+        assert_eq!(ifft(fft(a.clone())), a);
     }
 }
