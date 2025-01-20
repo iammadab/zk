@@ -398,6 +398,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "fft"
+version = "0.1.0"
+
+[[package]]
 name = "field-tracker"
 version = "0.1.0"
 source = "git+https://github.com/sublinearlabs/field-tracker#faf74ed86e39a4d0ae7bbbd9842784f7db62db15"

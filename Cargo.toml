@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = [
+members = [ "fft",
     "polynomial",
     "stat",
     "sumcheck",
