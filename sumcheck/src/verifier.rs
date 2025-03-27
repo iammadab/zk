@@ -12,16 +12,19 @@ pub struct SumcheckVerifier<F: PrimeField> {
 
 impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (verifier has access to the initial poly or its commitment)
-    pub fn verify(poly: ProductPoly<F>, proof: SumcheckProof<F>) -> Result<bool, &'static str> {
+    pub fn verify(
+        poly: ProductPoly<F>,
+        proof: SumcheckProof<F>,
+        transcript: &mut Transcript,
+    ) -> Result<bool, &'static str> {
         // number of round_poly in the proof should match n_vars
         if proof.round_polys.len() != poly.n_vars() {
             return Err("invalid proof: require 1 round poly for each variable in poly");
         }
 
-        let mut transcript = Transcript::new();
         transcript.append(poly.to_bytes().as_slice());
 
-        let subclaim = Self::verify_internal(proof, &mut transcript)?;
+        let subclaim = Self::verify_internal(proof, transcript)?;
 
         // final verifier check
         // p_v(r_v) = p(r_1, r_2, ..., r_v)
@@ -35,9 +38,11 @@ impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (when the veifier doesn't have access to the initial poly or its commitment)
     /// in such a case, the verifier performs all checks other than the last check.
     /// Returns a subclaim that can later be used for that final check verification.
-    pub fn verify_partial(proof: SumcheckProof<F>) -> Result<SubClaim<F>, &'static str> {
-        let mut transcript = Transcript::new();
-        Self::verify_internal(proof, &mut transcript)
+    pub fn verify_partial(
+        proof: SumcheckProof<F>,
+        transcript: &mut Transcript,
+    ) -> Result<SubClaim<F>, &'static str> {
+        Self::verify_internal(proof, transcript)
     }
 
     /// Main `Sumcheck` verification logic.

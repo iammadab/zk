@@ -36,6 +36,7 @@ mod tests {
     use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
     use polynomial::product_poly::ProductPoly;
+    use transcript::Transcript;
 
     fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {
         let evaluations = CoeffMultilinearPolynomial::new(
@@ -55,9 +56,14 @@ mod tests {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
         let prod_poly = ProductPoly::new(vec![p]).unwrap();
-        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(10)).unwrap();
+        let mut transcript = Transcript::new();
+        let proof =
+            SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(10), &mut transcript)
+                .unwrap();
+
+        let mut transcript = Transcript::new();
         let verification_result =
-            SumcheckVerifier::verify(prod_poly, proof).expect("proof is invalid");
+            SumcheckVerifier::verify(prod_poly, proof, &mut transcript).expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -96,8 +102,10 @@ mod tests {
 
         let p = ProductPoly::new(vec![p1, p2]).unwrap();
 
-        let proof = SumcheckProver::<2, Fr>::prove(p.clone(), Fr::from(5)).unwrap();
-        let verification_result = SumcheckVerifier::verify(p, proof).expect("proof is invalid");
+        let proof =
+            SumcheckProver::<2, Fr>::prove(p.clone(), Fr::from(5), &mut Transcript::new()).unwrap();
+        let verification_result =
+            SumcheckVerifier::verify(p, proof, &mut Transcript::new()).expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -105,9 +113,14 @@ mod tests {
     fn test_correct_sum_prove_partial() {
         let p = p_2ab_3bc();
         let prod_poly = ProductPoly::new(vec![p]).unwrap();
-        let (proof, _) =
-            SumcheckProver::<1, Fr>::prove_partial(prod_poly.clone(), Fr::from(10)).unwrap();
-        let subclaim = SumcheckVerifier::verify_partial(proof).expect("proof is invalid");
+        let (proof, _) = SumcheckProver::<1, Fr>::prove_partial(
+            prod_poly.clone(),
+            Fr::from(10),
+            &mut Transcript::new(),
+        )
+        .unwrap();
+        let subclaim = SumcheckVerifier::verify_partial(proof, &mut Transcript::new())
+            .expect("proof is invalid");
         let expected_sum = prod_poly.evaluate(subclaim.challenges.as_slice()).unwrap();
         assert_eq!(expected_sum, subclaim.sum);
     }
@@ -117,7 +130,9 @@ mod tests {
         // p = 2ab + 3bc
         let p = p_2ab_3bc();
         let prod_poly = ProductPoly::new(vec![p]).unwrap();
-        let proof = SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12)).unwrap();
-        assert!(SumcheckVerifier::verify(prod_poly, proof).is_err());
+        let proof =
+            SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12), &mut Transcript::new())
+                .unwrap();
+        assert!(SumcheckVerifier::verify(prod_poly, proof, &mut Transcript::new()).is_err());
     }
 }
