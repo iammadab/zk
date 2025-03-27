@@ -7,3 +7,4 @@ edition = "2024"
 ark-ff = "0.5.0"
 sumcheck = { path = "../sumcheck" }
 polynomial = { path = "../polynomial" }
+ark-bn254 = "0.5.0"
