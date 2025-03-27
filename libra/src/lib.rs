@@ -20,6 +20,14 @@ fn phase_one_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], f3_dense
     result
 }
 
+fn phase_two_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], x_eq: &[F]) -> Vec<F> {
+    let mut result = vec![F::zero(); x_eq.len()];
+    for [z, x, y] in f1_sparse.iter() {
+        result[*y] += g_eq[*z] * x_eq[*x];
+    }
+    result
+}
+
 #[cfg(test)]
 mod test {
     use crate::eq_table;
