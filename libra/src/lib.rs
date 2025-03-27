@@ -12,6 +12,14 @@ fn eq_table<F: PrimeField>(r: &[F]) -> Vec<F> {
     result
 }
 
+fn phase_one_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], f3_dense: &[F]) -> Vec<F> {
+    let mut result = vec![F::zero(); f3_dense.len()];
+    for [z, x, y] in f1_sparse.iter() {
+        result[*x] += g_eq[*z] * f3_dense[*y];
+    }
+    result
+}
+
 #[cfg(test)]
 mod test {
     use crate::eq_table;
