@@ -12,11 +12,14 @@ pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField> {
 
 impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> {
     /// Generates the `Sumcheck` proof (appends the initial poly to the transcript)
-    pub fn prove(poly: ProductPoly<F>, sum: F) -> Result<SumcheckProof<F>, &'static str> {
-        let mut transcript = Transcript::new();
+    pub fn prove(
+        poly: ProductPoly<F>,
+        sum: F,
+        transcript: &mut Transcript,
+    ) -> Result<SumcheckProof<F>, &'static str> {
         transcript.append(poly.to_bytes().as_slice());
 
-        Ok(Self::prove_internal(poly, sum, &mut transcript)?.0)
+        Ok(Self::prove_internal(poly, sum, transcript)?.0)
     }
 
     /// Generates the `Sumcheck` proof, but doesn't append the initial poly to the transcript.
@@ -24,9 +27,9 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
     pub fn prove_partial(
         poly: ProductPoly<F>,
         sum: F,
+        transcript: &mut Transcript,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
-        let mut transcript = Transcript::new();
-        Self::prove_internal(poly, sum, &mut transcript)
+        Self::prove_internal(poly, sum, transcript)
     }
 
     /// Main `Sumcheck` proof generation logic.
