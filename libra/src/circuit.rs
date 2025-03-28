@@ -26,6 +26,14 @@ impl LayeredCircuit {
 
         evaluations
     }
+
+    fn addi<F: PrimeField>(&self, layer_id: usize) -> &[[usize; 3]] {
+        &self.layers[layer_id].add_gates
+    }
+
+    fn muli<F: PrimeField>(&self, layer_id: usize) -> &[[usize; 3]] {
+        &self.layers[layer_id].mul_gates
+    }
 }
 
 struct Layer {
