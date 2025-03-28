@@ -54,7 +54,7 @@ impl Layer {
 
 #[cfg(test)]
 mod tests {
-    use crate::circuit::{Layer, LayeredCircuit};
+    use crate::circuit::layered_circuit::{Layer, LayeredCircuit};
     use ark_bn254::Fr;
 
     fn circuit() -> LayeredCircuit {
