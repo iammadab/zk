@@ -27,11 +27,11 @@ impl LayeredCircuit {
         evaluations
     }
 
-    fn addi<F: PrimeField>(&self, layer_id: usize) -> &[[usize; 3]] {
+    fn addi(&self, layer_id: usize) -> &[[usize; 3]] {
         &self.layers[layer_id].add_gates
     }
 
-    fn muli<F: PrimeField>(&self, layer_id: usize) -> &[[usize; 3]] {
+    fn muli(&self, layer_id: usize) -> &[[usize; 3]] {
         &self.layers[layer_id].mul_gates
     }
 }
@@ -57,15 +57,18 @@ mod tests {
     use crate::circuit::{Layer, LayeredCircuit};
     use ark_bn254::Fr;
 
-    #[test]
-    fn test_evaluate_layered_circuit() {
-        let circuit = LayeredCircuit {
+    fn circuit() -> LayeredCircuit {
+        LayeredCircuit {
             layers: vec![
                 Layer::new(vec![[0, 0, 1]], vec![]),
                 Layer::new(vec![[0, 0, 1]], vec![[1, 2, 3]]),
             ],
-        };
-        let evaluations = circuit.evaluate(
+        }
+    }
+
+    #[test]
+    fn test_evaluate_layered_circuit() {
+        let evaluations = circuit().evaluate(
             vec![1, 2, 3, 4]
                 .into_iter()
                 .map(Fr::from)
@@ -83,5 +86,13 @@ mod tests {
                 vec![Fr::from(15)]
             ]
         );
+    }
+
+    #[test]
+    fn test_add_i_mul_i() {
+        assert_eq!(circuit().addi(0), vec![[0, 0, 1]]);
+        assert!(circuit().muli(0).is_empty());
+        assert_eq!(circuit().addi(1), vec![[0, 0, 1]]);
+        assert_eq!(circuit().muli(1), vec![[1, 2, 3]]);
     }
 }
