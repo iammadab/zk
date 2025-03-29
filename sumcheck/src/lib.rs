@@ -143,20 +143,20 @@ mod tests {
     #[test]
     fn test_sum_of_product_sumcheck() {
         // 2a + 2b
-        let p2 = MultiLinearPolynomial::new_with_pad(
+        let p1 = MultiLinearPolynomial::new_with_pad(
             vec![Fr::from(0), Fr::from(2), Fr::from(2), Fr::from(4)],
             None,
         );
 
         // 3a + b
-        let p3 = MultiLinearPolynomial::new_with_pad(
+        let p2 = MultiLinearPolynomial::new_with_pad(
             vec![Fr::from(0), Fr::from(1), Fr::from(3), Fr::from(4)],
             None,
         );
 
         let sum_poly = vec![
             ProductPoly::new(vec![p2]).unwrap(),
-            ProductPoly::new(vec![p3]).unwrap(),
+            ProductPoly::new(vec![p1]).unwrap(),
         ];
 
         let proof =
