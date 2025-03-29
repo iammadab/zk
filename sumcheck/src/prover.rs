@@ -93,7 +93,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
     }
 }
 
-// TODO: move to util
+// TODO: delete this when we have sum poly
 fn element_wise_add_all<F: PrimeField>(vectors: &[Vec<F>]) -> Vec<F> {
     if vectors.is_empty() {
         return Vec::new();
