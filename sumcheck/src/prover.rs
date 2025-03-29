@@ -172,8 +172,12 @@ fn element_wise_add_all<F: PrimeField>(vectors: &[Vec<F>]) -> Vec<F> {
 
 #[cfg(test)]
 mod tests {
-    use super::element_wise_add_all;
+    use super::{element_wise_add_all, SumcheckProver};
     use ark_bls12_381::Fr;
+    use polynomial::{
+        multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly,
+    };
+    use transcript::Transcript;
 
     #[test]
     fn test_element_wise_addition() {
@@ -184,5 +188,51 @@ mod tests {
         ]);
 
         assert_eq!(sum, vec![Fr::from(3), Fr::from(6)]);
+    }
+
+    #[test]
+    fn test_proof_equality_given_sumcheck_linearity() {
+        // 5a + 3b => (2a + 2b) + (3a + b)
+
+        // 5a + 3b
+        let p1 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(3), Fr::from(5), Fr::from(8)],
+            None,
+        );
+
+        // 2a + 2b
+        let p2 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(2), Fr::from(2), Fr::from(4)],
+            None,
+        );
+
+        // 3a + b
+        let p3 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(1), Fr::from(3), Fr::from(4)],
+            None,
+        );
+
+        // sumcheck(p1) == sumcheck(p2) + sumcheck(p3)
+        let sumcheck_1_poly = ProductPoly::new(vec![p1]).unwrap();
+        let sumcheck_2_poly = vec![
+            ProductPoly::new(vec![p2]).unwrap(),
+            ProductPoly::new(vec![p3]).unwrap(),
+        ];
+
+        let proof1 = SumcheckProver::<1, Fr>::prove_partial(
+            sumcheck_1_poly,
+            Fr::from(16),
+            &mut Transcript::new(),
+        )
+        .unwrap();
+
+        let proof2 = SumcheckProver::<1, Fr>::prove_sum_of_products_internal(
+            sumcheck_2_poly,
+            Fr::from(16),
+            &mut Transcript::new(),
+        )
+        .unwrap();
+
+        assert_eq!(proof1, proof2);
     }
 }

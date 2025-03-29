@@ -3,7 +3,7 @@ pub mod verifier;
 
 use ark_ff::{BigInteger, PrimeField};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Holds the round polys and the initial prover claimed sum for sumcheck_old
 pub struct SumcheckProof<F: PrimeField> {
     sum: F,
