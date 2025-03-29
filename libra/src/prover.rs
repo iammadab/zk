@@ -4,7 +4,7 @@ use crate::{
 };
 use ark_ff::PrimeField;
 use polynomial::{multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly};
-use sumcheck::{prover::SumcheckProver, SumcheckProof};
+use sumcheck::{SumcheckProof, prover::SumcheckProver};
 use transcript::Transcript;
 
 struct GKRProof<F: PrimeField> {

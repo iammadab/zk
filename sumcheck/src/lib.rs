@@ -139,4 +139,33 @@ mod tests {
         .unwrap();
         assert!(SumcheckVerifier::verify(vec![prod_poly], proof, &mut Transcript::new()).is_err());
     }
+
+    #[test]
+    fn test_sum_of_product_sumcheck() {
+        // 2a + 2b
+        let p2 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(2), Fr::from(2), Fr::from(4)],
+            None,
+        );
+
+        // 3a + b
+        let p3 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(1), Fr::from(3), Fr::from(4)],
+            None,
+        );
+
+        let sum_poly = vec![
+            ProductPoly::new(vec![p2]).unwrap(),
+            ProductPoly::new(vec![p3]).unwrap(),
+        ];
+
+        let proof =
+            SumcheckProver::<1, Fr>::prove(sum_poly.clone(), Fr::from(16), &mut Transcript::new())
+                .unwrap();
+
+        let proof_result =
+            SumcheckVerifier::verify(sum_poly, proof, &mut Transcript::new()).unwrap();
+
+        assert!(proof_result);
+    }
 }
