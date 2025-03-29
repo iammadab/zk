@@ -24,16 +24,13 @@ impl Builder {
         (INPUT_LAYER_ID, id)
     }
 
-    fn add(&mut self, left: &Node, right: &Node) {
-        // what do we do here?
-        // we need to insert the node in the appropriate layer
-        // we already have the left id and the right id
-        // we just need the output id
-        // a function like insert in layer i should be sufficient
-        todo!()
+    fn add(&mut self, left: &Node, right: &Node) -> Node {
+        // ensure that both inputs come from the same layer
+        assert_eq!(left.0, right.0);
+        self.insert_in_layer(left.0 + 1, GateInfo::Add(left.1, right.1))
     }
 
-    fn insert_in_layer(&mut self, layer_id: usize, gate_info: GateInfo) {
+    fn insert_in_layer(&mut self, layer_id: usize, gate_info: GateInfo) -> Node {
         assert!(layer_id <= self.layered_circuit.layers.len());
 
         // if we haven't seen an element from this layer we first create the layer
@@ -51,6 +48,8 @@ impl Builder {
                 self.layered_circuit.layers[layer_id].mul_gate([id, l, r]);
             }
         }
+
+        (layer_id, id)
     }
 }
 
