@@ -123,16 +123,22 @@ mod tests {
     fn test_new_multilinear_poly() {
         // should not allow n_vars / evaluation count mismatch
         let poly = MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2)]);
-        assert_eq!(poly.is_err(), true);
+        assert!(poly.is_err());
         let poly = MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1)]);
-        assert_eq!(poly.is_err(), true);
+        assert!(poly.is_err());
 
         // correct inputs
         let poly = MultiLinearPolynomial::new(1, vec![Fr::from(3), Fr::from(1)]);
-        assert_eq!(poly.is_err(), false);
+        assert!(poly.is_ok());
         let poly =
             MultiLinearPolynomial::new(2, vec![Fr::from(3), Fr::from(1), Fr::from(2), Fr::from(5)]);
-        assert_eq!(poly.is_err(), false);
+        assert!(poly.is_ok());
+
+        let padded_poly = MultiLinearPolynomial::new_with_pad(vec![Fr::from(1); 3], None);
+        assert_eq!(
+            padded_poly.evaluations,
+            vec![Fr::from(1), Fr::from(1), Fr::from(1), Fr::from(0)]
+        );
     }
 
     #[test]

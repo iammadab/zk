@@ -56,7 +56,7 @@ impl Builder {
 
         // mark the inputs as consumed
         self.output_consumed[left.2] = true;
-        self.output_consumed[right.2] = rue;
+        self.output_consumed[right.2] = true;
 
         // insert inputs into the appropriate layer
         self.insert_in_layer(left.0 + 1, GateInfo::Mul(left.1, right.1))

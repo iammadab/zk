@@ -23,7 +23,7 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
 
     let mut transcript = Transcript::new();
 
-    let output_mle = MultiLinearPolynomial::new()
+    //let output_mle = MultiLinearPolynomial::new()
 
     todo!()
 }
