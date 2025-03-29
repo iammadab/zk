@@ -138,7 +138,12 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
             challenges.push(challenge);
         }
 
-        todo!()
+        let proof = SumcheckProof {
+            sum,
+            round_polys: final_round_polys,
+        };
+
+        Ok((proof, challenges))
     }
 }
 
