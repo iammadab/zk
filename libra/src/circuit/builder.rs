@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use super::layered_circuit::{Layer, LayeredCircuit};
 
 const INPUT_LAYER_ID: usize = 0;

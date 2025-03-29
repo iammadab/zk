@@ -1,6 +1,5 @@
-use crate::circuit::layered_circuit::LayeredCircuit;
+use crate::{circuit::layered_circuit::LayeredCircuit, util::w_i};
 use ark_ff::PrimeField;
-use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
 use sumcheck::SumcheckProof;
 use transcript::Transcript;
 
@@ -10,48 +9,25 @@ struct GKRProof<F: PrimeField> {
 }
 
 fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> GKRProof<F> {
-    // we need to prover layer by layer
-    // each layer is supposed to generate a sumcheck proof
-    // and also each layer should return hints
-
-    // let us focus on the output layer now
-    // we have the output vec we can turn that to an mle
-    // first we need to put the public inputs to the transcript
-    // what are the public inputs??
-    // the circuit should be part but for now we skip
-    // we need the output mle
-
     let mut transcript = Transcript::new();
 
-    let mut evaluations_iter = evaluations.into_iter();
+    // add public input to the transcript
+    // TODO: add the circuit also
+    let output_mle = w_i(&evaluations, 0);
+    transcript.append(output_mle.to_bytes().as_slice());
 
-    let mut output_vec = evaluations_iter.next().expect("empty evaluation vec");
+    let r_0 = transcript.sample_n_field_elements(output_mle.n_vars());
+    let m_0 = output_mle.evaluate(&r_0);
 
-    // ensure that output vec has evaluations for 0 and 1
-    let output_vec = if output_vec.len() == 1 {
-        output_vec.push(F::zero());
-        output_vec
-    } else {
-        output_vec
-    };
-
-    let output_mle = MultiLinearPolynomial::new_with_pad(output_vec, None);
-
-    //let output_mle = MultiLinearPolynomial::new_with_pad(evaluations, pad_element)
+    // m_0 will serve as the claimed sum
+    // r_0 will serve as g
+    // what next??
+    // we need to perform sumcheck for a particular layer
+    // the layer 0 to layer 1 connection
 
     todo!()
 }
 
-fn w_i<F: PrimeField>(evaluations: &[Vec<F>], layer_id: usize) -> MultiLinearPolynomial<F> {
-    let values = if layer_id == 0 {
-        if evaluations[0].len() == 1 {
-            vec![evaluations[0][0], F::zero()]
-        } else {
-            evaluations[0].clone()
-        }
-    } else {
-        evaluations[layer_id].clone()
-    };
-
-    MultiLinearPolynomial::new_with_pad(values, None)
+fn libra_sumcheck<F: PrimeField>(layer_id: usize) -> SumcheckProof<F> {
+    todo!()
 }
