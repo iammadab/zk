@@ -1,6 +1,10 @@
-use crate::{circuit::layered_circuit::LayeredCircuit, util::w_i};
+use crate::{
+    circuit::layered_circuit::LayeredCircuit,
+    util::{eq_table, phase_one_table, w_i},
+};
 use ark_ff::PrimeField;
-use sumcheck::SumcheckProof;
+use polynomial::{multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly};
+use sumcheck::{SumcheckProof, prover::SumcheckProver};
 use transcript::Transcript;
 
 struct GKRProof<F: PrimeField> {
@@ -28,6 +32,33 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
     todo!()
 }
 
-fn libra_sumcheck<F: PrimeField>(layer_id: usize) -> SumcheckProof<F> {
+fn libra_sumcheck<F: PrimeField>(
+    circuit: &LayeredCircuit,
+    evaluations: &[Vec<F>],
+    layer_id: usize,
+    output_challenges: &[F],
+    transcript: &mut Transcript,
+) -> SumcheckProof<F> {
+    let addi = circuit.addi(layer_id);
+    let muli = circuit.muli(layer_id);
+    let w_next = w_i(evaluations, layer_id + 1);
+
+    //let sumcheck_prover = SumcheckProver::prove_partial(ProductPoly::new(polynomials), sum, transcript)
+
+    // let us focus on just the muli type polynomial
+    // phase 1
+    // first we need to construct the phase 1 table then run sumcheck product
+    let i_gz = eq_table(output_challenges);
+    let hg_table = phase_one_table(&muli, &i_gz, w_next.evaluation_slice());
+    let phase_one_product_poly = ProductPoly::new(vec![
+        MultiLinearPolynomial::new_with_pad(hg_table, None),
+        w_next,
+    ])
+    .unwrap();
+
+    let (phase_one_proof, u_challenges) =
+        SumcheckProver::<2, F>::prove_partial(phase_one_product_poly, F::zero(), transcript)
+            .unwrap();
+
     todo!()
 }

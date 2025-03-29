@@ -2,7 +2,7 @@ use ark_ff::PrimeField;
 use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
 use polynomial::multilinear::pairing_index::index_pair;
 
-fn eq_table<F: PrimeField>(r: &[F]) -> Vec<F> {
+pub(crate) fn eq_table<F: PrimeField>(r: &[F]) -> Vec<F> {
     let mut result = vec![F::one(); 1 << r.len()];
     for (i, val) in r.iter().enumerate() {
         for (l, r) in index_pair(r.len() as u8, i as u8) {
@@ -13,7 +13,11 @@ fn eq_table<F: PrimeField>(r: &[F]) -> Vec<F> {
     result
 }
 
-fn phase_one_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], f3_dense: &[F]) -> Vec<F> {
+pub(crate) fn phase_one_table<F: PrimeField>(
+    f1_sparse: &[[usize; 3]],
+    g_eq: &[F],
+    f3_dense: &[F],
+) -> Vec<F> {
     let mut result = vec![F::zero(); f3_dense.len()];
     for [z, x, y] in f1_sparse.iter() {
         result[*x] += g_eq[*z] * f3_dense[*y];
@@ -21,7 +25,11 @@ fn phase_one_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], f3_dense
     result
 }
 
-fn phase_two_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], x_eq: &[F]) -> Vec<F> {
+pub(crate) fn phase_two_table<F: PrimeField>(
+    f1_sparse: &[[usize; 3]],
+    g_eq: &[F],
+    x_eq: &[F],
+) -> Vec<F> {
     let mut result = vec![F::zero(); x_eq.len()];
     for [z, x, y] in f1_sparse.iter() {
         result[*y] += g_eq[*z] * x_eq[*x];
