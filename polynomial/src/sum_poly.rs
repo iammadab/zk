@@ -41,7 +41,7 @@ impl<F: PrimeField> SumPoly<F> {
         })
     }
 
-    // Partially evalutes the constituent polynomials
+    /// Partially evalutes the constituent polynomials
     pub fn partial_evaluate(
         &self,
         initial_var: usize,
@@ -59,8 +59,15 @@ impl<F: PrimeField> SumPoly<F> {
         })
     }
 
+    /// The boolean hypercube representation of the sum poly
     pub fn sum_reduce(&self) -> Vec<F> {
-        todo!()
+        let mut result = self.polynomials[0].prod_reduce().to_vec();
+        for poly in self.polynomials.iter().skip(1) {
+            for (i, eval) in poly.prod_reduce().iter().enumerate() {
+                result[i] += eval
+            }
+        }
+        result
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -118,5 +125,14 @@ mod test {
         let poly2 = poly.partial_evaluate(0, &[Fr::from(2)]).unwrap();
         assert_eq!(poly2.n_vars(), 1);
         assert_eq!(poly2.evaluate(&[Fr::from(3)]).unwrap(), Fr::from(19));
+    }
+
+    #[test]
+    fn test_sum_reduce() {
+        let poly = sum_poly();
+        assert_eq!(
+            poly.sum_reduce(),
+            vec![Fr::from(0), Fr::from(3), Fr::from(5), Fr::from(8)]
+        );
     }
 }
