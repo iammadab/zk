@@ -1,6 +1,7 @@
 use ark_ff::PrimeField;
 
-struct LayeredCircuit {
+#[derive(Default)]
+pub(crate) struct LayeredCircuit {
     // we assume that the output layer is at index 0
     layers: Vec<Layer>,
 }
@@ -36,6 +37,7 @@ impl LayeredCircuit {
     }
 }
 
+#[derive(Default)]
 struct Layer {
     add_gates: Vec<[usize; 3]>,
     mul_gates: Vec<[usize; 3]>,
