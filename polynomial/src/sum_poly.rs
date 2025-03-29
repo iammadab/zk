@@ -4,6 +4,7 @@ use ark_ff::PrimeField;
 
 use crate::product_poly::ProductPoly;
 
+#[derive(Clone)]
 pub struct SumPoly<F: PrimeField> {
     n_vars: usize,
     polynomials: Vec<ProductPoly<F>>,
