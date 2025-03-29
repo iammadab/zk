@@ -17,8 +17,6 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<SumcheckProof<F>, &'static str> {
-        // TODO: fix this, to bytes should be for all
-        //  moving this logic to the sum poly
         transcript.append(poly.to_bytes().as_slice());
 
         Ok(Self::prove_internal(poly, sum, transcript)?.0)
