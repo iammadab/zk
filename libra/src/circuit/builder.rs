@@ -30,6 +30,12 @@ impl Builder {
         self.insert_in_layer(left.0 + 1, GateInfo::Add(left.1, right.1))
     }
 
+    fn mul(&mut self, left: &Node, right: &Node) -> Node {
+        // ensure that both inputs come from the same layer
+        assert_eq!(left.0, right.0);
+        self.insert_in_layer(left.0 + 1, GateInfo::Mul(left.1, right.1))
+    }
+
     fn insert_in_layer(&mut self, layer_id: usize, gate_info: GateInfo) -> Node {
         assert!(layer_id <= self.layered_circuit.layers.len());
 
