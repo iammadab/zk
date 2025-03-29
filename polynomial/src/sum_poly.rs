@@ -71,7 +71,11 @@ impl<F: PrimeField> SumPoly<F> {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        todo!()
+        self.polynomials
+            .iter()
+            .map(|poly| poly.to_bytes())
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 
     pub fn n_vars(&self) -> usize {
