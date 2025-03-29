@@ -1,12 +1,13 @@
 use ark_ff::PrimeField;
 
-struct LayeredCircuit {
+#[derive(Default)]
+pub(crate) struct LayeredCircuit {
     // we assume that the output layer is at index 0
-    layers: Vec<Layer>,
+    pub(crate) layers: Vec<Layer>,
 }
 
 impl LayeredCircuit {
-    fn evaluate<F: PrimeField>(&self, inputs: &[F]) -> Vec<Vec<F>> {
+    pub(crate) fn evaluate<F: PrimeField>(&self, inputs: &[F]) -> Vec<Vec<F>> {
         let mut evaluations = Vec::with_capacity(self.layers.len());
         evaluations.push(inputs.to_vec());
 
@@ -36,7 +37,8 @@ impl LayeredCircuit {
     }
 }
 
-struct Layer {
+#[derive(Default)]
+pub(crate) struct Layer {
     add_gates: Vec<[usize; 3]>,
     mul_gates: Vec<[usize; 3]>,
     len: usize,
@@ -49,6 +51,20 @@ impl Layer {
             add_gates,
             mul_gates,
         }
+    }
+
+    pub(crate) fn add_gate(&mut self, gate_info: [usize; 3]) {
+        self.add_gates.push(gate_info);
+        self.len += 1;
+    }
+
+    pub(crate) fn mul_gate(&mut self, gate_info: [usize; 3]) {
+        self.mul_gates.push(gate_info);
+        self.len += 1;
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.len
     }
 }
 
