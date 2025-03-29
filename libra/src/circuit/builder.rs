@@ -56,7 +56,7 @@ impl Builder {
 
         // mark the inputs as consumed
         self.output_consumed[left.2] = true;
-        self.output_consumed[right.2] = true;
+        self.output_consumed[right.2] = rue;
 
         // insert inputs into the appropriate layer
         self.insert_in_layer(left.0 + 1, GateInfo::Mul(left.1, right.1))
@@ -131,8 +131,6 @@ mod tests {
         let cd = builder.mul(&c, &d);
         builder.add(&ab, &cd);
 
-        dbg!(&builder.output_consumed);
-
         assert!(builder.to_layered_circuit().is_some());
     }
 
@@ -147,8 +145,6 @@ mod tests {
         let ab = builder.add(&a, &b);
         let cd = builder.mul(&c, &d);
         builder.add(&ab, &cd);
-
-        dbg!(&builder.output_consumed);
 
         assert!(builder.to_layered_circuit().is_none());
     }
