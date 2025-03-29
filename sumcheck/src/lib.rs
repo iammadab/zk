@@ -62,8 +62,8 @@ mod tests {
                 .unwrap();
 
         let mut transcript = Transcript::new();
-        let verification_result =
-            SumcheckVerifier::verify(prod_poly, proof, &mut transcript).expect("proof is invalid");
+        let verification_result = SumcheckVerifier::verify(vec![prod_poly], proof, &mut transcript)
+            .expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -105,8 +105,8 @@ mod tests {
         let proof =
             SumcheckProver::<2, Fr>::prove(vec![p.clone()], Fr::from(5), &mut Transcript::new())
                 .unwrap();
-        let verification_result =
-            SumcheckVerifier::verify(p, proof, &mut Transcript::new()).expect("proof is invalid");
+        let verification_result = SumcheckVerifier::verify(vec![p], proof, &mut Transcript::new())
+            .expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -137,6 +137,6 @@ mod tests {
             &mut Transcript::new(),
         )
         .unwrap();
-        assert!(SumcheckVerifier::verify(prod_poly, proof, &mut Transcript::new()).is_err());
+        assert!(SumcheckVerifier::verify(vec![prod_poly], proof, &mut Transcript::new()).is_err());
     }
 }

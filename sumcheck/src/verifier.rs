@@ -13,22 +13,23 @@ pub struct SumcheckVerifier<F: PrimeField> {
 impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (verifier has access to the initial poly or its commitment)
     pub fn verify(
-        poly: ProductPoly<F>,
+        polys: Vec<ProductPoly<F>>,
         proof: SumcheckProof<F>,
         transcript: &mut Transcript,
     ) -> Result<bool, &'static str> {
         // number of round_poly in the proof should match n_vars
-        if proof.round_polys.len() != poly.n_vars() {
+        if proof.round_polys.len() != polys[0].n_vars() {
             return Err("invalid proof: require 1 round poly for each variable in poly");
         }
 
-        transcript.append(poly.to_bytes().as_slice());
+        // TODO: fix bug here, when you introduce sum poly
+        transcript.append(polys[0].to_bytes().as_slice());
 
         let subclaim = Self::verify_internal(proof, transcript)?;
 
         // final verifier check
         // p_v(r_v) = p(r_1, r_2, ..., r_v)
-        let initial_poly_eval = poly
+        let initial_poly_eval = polys[0]
             .evaluate(subclaim.challenges.as_slice())
             .map_err(|_| "couldn't evaluate initial poly")?;
         // ensure the oracle evaluation equals the claimed sum
