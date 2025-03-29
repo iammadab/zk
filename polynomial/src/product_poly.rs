@@ -12,7 +12,7 @@ pub struct ProductPoly<F: PrimeField> {
 impl<F: PrimeField> ProductPoly<F> {
     /// Instantiate a new product_poly from a set of `Multilinear` polynomials
     pub fn new(polynomials: Vec<MultiLinearPolynomial<F>>) -> Result<Self, &'static str> {
-        if polynomials.len() == 0 {
+        if polynomials.is_empty() {
             return Err("cannot create product polynomial from empty polynomials");
         }
 
