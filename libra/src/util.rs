@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
 use polynomial::multilinear::pairing_index::index_pair;
 
 fn eq_table<F: PrimeField>(r: &[F]) -> Vec<F> {
@@ -26,6 +27,23 @@ fn phase_two_table<F: PrimeField>(f1_sparse: &[[usize; 3]], g_eq: &[F], x_eq: &[
         result[*y] += g_eq[*z] * x_eq[*x];
     }
     result
+}
+
+pub(crate) fn w_i<F: PrimeField>(
+    evaluations: &[Vec<F>],
+    layer_id: usize,
+) -> MultiLinearPolynomial<F> {
+    let values = if layer_id == 0 {
+        if evaluations[0].len() == 1 {
+            vec![evaluations[0][0], F::zero()]
+        } else {
+            evaluations[0].clone()
+        }
+    } else {
+        evaluations[layer_id].clone()
+    };
+
+    MultiLinearPolynomial::new_with_pad(values, None)
 }
 
 #[cfg(test)]

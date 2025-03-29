@@ -43,6 +43,15 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
 }
 
 fn w_i<F: PrimeField>(evaluations: &[Vec<F>], layer_id: usize) -> MultiLinearPolynomial<F> {
-    // it is assumed that the output polynomial is at index 0
-    todo!()
+    let values = if layer_id == 0 {
+        if evaluations[0].len() == 1 {
+            vec![evaluations[0][0], F::zero()]
+        } else {
+            evaluations[0].clone()
+        }
+    } else {
+        evaluations[layer_id].clone()
+    };
+
+    MultiLinearPolynomial::new_with_pad(values, None)
 }
