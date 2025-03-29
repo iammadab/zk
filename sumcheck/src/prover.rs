@@ -1,6 +1,6 @@
 use crate::{field_elements_to_bytes, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::{product_poly::ProductPoly, sum_poly::SumPoly};
+use polynomial::sum_poly::SumPoly;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
@@ -77,49 +77,5 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
         let proof = SumcheckProof { sum, round_polys };
 
         Ok((proof, challenges))
-    }
-}
-
-// TODO: delete this when we have sum poly
-fn element_wise_add_all<F: PrimeField>(vectors: &[Vec<F>]) -> Vec<F> {
-    if vectors.is_empty() {
-        return Vec::new();
-    }
-
-    let length = vectors[0].len();
-    assert!(
-        vectors.iter().all(|v| v.len() == length),
-        "All vectors must have the same length"
-    );
-
-    let mut result = vec![F::zero(); length];
-
-    for vector in vectors {
-        for (i, &value) in vector.iter().enumerate() {
-            result[i] += value;
-        }
-    }
-
-    result
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{element_wise_add_all, SumcheckProver};
-    use ark_bls12_381::Fr;
-    use polynomial::{
-        multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly,
-    };
-    use transcript::Transcript;
-
-    #[test]
-    fn test_element_wise_addition() {
-        let sum = element_wise_add_all(&[
-            vec![Fr::from(1), Fr::from(2)],
-            vec![Fr::from(1), Fr::from(2)],
-            vec![Fr::from(1), Fr::from(2)],
-        ]);
-
-        assert_eq!(sum, vec![Fr::from(3), Fr::from(6)]);
     }
 }
