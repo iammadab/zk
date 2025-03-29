@@ -30,8 +30,15 @@ impl<F: PrimeField> SumPoly<F> {
         })
     }
 
+    /// Evaluates P(x) = A(x) + B(x) + ... + N(x)
     pub fn evaluate(&self, assignments: &[F]) -> Result<F, &'static str> {
-        todo!()
+        if assignments.len() != self.n_vars {
+            return Err("evaluate must assign to all variables");
+        }
+
+        self.polynomials.iter().try_fold(F::zero(), |sum, poly| {
+            poly.evaluate(assignments).map(|value| sum + value)
+        })
     }
 
     pub fn partial_evaluate(
