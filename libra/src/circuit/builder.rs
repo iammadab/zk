@@ -4,12 +4,14 @@ use super::layered_circuit::{Layer, LayeredCircuit};
 
 const INPUT_LAYER_ID: usize = 0;
 
-// (layer, id)
-type Node = (usize, usize);
+// (layer, id, validation_id)
+type Node = (usize, usize, usize);
 
 #[derive(Default)]
 struct Builder {
     curr_input_id: usize,
+    curr_validation_id: usize,
+    output_consumed: Vec<bool>,
     layered_circuit: LayeredCircuit,
 }
 
@@ -19,9 +21,18 @@ impl Builder {
         self.curr_input_id - 1
     }
 
+    fn next_validation_id(&mut self) -> usize {
+        self.curr_validation_id += 1;
+        self.output_consumed.push(false);
+        self.curr_validation_id - 1
+    }
+
     fn input(&mut self) -> Node {
-        let id = self.next_input_id();
-        (INPUT_LAYER_ID, id)
+        (
+            INPUT_LAYER_ID,
+            self.next_input_id(),
+            self.next_validation_id(),
+        )
     }
 
     fn input_n(&mut self, n: usize) -> Vec<Node> {
@@ -31,12 +42,23 @@ impl Builder {
     fn add(&mut self, left: &Node, right: &Node) -> Node {
         // ensure that both inputs come from the same layer
         assert_eq!(left.0, right.0);
+
+        // mark the inputs as consumed
+        self.output_consumed[left.2] = true;
+        self.output_consumed[right.2] = true;
+
         self.insert_in_layer(left.0 + 1, GateInfo::Add(left.1, right.1))
     }
 
     fn mul(&mut self, left: &Node, right: &Node) -> Node {
         // ensure that both inputs come from the same layer
         assert_eq!(left.0, right.0);
+
+        // mark the inputs as consumed
+        self.output_consumed[left.2] = true;
+        self.output_consumed[right.2] = true;
+
+        // insert inputs into the appropriate layer
         self.insert_in_layer(left.0 + 1, GateInfo::Mul(left.1, right.1))
     }
 
@@ -59,14 +81,29 @@ impl Builder {
             }
         }
 
-        (layer_id, id)
+        (layer_id, id, self.next_validation_id())
     }
 
     fn to_layered_circuit(self) -> Option<LayeredCircuit> {
         let mut circuit = self.layered_circuit;
-        // TODO: do circuit validation here to ensure that we have a valid layered circuit
-        circuit.layers.reverse();
-        Some(circuit)
+
+        let no_of_unused = self.output_consumed.into_iter().filter(|v| !v).count();
+
+        // every created element, input, gates, start out with a consumed state of false
+        // when an element is used as input to the creation of another element the inputs
+        // output state changes to true.
+        // hence the number of unconsumed state is an accurate representation of unconsumed nodes
+        // for layered circuit, we can have more than one unconsumed nodes but they must
+        // all be on the output layer.
+        // hence checking that the number of unconsumed states equals the number of nodes in the
+        // output layer should be a complete way to validate accurate layered circuit construction
+        // given our other type constraints.
+        if circuit.layers.last().unwrap().len() != no_of_unused {
+            None
+        } else {
+            circuit.layers.reverse();
+            Some(circuit)
+        }
     }
 }
 
@@ -94,6 +131,8 @@ mod tests {
         let cd = builder.mul(&c, &d);
         builder.add(&ab, &cd);
 
+        dbg!(&builder.output_consumed);
+
         assert!(builder.to_layered_circuit().is_some());
     }
 
@@ -108,6 +147,8 @@ mod tests {
         let ab = builder.add(&a, &b);
         let cd = builder.mul(&c, &d);
         builder.add(&ab, &cd);
+
+        dbg!(&builder.output_consumed);
 
         assert!(builder.to_layered_circuit().is_none());
     }
