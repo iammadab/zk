@@ -26,6 +26,17 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
         })
     }
 
+    /// Instantiates a new `MultilinearPolynomial` but pads to the next power of 2
+    /// use of api can pass in the pad element, if not defaults to 0 in the field
+    pub fn new_with_pad(mut evaluations: Vec<F>, pad_element: Option<F>) -> Self {
+        let target_len = evaluations.len().next_power_of_two();
+        evaluations.resize(target_len, pad_element.unwrap_or(F::zero()));
+        Self {
+            n_vars: target_len.ilog2() as usize,
+            evaluations,
+        }
+    }
+
     /// Returns the number of variables
     pub fn n_vars(&self) -> usize {
         self.n_vars

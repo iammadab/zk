@@ -561,6 +561,7 @@ dependencies = [
  "ark-ff",
  "polynomial",
  "sumcheck",
+ "transcript",
 ]
 
 [[package]]
