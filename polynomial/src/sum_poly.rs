@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use ark_ff::PrimeField;
 
 use crate::product_poly::ProductPoly;
