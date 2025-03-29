@@ -29,11 +29,11 @@ impl LayeredCircuit {
         evaluations
     }
 
-    fn addi(&self, layer_id: usize) -> &[[usize; 3]] {
+    pub(crate) fn addi(&self, layer_id: usize) -> &[[usize; 3]] {
         &self.layers[layer_id].add_gates
     }
 
-    fn muli(&self, layer_id: usize) -> &[[usize; 3]] {
+    pub(crate) fn muli(&self, layer_id: usize) -> &[[usize; 3]] {
         &self.layers[layer_id].mul_gates
     }
 }

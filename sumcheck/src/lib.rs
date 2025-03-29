@@ -3,7 +3,7 @@ pub mod verifier;
 
 use ark_ff::{BigInteger, PrimeField};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Holds the round polys and the initial prover claimed sum for sumcheck_old
 pub struct SumcheckProof<F: PrimeField> {
     sum: F,
@@ -36,6 +36,7 @@ mod tests {
     use polynomial::multilinear::coefficient_form::CoeffMultilinearPolynomial;
     use polynomial::multilinear::evaluation_form::MultiLinearPolynomial;
     use polynomial::product_poly::ProductPoly;
+    use polynomial::sum_poly::SumPoly;
     use transcript::Transcript;
 
     fn p_2ab_3bc() -> MultiLinearPolynomial<Fr> {
@@ -54,16 +55,18 @@ mod tests {
     #[test]
     fn test_sumcheck_correct_sum_multilinear() {
         // p = 2ab + 3bc
-        let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
         let mut transcript = Transcript::new();
-        let proof =
-            SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(10), &mut transcript)
-                .unwrap();
+        let proof = SumcheckProver::<1, Fr>::prove(
+            p_2ab_3bc().to_sum_poly(),
+            Fr::from(10),
+            &mut transcript,
+        )
+        .unwrap();
 
         let mut transcript = Transcript::new();
         let verification_result =
-            SumcheckVerifier::verify(prod_poly, proof, &mut transcript).expect("proof is invalid");
+            SumcheckVerifier::verify(p_2ab_3bc().to_sum_poly(), proof, &mut transcript)
+                .expect("proof is invalid");
         assert!(verification_result);
     }
 
@@ -100,7 +103,7 @@ mod tests {
         )
         .unwrap();
 
-        let p = ProductPoly::new(vec![p1, p2]).unwrap();
+        let p = SumPoly::new(vec![ProductPoly::new(vec![p1, p2]).unwrap()]).unwrap();
 
         let proof =
             SumcheckProver::<2, Fr>::prove(p.clone(), Fr::from(5), &mut Transcript::new()).unwrap();
@@ -111,28 +114,57 @@ mod tests {
 
     #[test]
     fn test_correct_sum_prove_partial() {
-        let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
         let (proof, _) = SumcheckProver::<1, Fr>::prove_partial(
-            prod_poly.clone(),
+            p_2ab_3bc().to_sum_poly(),
             Fr::from(10),
             &mut Transcript::new(),
         )
         .unwrap();
         let subclaim = SumcheckVerifier::verify_partial(proof, &mut Transcript::new())
             .expect("proof is invalid");
-        let expected_sum = prod_poly.evaluate(subclaim.challenges.as_slice()).unwrap();
+        let expected_sum = p_2ab_3bc()
+            .evaluate(subclaim.challenges.as_slice())
+            .unwrap();
         assert_eq!(expected_sum, subclaim.sum);
     }
 
     #[test]
     fn test_invalid_sum() {
-        // p = 2ab + 3bc
-        let p = p_2ab_3bc();
-        let prod_poly = ProductPoly::new(vec![p]).unwrap();
+        let proof = SumcheckProver::<1, Fr>::prove(
+            p_2ab_3bc().to_sum_poly(),
+            Fr::from(12),
+            &mut Transcript::new(),
+        )
+        .unwrap();
+        assert!(
+            SumcheckVerifier::verify(p_2ab_3bc().to_sum_poly(), proof, &mut Transcript::new())
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_sum_of_product_sumcheck() {
+        // 2a + 2b
+        let p1 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(2), Fr::from(2), Fr::from(4)],
+            None,
+        );
+
+        // 3a + b
+        let p2 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(1), Fr::from(3), Fr::from(4)],
+            None,
+        );
+
+        let sum_poly = SumPoly::new(vec![p2.to_product_poly(), p1.to_product_poly()]).unwrap();
+
         let proof =
-            SumcheckProver::<1, Fr>::prove(prod_poly.clone(), Fr::from(12), &mut Transcript::new())
+            SumcheckProver::<1, Fr>::prove(sum_poly.clone(), Fr::from(16), &mut Transcript::new())
                 .unwrap();
-        assert!(SumcheckVerifier::verify(prod_poly, proof, &mut Transcript::new()).is_err());
+
+        let proof_result =
+            SumcheckVerifier::verify(sum_poly, proof, &mut Transcript::new()).unwrap();
+
+        assert!(proof_result);
     }
 }

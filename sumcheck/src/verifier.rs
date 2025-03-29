@@ -1,6 +1,6 @@
 use crate::{field_elements_to_bytes, SubClaim, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::product_poly::ProductPoly;
+use polynomial::sum_poly::SumPoly;
 use polynomial::univariate_poly::UnivariatePolynomial;
 use std::marker::PhantomData;
 use transcript::Transcript;
@@ -13,7 +13,7 @@ pub struct SumcheckVerifier<F: PrimeField> {
 impl<F: PrimeField> SumcheckVerifier<F> {
     /// Verify a `Sumcheck` proof (verifier has access to the initial poly or its commitment)
     pub fn verify(
-        poly: ProductPoly<F>,
+        poly: SumPoly<F>,
         proof: SumcheckProof<F>,
         transcript: &mut Transcript,
     ) -> Result<bool, &'static str> {
@@ -31,11 +31,13 @@ impl<F: PrimeField> SumcheckVerifier<F> {
         let initial_poly_eval = poly
             .evaluate(subclaim.challenges.as_slice())
             .map_err(|_| "couldn't evaluate initial poly")?;
+
         // ensure the oracle evaluation equals the claimed sum
         Ok(initial_poly_eval == subclaim.sum)
     }
 
-    /// Verify a `Sumcheck` proof (when the veifier doesn't have access to the initial poly or its commitment)
+    /// Verify a `Sumcheck` proof
+    /// (when the veifier doesn't have access to the initial poly or its commitment)
     /// in such a case, the verifier performs all checks other than the last check.
     /// Returns a subclaim that can later be used for that final check verification.
     pub fn verify_partial(

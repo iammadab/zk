@@ -1,4 +1,4 @@
-use crate::multilinear::pairing_index::index_pair;
+use crate::{multilinear::pairing_index::index_pair, product_poly::ProductPoly, sum_poly::SumPoly};
 use ark_ff::{BigInteger, PrimeField};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -84,10 +84,7 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
 
         // truncate and return new polynomial
         let new_n_vars = self.n_vars - assignments.len();
-        Ok(Self::new(
-            new_n_vars,
-            new_evaluations[..(1 << new_n_vars)].to_vec(),
-        )?)
+        Self::new(new_n_vars, new_evaluations[..(1 << new_n_vars)].to_vec())
     }
 
     /// Evaluate the `MultilinearPolynomial` at n points
@@ -111,6 +108,14 @@ impl<F: PrimeField> MultiLinearPolynomial<F> {
             .map(|elem| elem.into_bigint().to_bytes_be())
             .collect::<Vec<Vec<u8>>>()
             .concat()
+    }
+
+    pub fn to_product_poly(&self) -> ProductPoly<F> {
+        ProductPoly::new(vec![self.clone()]).expect("cannot fail only one poly")
+    }
+
+    pub fn to_sum_poly(&self) -> SumPoly<F> {
+        SumPoly::new(vec![self.to_product_poly()]).expect("cannot fail only one poly")
     }
 }
 
