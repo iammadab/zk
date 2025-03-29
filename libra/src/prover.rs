@@ -23,7 +23,26 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
 
     let mut transcript = Transcript::new();
 
-    //let output_mle = MultiLinearPolynomial::new()
+    let mut evaluations_iter = evaluations.into_iter();
 
+    let mut output_vec = evaluations_iter.next().expect("empty evaluation vec");
+
+    // ensure that output vec has evaluations for 0 and 1
+    let output_vec = if output_vec.len() == 1 {
+        output_vec.push(F::zero());
+        output_vec
+    } else {
+        output_vec
+    };
+
+    let output_mle = MultiLinearPolynomial::new_with_pad(output_vec, None);
+
+    //let output_mle = MultiLinearPolynomial::new_with_pad(evaluations, pad_element)
+
+    todo!()
+}
+
+fn w_i<F: PrimeField>(evaluations: &[Vec<F>], layer_id: usize) -> MultiLinearPolynomial<F> {
+    // it is assumed that the output polynomial is at index 0
     todo!()
 }
