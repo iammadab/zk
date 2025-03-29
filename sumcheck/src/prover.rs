@@ -149,5 +149,40 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
 
 // TODO: move to util
 fn element_wise_add_all<F: PrimeField>(vectors: &[Vec<F>]) -> Vec<F> {
-    todo!()
+    if vectors.is_empty() {
+        return Vec::new();
+    }
+
+    let length = vectors[0].len();
+    assert!(
+        vectors.iter().all(|v| v.len() == length),
+        "All vectors must have the same length"
+    );
+
+    let mut result = vec![F::zero(); length];
+
+    for vector in vectors {
+        for (i, &value) in vector.iter().enumerate() {
+            result[i] += value;
+        }
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::element_wise_add_all;
+    use ark_bls12_381::Fr;
+
+    #[test]
+    fn test_element_wise_addition() {
+        let sum = element_wise_add_all(&[
+            vec![Fr::from(1), Fr::from(2)],
+            vec![Fr::from(1), Fr::from(2)],
+            vec![Fr::from(1), Fr::from(2)],
+        ]);
+
+        assert_eq!(sum, vec![Fr::from(3), Fr::from(6)]);
+    }
 }
