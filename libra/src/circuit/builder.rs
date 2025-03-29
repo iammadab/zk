@@ -24,6 +24,10 @@ impl Builder {
         (INPUT_LAYER_ID, id)
     }
 
+    fn input_n(&mut self, n: usize) -> Vec<Node> {
+        (0..n).map(|_| self.input()).collect()
+    }
+
     fn add(&mut self, left: &Node, right: &Node) -> Node {
         // ensure that both inputs come from the same layer
         assert_eq!(left.0, right.0);
@@ -37,25 +41,32 @@ impl Builder {
     }
 
     fn insert_in_layer(&mut self, layer_id: usize, gate_info: GateInfo) -> Node {
-        assert!(layer_id <= self.layered_circuit.layers.len());
+        assert!(layer_id - 1 <= self.layered_circuit.layers.len());
 
         // if we haven't seen an element from this layer we first create the layer
-        if layer_id == self.layered_circuit.layers.len() {
+        if layer_id - 1 == self.layered_circuit.layers.len() {
             self.layered_circuit.layers.push(Layer::default());
         }
 
-        let id = self.layered_circuit.layers[layer_id].len();
+        let id = self.layered_circuit.layers[layer_id - 1].len();
 
         match gate_info {
             GateInfo::Add(l, r) => {
-                self.layered_circuit.layers[layer_id].add_gate([id, l, r]);
+                self.layered_circuit.layers[layer_id - 1].add_gate([id, l, r]);
             }
             GateInfo::Mul(l, r) => {
-                self.layered_circuit.layers[layer_id].mul_gate([id, l, r]);
+                self.layered_circuit.layers[layer_id - 1].mul_gate([id, l, r]);
             }
         }
 
         (layer_id, id)
+    }
+
+    fn to_layered_circuit(self) -> Option<LayeredCircuit> {
+        let mut circuit = self.layered_circuit;
+        // TODO: do circuit validation here to ensure that we have a valid layered circuit
+        circuit.layers.reverse();
+        Some(circuit)
     }
 }
 
@@ -64,4 +75,40 @@ enum GateInfo {
     Add(usize, usize),
     // (left, right)
     Mul(usize, usize),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Builder;
+    use ark_bn254::Fr;
+
+    #[test]
+    fn test_circuit_builder() {
+        // (a + b) + (c * d)
+        let mut builder = Builder::default();
+        let [a, b, c, d] = builder.input_n(4)[..] else {
+            panic!("")
+        };
+
+        let ab = builder.add(&a, &b);
+        let cd = builder.mul(&c, &d);
+        builder.add(&ab, &cd);
+
+        assert!(builder.to_layered_circuit().is_some());
+    }
+
+    #[test]
+    fn test_should_not_return_layered_circuit() {
+        // (a + b) + (c * d) | e
+        // e is not consumed hence serves as an invalid output
+        let mut builder = Builder::default();
+        let [a, b, c, d, e] = builder.input_n(5)[..] else {
+            panic!("")
+        };
+        let ab = builder.add(&a, &b);
+        let cd = builder.mul(&c, &d);
+        builder.add(&ab, &cd);
+
+        assert!(builder.to_layered_circuit().is_none());
+    }
 }

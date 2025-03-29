@@ -7,7 +7,7 @@ pub(crate) struct LayeredCircuit {
 }
 
 impl LayeredCircuit {
-    fn evaluate<F: PrimeField>(&self, inputs: &[F]) -> Vec<Vec<F>> {
+    pub(crate) fn evaluate<F: PrimeField>(&self, inputs: &[F]) -> Vec<Vec<F>> {
         let mut evaluations = Vec::with_capacity(self.layers.len());
         evaluations.push(inputs.to_vec());
 
