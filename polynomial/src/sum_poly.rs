@@ -41,12 +41,22 @@ impl<F: PrimeField> SumPoly<F> {
         })
     }
 
+    // Partially evalutes the constituent polynomials
     pub fn partial_evaluate(
         &self,
         initial_var: usize,
         assignments: &[F],
     ) -> Result<Self, &'static str> {
-        todo!()
+        let partial_polynomials = self
+            .polynomials
+            .iter()
+            .map(|poly| poly.partial_evaluate(initial_var, assignments))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self {
+            n_vars: partial_polynomials[0].n_vars(),
+            polynomials: partial_polynomials,
+        })
     }
 
     pub fn sum_reduce(&self) -> Vec<F> {
@@ -88,6 +98,7 @@ mod test {
         ])
         .unwrap()
     }
+
     #[test]
     fn test_sum_poly_evaluate() {
         let poly = sum_poly();
@@ -99,5 +110,13 @@ mod test {
             poly.evaluate(&[Fr::from(2), Fr::from(3)]).unwrap(),
             Fr::from(19)
         );
+    }
+
+    #[test]
+    fn test_sum_poly_partial_evaluate() {
+        let poly = sum_poly();
+        let poly2 = poly.partial_evaluate(0, &[Fr::from(2)]).unwrap();
+        assert_eq!(poly2.n_vars(), 1);
+        assert_eq!(poly2.evaluate(&[Fr::from(3)]).unwrap(), Fr::from(19));
     }
 }
