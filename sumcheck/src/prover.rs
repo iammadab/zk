@@ -1,6 +1,6 @@
 use crate::{field_elements_to_bytes, SumcheckProof};
 use ark_ff::{BigInteger, PrimeField};
-use polynomial::product_poly::ProductPoly;
+use polynomial::sum_poly::SumPoly;
 use std::marker::PhantomData;
 use transcript::Transcript;
 
@@ -13,7 +13,7 @@ pub struct SumcheckProver<const MAX_VAR_DEGREE: u8, F: PrimeField> {
 impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> {
     /// Generates the `Sumcheck` proof (appends the initial poly to the transcript)
     pub fn prove(
-        poly: ProductPoly<F>,
+        poly: SumPoly<F>,
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<SumcheckProof<F>, &'static str> {
@@ -25,7 +25,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
     /// Generates the `Sumcheck` proof, but doesn't append the initial poly to the transcript.
     /// This is used when the verifier doesn't have access to the initial poly or its commitment
     pub fn prove_partial(
-        poly: ProductPoly<F>,
+        poly: SumPoly<F>,
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
@@ -34,7 +34,7 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
 
     /// Main `Sumcheck` proof generation logic.
     fn prove_internal(
-        mut poly: ProductPoly<F>,
+        mut poly: SumPoly<F>,
         sum: F,
         transcript: &mut Transcript,
     ) -> Result<(SumcheckProof<F>, Vec<F>), &'static str> {
@@ -49,12 +49,13 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
             // for a round poly of a certain degree d (denoted by MAX_VAR_DEGREE)
             // we evaluate the polynomial at d + 1 points
             let mut round_poly = vec![];
+
             for i in 0..=MAX_VAR_DEGREE {
                 round_poly.push(
                     poly.partial_evaluate(0, &[F::from(i)])?
-                        .prod_reduce()
+                        .sum_reduce()
                         .iter()
-                        .sum::<F>(),
+                        .sum(),
                 )
             }
 
@@ -63,7 +64,8 @@ impl<const MAX_VAR_DEGREE: u8, F: PrimeField> SumcheckProver<MAX_VAR_DEGREE, F> 
 
             // generate challenge
             let challenge = transcript.sample_field_element::<F>();
-            // partially evaluate the poly at the challenge
+
+            // partially evaluate at the challenge
             poly = poly.partial_evaluate(0, &[challenge])?;
 
             round_polys.push(round_poly);

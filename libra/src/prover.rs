@@ -32,6 +32,7 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
     todo!()
 }
 
+/*
 fn libra_sumcheck<F: PrimeField>(
     circuit: &LayeredCircuit,
     evaluations: &[Vec<F>],
@@ -90,3 +91,4 @@ fn libra_sumcheck<F: PrimeField>(
 
     todo!()
 }
+*/
