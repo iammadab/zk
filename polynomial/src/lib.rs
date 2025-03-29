@@ -4,6 +4,7 @@ use self::univariate_poly::UnivariatePolynomial;
 
 pub mod multilinear;
 pub mod product_poly;
+pub mod sum_poly;
 pub mod univariate_poly;
 
 // TODO: get rid of this trait
