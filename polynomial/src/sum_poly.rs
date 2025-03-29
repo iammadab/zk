@@ -61,3 +61,43 @@ impl<F: PrimeField> SumPoly<F> {
         self.n_vars
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly};
+
+    use super::SumPoly;
+    use ark_bls12_381::Fr;
+
+    fn sum_poly() -> SumPoly<Fr> {
+        // 2a + 2b
+        let p1 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(2), Fr::from(2), Fr::from(4)],
+            None,
+        );
+
+        // 3a + b
+        let p2 = MultiLinearPolynomial::new_with_pad(
+            vec![Fr::from(0), Fr::from(1), Fr::from(3), Fr::from(4)],
+            None,
+        );
+
+        SumPoly::new(vec![
+            ProductPoly::new(vec![p2]).unwrap(),
+            ProductPoly::new(vec![p1]).unwrap(),
+        ])
+        .unwrap()
+    }
+    #[test]
+    fn test_sum_poly_evaluate() {
+        let poly = sum_poly();
+
+        // 2(2) + 2(3) = 4 + 6 = 10
+        // 3(2) + 3 = 6 + 3 = 9
+        // 10 + 9 = 19
+        assert_eq!(
+            poly.evaluate(&[Fr::from(2), Fr::from(3)]).unwrap(),
+            Fr::from(19)
+        );
+    }
+}
