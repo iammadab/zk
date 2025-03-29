@@ -4,7 +4,7 @@ use crate::{
 };
 use ark_ff::PrimeField;
 use polynomial::{multilinear::evaluation_form::MultiLinearPolynomial, product_poly::ProductPoly};
-use sumcheck::{SumcheckProof, prover::SumcheckProver};
+use sumcheck::{prover::SumcheckProver, SumcheckProof};
 use transcript::Transcript;
 
 struct GKRProof<F: PrimeField> {
@@ -32,6 +32,7 @@ fn prove<F: PrimeField>(circuit: &LayeredCircuit, evaluations: Vec<Vec<F>>) -> G
     todo!()
 }
 
+/*
 fn libra_sumcheck<F: PrimeField>(
     circuit: &LayeredCircuit,
     evaluations: &[Vec<F>],
@@ -90,3 +91,4 @@ fn libra_sumcheck<F: PrimeField>(
 
     todo!()
 }
+*/
