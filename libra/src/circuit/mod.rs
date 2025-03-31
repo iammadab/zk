@@ -1,2 +1,2 @@
-mod builder;
-mod layered_circuit;
+pub(crate) mod builder;
+pub(crate) mod layered_circuit;

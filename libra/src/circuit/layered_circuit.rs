@@ -25,6 +25,7 @@ impl LayeredCircuit {
             evaluations.push(layer_evaluations);
         }
 
+        evaluations.reverse();
         evaluations
     }
 
@@ -94,12 +95,12 @@ mod tests {
         assert_eq!(
             evaluations,
             vec![
-                // input layer
-                vec![Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)],
+                // output layer
+                vec![Fr::from(15)],
                 // mid layer
                 vec![Fr::from(3), Fr::from(12)],
-                // output layer
-                vec![Fr::from(15)]
+                // input layer
+                vec![Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)]
             ]
         );
     }
